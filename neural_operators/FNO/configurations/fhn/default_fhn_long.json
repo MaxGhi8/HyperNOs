@@ -1,0 +1,33 @@
+{
+	"training_properties": {
+		"training_samples": 2400,
+		"test_samples": 300,
+		"val_samples": 300,
+		"learning_rate": 0.000339686262648724,
+		"epochs": 1000,
+		"batch_size": 16,
+		"weight_decay": 0.0004076737139155358,
+		"scheduler_step": 72,
+		"scheduler_gamma": 0.7583225728191492,
+		"beta": 1
+	},
+	"fno_architecture": {
+		"width": 256,
+		"modes": 8,
+		"n_layers": 6,
+		"padding": 0,
+		"arc": "Zongyi",
+		"fun_act": "leaky_relu",
+		"d_a": 1,
+		"d_u": 2,
+		"fft_norm": null,
+		"FourierF": 0,
+		"RNN": false,
+		"include_grid": 1,
+		"weights_norm": "Kaiming",
+		"retrain": 4
+	},
+	"loss_function": {
+		"loss": "L1_smooth"
+	}
+}
