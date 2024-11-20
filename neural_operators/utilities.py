@@ -11,10 +11,11 @@ from torch import Tensor
 import torch
 import torch.nn as nn
 
-from FNObenchmarks import Airfoil, DiscContTranslation, ContTranslation, AllenCahn, SinFrequency, WaveEquation, ShearLayer, Darcy
-from FNObenchmarks import Darcy_Zongyi, Burgers_Zongyi
-from FNObenchmarks import FitzHughNagumo, HodgkinHuxley
-from FNObenchmarks import CrossTruss
+from FNO.FNObenchmarks import find_file
+from FNO.FNObenchmarks import Airfoil, DiscContTranslation, ContTranslation, AllenCahn, SinFrequency, WaveEquation, ShearLayer, Darcy
+from FNO.FNObenchmarks import Darcy_Zongyi, Burgers_Zongyi
+from FNO.FNObenchmarks import FitzHughNagumo, HodgkinHuxley
+from FNO.FNObenchmarks import CrossTruss
 
 #########################################
 # function to load the data and model
@@ -148,13 +149,12 @@ def FNO_initialize_hyperparameters(which_example:str, mode:str):
         The mode to use to load the hyperparameters (this can be either 'best' or 'default').
     """
     # Here I use relative path
-    config_directory = "./configurations"
-    config_path = os.path.join(config_directory, f"{mode}_{which_example}.json")
-    print("The default hyperparameters are loaded from:", config_path)
+    config_directory = "./FNO/configurations/"
+    config_path = find_file(f"{mode}_{which_example}.json", config_directory)
 
     # Check if the configuration file exists
     if not os.path.exists(config_path):
-        raise ValueError(f"The configuration file for '{which_example}' does not exist.")
+        raise ValueError(f"The configuration file with '{mode}' hyperparameters for '{which_example}' does not exist.")
     
     # Load the configuration from the JSON file
     with open(config_path, 'r') as f:

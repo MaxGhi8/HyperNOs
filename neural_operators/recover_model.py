@@ -157,7 +157,6 @@ test_loader = example.test_loader # for final testing
 print("Dimension of datasets are:", next(iter(train_loader))[0].shape, next(iter(val_loader))[0].shape, next(iter(test_loader))[0].shape)
 
 problem_dim = fno_architecture["problem_dim"]
-print('Data loaded')
 
 # Count and print the total number of parameters
 par_tot = count_params(model)

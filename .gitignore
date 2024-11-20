@@ -3,3 +3,5 @@ TrainedModels/
 *.png
 *.jpeg
 *.jpg
+.python-version
+__pycache__/

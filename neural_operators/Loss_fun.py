@@ -6,7 +6,6 @@ from torch import Tensor
 from jaxtyping import Float, Complex, jaxtyped
 from beartype import beartype
 
-
 #########################################
 # L^p relative loss for N-D functions
 #########################################
