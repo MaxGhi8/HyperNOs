@@ -452,14 +452,10 @@ def save_tensor(input_tensor, output_tensor, prediction_tensor, which_example:st
         case "fhn" | "fhn_long":
             data_to_save = {
                 "input": input_tensor.numpy().squeeze(),
-                "output": {
-                    "V": output_tensor[:, :, 0].numpy(),
-                    "w": output_tensor[:, :, 1].numpy()
-                },
-                "predicted": {
-                    "V": prediction_tensor[:, :, 0].numpy(),
-                    "w": prediction_tensor[:, :, 1].numpy()
-                }
+                "V_exact": output_tensor[:, :, 0].numpy().squeeze(),
+                "w_exact": output_tensor[:, :, 1].numpy().squeeze(),
+                "V_pred": prediction_tensor[:, :, 0].numpy().squeeze(),
+                "w_pred": prediction_tensor[:, :, 1].numpy().squeeze()
             }
 
         case "hh":
