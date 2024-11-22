@@ -33,7 +33,7 @@ class CNO_LReLu(nn.Module):
         return x[:,:,0]
 
 #########################################
-# CNO Block:
+# CNO Block or Invariant Block:
 #########################################
 class CNOBlock(nn.Module):
     def __init__(self, in_channels, out_channels, in_size, out_size, use_bn = True):
@@ -55,6 +55,7 @@ class CNOBlock(nn.Module):
             self.batch_norm  = nn.BatchNorm1d(self.out_channels)
         else:
             self.batch_norm  = nn.Identity()
+
         self.act = CNO_LReLu(in_size = self.in_size, out_size = self.out_size)
 
     def forward(self, x):
@@ -160,22 +161,22 @@ class CNO1d(nn.Module):
         CNO1d: Convolutional Neural Operator 1D
         
         in_dim: int
-            Number of input channels.
+            Number of input channels (or the number of the features input channel).
 
         out_dim: int
-            Number of output channels.
+            Number of output channels (or the number of the features output channel).
             
         size: int
-            Input and Output spatial size 
+            Input and Output spatial size, resolution of the grid.
         
         N_layers: int
-            Number of (D) or (U) blocks in the network
+            Number of (D) or (U) blocks in the network.
             
         N_res: int
-            Number of (R) blocks per level (except the neck)
+            Number of (R) blocks per level (except the neck).
             
         N_res_neck: int
-            Number of (R) blocks in the neck
+            Number of (R) blocks in the neck.
             
         channel_multiplier: int
             How the number of channels evolve?
@@ -191,28 +192,29 @@ class CNO1d(nn.Module):
         self.out_dim  = out_dim
         self.channel_multiplier = channel_multiplier  # The growth of the channels
 
-        ######## Num of channels/features - evolution ########
-        self.encoder_features = [self.lift_dim] # How the features in Encoder evolve (number of features)
+        #### Num of channels/features - evolution
+        # Encoder (at every layer the number of channels is doubled)
+        self.encoder_features = [self.lift_dim]
         for i in range(self.N_layers):
-            self.encoder_features.append(2 ** i *   self.channel_multiplier)
+            self.encoder_features.append( (2**i)*self.channel_multiplier) 
 
-        self.decoder_features_in = self.encoder_features[1:] # How the features in Decoder evolve (number of features)
+        # Decoder (at every layer the number of channels is halved)
+        self.decoder_features_in = self.encoder_features[1:] # size of the input of the decoder
         self.decoder_features_in.reverse()
-        self.decoder_features_out = self.encoder_features[:-1]
+        self.decoder_features_out = self.encoder_features[:-1] # size of the output of the decoder
         self.decoder_features_out.reverse()
 
         for i in range(1, self.N_layers):
-            self.decoder_features_in[i] = 2*self.decoder_features_in[i] #Pad the outputs of the resnets (we must multiply by 2 then)
+            self.decoder_features_in[i] = 2*self.decoder_features_in[i] # Concat the outputs of the res-nets, so we must multiply by 2
 
-        ######## Spatial sizes of channels - evolution ########
+        #### Spatial sizes of channels (grid resolution) - evolution
         self.encoder_sizes = []
         self.decoder_sizes = []
         for i in range(self.N_layers + 1):
-            self.encoder_sizes.append(size // 2 ** i)
-            self.decoder_sizes.append(size // 2 ** (self.N_layers - i))
+            self.encoder_sizes.append( size//(2**i) ) # Encoder sizes are halved at every layer
+            self.decoder_sizes.append( size//(2**(self.N_layers - i)) ) # Decoder sizes are doubled at every layer
 
-
-        ######## Define Lift and Project blocks ########
+        #### Define Lift and Project blocks
         self.lift = LiftProjectBlock(in_channels = in_dim,
                                      out_channels = self.encoder_features[0],
                                      size = size)
@@ -221,7 +223,7 @@ class CNO1d(nn.Module):
                                         out_channels = out_dim,
                                         size = size)
 
-        ######## Define Encoder, ED Linker and Decoder networks ########
+        #### Define Encoder, ED Linker and Decoder networks
         self.encoder = nn.ModuleList([ CNOBlock(in_channels  = self.encoder_features[i],
                                                 out_channels = self.encoder_features[i+1],
                                                 in_size      = self.encoder_sizes[i],
@@ -229,7 +231,7 @@ class CNO1d(nn.Module):
                                                 use_bn       = use_bn) for i in range(self.N_layers) ])
 
         # After the ResNets are executed, the sizes of encoder and decoder might not match (if out_size>1)
-        # We must ensure that the sizes are the same, by aplying CNO Blocks
+        # We must ensure that the sizes are the same, by applying CNO Blocks
         self.ED_expansion = nn.ModuleList([ CNOBlock(in_channels = self.encoder_features[i],
                                                      out_channels = self.encoder_features[i],
                                                      in_size      = self.encoder_sizes[i],

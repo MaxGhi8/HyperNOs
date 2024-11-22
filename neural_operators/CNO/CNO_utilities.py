@@ -79,20 +79,15 @@ def CNO_initialize_hyperparameters(which_example:str, mode:str):
         The mode to use to load the hyperparameters (this can be either 'best' or 'default').
     """
     # Here I use relative path
-    config_directory = "./CNO/configurations/"
+    config_directory = "./configurations/"
     config_path = find_file(f"{mode}_{which_example}.json", config_directory)
 
     # Load the configuration from the JSON file
     with open(config_path, 'r') as f:
         config = json.load(f)
     
-    pass 
-
-    # todo
     # Extract the training properties and FNO architecture from the loaded configuration
-    # training_properties = config["training_properties"]
-    # fno_architecture = config["fno_architecture"]
-    # fno_architecture["weights_norm"] = "Xavier" if fno_architecture["fun_act"] == 'gelu' else "Kaiming"
+    training_properties = config["training_properties"]
+    cno_architecture = config["cno_architecture"]
     
-    # todo
-    # return training_properties, fno_architecture
+    return training_properties, cno_architecture

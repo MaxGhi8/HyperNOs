@@ -15,7 +15,7 @@ from beartype import beartype
 
 import sys
 sys.path.append("../")
-from utilities import find_file, FourierFeatures
+from utilities import find_file, FourierFeatures, UnitGaussianNormalizer
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

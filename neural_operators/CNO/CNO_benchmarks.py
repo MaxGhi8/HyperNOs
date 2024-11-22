@@ -323,6 +323,9 @@ class SinFrequencyDataset(Dataset):
 class SinFrequency:
     def __init__(self, network_properties, device, batch_size, training_samples = 1024, s = 64, in_dist = True, search_path = "/"):
         
+        #Load default parameters if they are not in network_properties
+        network_properties = default_param(network_properties)
+
         if "in_size" in network_properties:
             self.in_size = network_properties["in_size"]
             assert self.in_size<=128        
@@ -343,7 +346,6 @@ class SinFrequency:
                 N_res_neck = network_properties["N_res_neck"]        
         else:
             raise ValueError("You must specify the number of (R)-neck blocks.")
-        
         
         #----------------------------------------------------------------------
         kernel_size = network_properties["kernel_size"]

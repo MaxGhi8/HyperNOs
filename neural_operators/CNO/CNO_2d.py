@@ -9,6 +9,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+torch.manual_seed(0)
+torch.cuda.manual_seed(0)
+
 # CNO LReLu activation fucntion
 # CNO building block (CNOBlock) → Conv2d - BatchNorm - Activation
 # Lift/Project Block (Important for embeddings)
@@ -82,6 +85,7 @@ class LiftProjectBlock(nn.Module):
                                             out_channels = out_channels,
                                             kernel_size  = 3,
                                             padding      = 1)
+                                            # device       = torch.device("cuda"))
 
 
     def forward(self, x):

@@ -23,11 +23,14 @@ frozenlist==1.5.0
 fsspec==2024.10.0
 future==1.0.0
 google-api-core==2.22.0
+google-api-python-client==2.154.0
 google-auth==2.35.0
+google-auth-httplib2==0.2.0
 googleapis-common-protos==1.65.0
 grpcio==1.67.1
 h11==0.14.0
 h5py==3.12.1
+httplib2==0.22.0
 httptools==0.6.4
 hyperopt==0.2.7
 idna==3.10
@@ -113,6 +116,7 @@ typeguard==2.13.3
 typing_extensions==4.12.2
 tzdata==2024.2
 uc-micro-py==1.0.3
+uritemplate==4.1.1
 urllib3==2.2.3
 uvicorn==0.32.0
 uvloop==0.21.0

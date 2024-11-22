@@ -5,15 +5,21 @@ import torch.nn.functional as F
 from torch.optim import AdamW
 from CNO_2d import CNO2d
 
+from CNO_benchmarks import SinFrequency 
+from CNO_utilities import CNO_initialize_hyperparameters
 
-# In this script, we approxiamte solution of the 1d Allen-Cahn equation
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# torch.cuda.set_device(device)
+
+torch.manual_seed(0)
+torch.cuda.manual_seed(0)
 
 def main():
     
     #--------------------------------------
     # REPLACE THIS PART BY YOUR DATALOADER
     #--------------------------------------
-    
+
     n_train = 100 # number of training samples
 
     x_data = torch.rand((256, 1, 128, 128)).type(torch.float32)
@@ -29,6 +35,9 @@ def main():
     training_set = DataLoader(TensorDataset(input_function_train, output_function_train), batch_size=batch_size, shuffle=True)
     testing_set = DataLoader(TensorDataset(input_function_test, output_function_test), batch_size=batch_size, shuffle=False)
 
+    # cno_architecture = CNO_initialize_hyperparameters("poisson", "default")
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # example = SinFrequency(cno_architecture, device, 32, 126, in_dist=True, search_path='/')
     
     #---------------------
     # Define the hyperparameters and the model:
@@ -55,6 +64,7 @@ def main():
                 channel_multiplier = channel_multiplier,  # How the number of channels evolve?
                 use_bn = False)
 
+    cno.to(device)
     #-----------
     # TRAIN:
     #-----------
@@ -67,6 +77,9 @@ def main():
     for epoch in range(epochs):
         train_mse = 0.0
         for (input_batch, output_batch) in training_set:
+            input_batch = input_batch.to(device)
+            output_batch = output_batch.to(device)
+            
             optimizer.zero_grad()
             output_pred_batch = cno(input_batch)
             loss_f = l(output_pred_batch, output_batch)
@@ -80,9 +93,12 @@ def main():
         with torch.no_grad():
             cno.eval()
             test_relative_l2 = 0.0
-            for step, (input_batch, output_batch) in enumerate(testing_set):
+            for (input_batch, output_batch) in testing_set:
+                input_batch = input_batch.to(device)
+                output_batch = output_batch.to(device)
+
                 output_pred_batch = cno(input_batch)
-                loss_f = (torch.mean((abs(output_pred_batch - output_batch))) / torch.mean(abs(output_batch))) ** 0.5 * 100
+                loss_f = (torch.mean((abs(output_pred_batch - output_batch))) / torch.mean(abs(output_batch))) ** 0.5
                 test_relative_l2 += loss_f.item()
             test_relative_l2 /= len(testing_set)
 
