@@ -74,7 +74,8 @@ Norm_dict = {"L1":0, "L2":1, "H1":2, "L1_smooth":3, "MSE":4}
 #########################################
 # parameters for save the model
 #########################################
-model_folder = "TrainedModels/"
+arc = "FNO"
+model_folder = f"./{arc}/TrainedModels/"
 description_test = "test_" + exp_norm
 folder = model_folder + which_example + "/exp_FNO_" + description_test + "_" + mode_str + "_hyperparams"
 name_model = model_folder + which_example + "/model_FNO_" + description_test + "_" + mode_str + "_hyperparams"

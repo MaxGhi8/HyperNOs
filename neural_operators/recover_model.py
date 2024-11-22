@@ -76,7 +76,8 @@ else:
 Norm_dict = {"L1":0, "L2":1, "H1":2, "L1_smooth":3, "MSE":4}
 
 # upload the model and the hyperparameters
-model_folder = "TrainedModels/"
+arc = "FNO"
+model_folder = f"./{arc}/TrainedModels/"
 description_test = "test_" + exp_norm
 folder = model_folder + which_example + "/exp_FNO_" + description_test + "_" + mode_str + "_hyperparams"
 name_model = model_folder + which_example + "/model_FNO_" + description_test + "_" + mode_str + "_hyperparams"
@@ -479,7 +480,7 @@ def save_tensor(input_tensor, output_tensor, prediction_tensor, which_example:st
             flag = False
 
     if flag:
-        directory = f"./data_results/"
+        directory = f"../data/{which_example}/"
         os.makedirs(directory, exist_ok=True) # Create the directory if it doesn't exist
         savemat(f"{directory}{which_example}_train{norm_str}_n_{output_tensor.shape[0]}_points_{output_tensor.shape[1]}_tf_{'200' if 'long' in which_example else '100'}.mat", data_to_save) # Save the data
     else:
