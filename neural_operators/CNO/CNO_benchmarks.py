@@ -1,27 +1,24 @@
+"""
+This file contains the necessary functions to load the data for the Fourier Neural Operator benchmarks.
+"""
 import random
-
 import h5py
 import numpy as np
+import scipy
 import torch
 from torch.utils.data import DataLoader
-
-from CNOModule import CNO
 from torch.utils.data import Dataset
 
-import scipy
+import sys
+sys.path.append("../")
+from utilities import find_file, FourierFeatures
+from CNO_2d import CNO2d
 
-from training.FourierFeatures import FourierFeatures
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-torch.manual_seed(0)
-np.random.seed(0)
-random.seed(0)
-
-
-
-#------------------------------------------------------------------------------
-
+#########################################
 # Some functions needed for loading the Navier-Stokes data
-
+#########################################
 def samples_fft(u):
     return scipy.fft.fft2(u, norm='forward', workers=-1)
 
@@ -37,10 +34,8 @@ def downsample(u, N):
     u_down = samples_ifft(u_hat_down)
     return u_down
 
-#------------------------------------------------------------------------------
-
+#! I want to delete this function after I create the configurations file
 #Load default parameters:
-    
 def default_param(network_properties):
     
     if "channel_multiplier" not in network_properties:
@@ -79,31 +74,25 @@ def default_param(network_properties):
     return network_properties
 
 #------------------------------------------------------------------------------
-
-#NOTE:
-#All the training sets should be in the folder: data/
-
-#------------------------------------------------------------------------------
-#Navier-Stokes data:
+# Navier-Stokes data (from Mishra CNO article)
 #   From 0 to 750 : training samples (750)
 #   From 1024 - 128 - 128 to 1024 - 128 : validation samples (128)
 #   From 1024 - 128 to 1024 : test samples (128)
 #   Out-of-distribution testing samples: 0 to 128 (128)
 
 class ShearLayerDataset(Dataset):
-    def __init__(self, which="training", nf=0, training_samples = 750, s=64, in_dist = True):
+    def __init__(self, which="training", nf=0, training_samples = 750, s=64, in_dist = True, search_path = "/"):
         
         self.s = s
         self.in_dist = in_dist
-        #The file:
         
         if in_dist:
             if self.s==64:
-                self.file_data = "data/NavierStokes_64x64_IN.h5" #In-distribution file 64x64               
+                self.file_data = find_file("NavierStokes_64x64_IN.h5", search_path) #In-distribution file 64x64               
             else:
-                self.file_data = "data/NavierStokes_128x128_IN.h5"   #In-distribution file 128x128
+                self.file_data = find_file("NavierStokes_128x128_IN.h5", search_path) #In-distribution file 128x128
         else:
-            self.file_data = "data/NavierStokes_128x128_OUT.h5"  #Out-of_-distribution file 128x128
+            self.file_data = find_file("NavierStokes_128x128_OUT.h5", search_path) #Out-of_-distribution file 128x128
         
         self.reader = h5py.File(self.file_data, 'r') 
         self.N_max = 1024
@@ -175,13 +164,11 @@ class ShearLayerDataset(Dataset):
         return grid
     
 class ShearLayer:
-    def __init__(self, network_properties, device, batch_size, training_samples, size, in_dist = True):
-
-        #Must have parameters: ------------------------------------------------        
+    def __init__(self, network_properties, device, batch_size, training_samples, size, in_dist = True, search_path = "/"):
 
         if "in_size" in network_properties:
             self.in_size = network_properties["in_size"]
-            assert self.in_size<=128        
+            assert self.in_size <= 128        
         else:
             raise ValueError("You must specify the computational grid size.")
         
@@ -199,27 +186,30 @@ class ShearLayer:
                 N_res_neck = network_properties["N_res_neck"]        
         else:
             raise ValueError("You must specify the number of (R)-neck blocks.")
-        
-        #Load default parameters if they are not in network_properties
-        network_properties = default_param(network_properties)
-        
+
+        if "s" in network_properties:
+            s = size
+        else:
+            s = 64 # Default value
         #----------------------------------------------------------------------
         kernel_size = network_properties["kernel_size"]
         channel_multiplier = network_properties["channel_multiplier"]
         retrain = network_properties["retrain"]
         self.N_Fourier_F = network_properties["FourierF"]
         
-        #Filter properties: ---------------------------------------------------
+        # Filter properties: --------------------------------------------------
         cutoff_den = network_properties["cutoff_den"]
         filter_size = network_properties["filter_size"]
         half_width_mult = network_properties["half_width_mult"]
         lrelu_upsampling = network_properties["lrelu_upsampling"]
         activation = network_properties["activation"]
-        ##----------------------------------------------------------------------
+
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
         
-        torch.manual_seed(retrain)
-        
-        self.model = CNO(in_dim  = 1 + 2*self.N_Fourier_F,     # Number of input channels.
+        self.model = CNO2d(in_dim  = 1 + 2*self.N_Fourier_F,     # Number of input channels.
                         in_size = self.in_size,                # Input spatial size
                         N_layers = N_layers,                   # Number of (D) and (U) Blocks in the network
                         N_res = N_res,                         # Number of (R) Blocks per level
@@ -232,44 +222,49 @@ class ShearLayer:
                         half_width_mult  = half_width_mult,
                         activation = activation).to(device)
 
-        #----------------------------------------------------------------------
-
-        #Change number of workers accoirding to your preference
-        
+        # Change number of workers according to your preference
         num_workers = 0
-        self.train_loader = DataLoader(ShearLayerDataset("training", self.N_Fourier_F, training_samples, size), batch_size=batch_size, shuffle=True, num_workers=num_workers)
-        self.val_loader = DataLoader(ShearLayerDataset("validation", self.N_Fourier_F, training_samples, size), batch_size=batch_size, shuffle=False, num_workers=num_workers)
-        self.test_loader = DataLoader(ShearLayerDataset("test", self.N_Fourier_F, training_samples, size, in_dist), batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        self.train_loader = DataLoader(
+            ShearLayerDataset("training", self.N_Fourier_F, training_samples, s, search_path=search_path), 
+            batch_size=batch_size, 
+            shuffle=True, 
+            num_workers=num_workers)
+        self.val_loader = DataLoader(
+            ShearLayerDataset("validation", self.N_Fourier_F, training_samples, s, search_path=search_path), 
+            batch_size=batch_size, 
+            shuffle=False, 
+            num_workers=num_workers)
+        self.test_loader = DataLoader(
+            ShearLayerDataset("test", self.N_Fourier_F, training_samples, s, in_dist, search_path=search_path), 
+            batch_size=batch_size, 
+            shuffle=False, 
+            num_workers=num_workers)
 
 #------------------------------------------------------------------------------
-#------------------------------------------------------------------------------
-
-#Poisson data:
+# Poisson data (from Mishra CNO article) 
 #   From 0 to 1024 : training samples (1024)
 #   From 1024 to 1024 + 128 : validation samples (128)
 #   From 1024 + 128 to 1024 + 128 + 256 : test samples (256)
 #   Out-of-distribution testing samples: 0 to 256 (256)
 
 class SinFrequencyDataset(Dataset):
-    def __init__(self, which="training", nf=0, training_samples = 1024, s=64, in_dist = True):
-        
+    def __init__(self, which="training", nf=0, training_samples = 1024, s=64, in_dist = True, search_path = "/"):
         
         # Note: Normalization constants for both ID and OOD should be used from the training set!
-        #Load normalization constants from the TRAINING set:
-        file_data_train = "data/PoissonData_64x64_IN.h5"
+        # Load normalization constants from the TRAINING set:
+        file_data_train = find_file("PoissonData_64x64_IN.h5", search_path)
         self.reader = h5py.File(file_data_train, 'r')
         self.min_data = self.reader['min_inp'][()]
         self.max_data = self.reader['max_inp'][()]
         self.min_model = self.reader['min_out'][()]
         self.max_model = self.reader['max_out'][()]
         
-        #The file:
         if in_dist:
-            self.file_data = "data/PoissonData_64x64_IN.h5"
+            self.file_data = find_file("PoissonData_64x64_IN.h5", search_path)
         else:
-            self.file_data = "data/PoissonData_64x64_OUT.h5"
+            self.file_data = find_file("PoissonData_64x64_OUT.h5", search_path)
 
-        self.s = s #Sampling rate
+        self.s = s # Sampling rate
 
         if which == "training":
             self.length = training_samples
@@ -285,15 +280,15 @@ class SinFrequencyDataset(Dataset):
                 self.length = 256
                 self.start = 0 
         
-        #Load different resolutions
+        # Load different resolutions
         if s!=64:
             self.file_data = "data/PoissonData_NEW_s" + str(s) + ".h5"
             self.start = 0
         
-        #If the reader changed.
+        # If the reader changed.
         self.reader = h5py.File(self.file_data, 'r')
         
-        #Fourier modes (Default is 0):
+        # Fourier modes (Default is 0):
         self.N_Fourier_F = nf
         
     def __len__(self):
@@ -305,7 +300,6 @@ class SinFrequencyDataset(Dataset):
 
         inputs = (inputs - self.min_data)/(self.max_data - self.min_data)
         labels = (labels - self.min_model)/(self.max_model - self.min_model)
-        
         
         if self.N_Fourier_F > 0:
             grid = self.get_grid()
@@ -327,7 +321,7 @@ class SinFrequencyDataset(Dataset):
 
 
 class SinFrequency:
-    def __init__(self, network_properties, device, batch_size, training_samples = 1024, s = 64, in_dist = True):
+    def __init__(self, network_properties, device, batch_size, training_samples = 1024, s = 64, in_dist = True, search_path = "/"):
         
         if "in_size" in network_properties:
             self.in_size = network_properties["in_size"]
@@ -350,8 +344,6 @@ class SinFrequency:
         else:
             raise ValueError("You must specify the number of (R)-neck blocks.")
         
-        #Load default parameters if they are not in network_properties
-        network_properties = default_param(network_properties)
         
         #----------------------------------------------------------------------
         kernel_size = network_properties["kernel_size"]
@@ -365,9 +357,10 @@ class SinFrequency:
         half_width_mult = network_properties["half_width_mult"]
         lrelu_upsampling = network_properties["lrelu_upsampling"]
         activation = network_properties["activation"]
-        ##----------------------------------------------------------------------
-        
-        torch.manual_seed(retrain)
+
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            torch.manual_seed(retrain)
         
         self.model = CNO(in_dim  = 1 + 2*self.N_Fourier_F,      # Number of input channels.
                         in_size = self.in_size,                # Input spatial size
@@ -382,15 +375,28 @@ class SinFrequency:
                         half_width_mult  = half_width_mult,
                         activation = activation).to(device)
 
-        #----------------------------------------------------------------------
         
 
-        #Change number of workers accoirding to your preference
+        #Change number of workers according to your preference
         num_workers = 0
 
-        self.train_loader = DataLoader(SinFrequencyDataset("training", self.N_Fourier_F, training_samples, s), batch_size=batch_size, shuffle=True, num_workers=num_workers)
-        self.val_loader = DataLoader(SinFrequencyDataset("validation", self.N_Fourier_F, training_samples, s), batch_size=batch_size, shuffle=False, num_workers=num_workers)
-        self.test_loader = DataLoader(SinFrequencyDataset("test", self.N_Fourier_F, training_samples, s, in_dist), batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        # Change number of workers according to your preference
+        num_workers = 0
+        self.train_loader = DataLoader(
+            SinFrequencyDataset("training", self.N_Fourier_F, training_samples, s, search_path=search_path), 
+            batch_size=batch_size, 
+            shuffle=True, 
+            num_workers=num_workers)
+        self.val_loader = DataLoader(
+            SinFrequencyDataset("validation", self.N_Fourier_F, training_samples, s, search_path=search_path), 
+            batch_size=batch_size, 
+            shuffle=False, 
+            num_workers=num_workers)
+        self.test_loader = DataLoader(
+            SinFrequencyDataset("test", self.N_Fourier_F, training_samples, s, in_dist, search_path=search_path), 
+            batch_size=batch_size, 
+            shuffle=False, 
+            num_workers=num_workers)
 
 #------------------------------------------------------------------------------
 # Wave data

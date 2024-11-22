@@ -1,5 +1,5 @@
 """
-This file contains the necessary functions to load the data for the Neural Operator benchmarks.
+This file contains the necessary functions to load the data for the Fourier Neural Operator benchmarks.
 """
 import os
 import h5py
@@ -8,45 +8,16 @@ import scipy.io
 import scipy.fft as fft
 import torch
 from torch import Tensor
-import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from torch.utils.data import Dataset
 from jaxtyping import jaxtyped, Float
 from beartype import beartype
-import matplotlib.pyplot as plt
+
+import sys
+sys.path.append("../")
+from utilities import find_file, FourierFeatures
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-#########################################
-# Function to find a file in a directory
-#########################################
-def find_file(file_name, search_path):
-    # Set the directory to start the search, for example 'C:\' on Windows or '/' on Unix-based systems.
-    # Walk through all directories and files in the search_path.
-    for root, dirs, files in os.walk(search_path):
-        if file_name in files:
-            print(f"File {file_name} found in {root}") # print the path where the file was found
-            return os.path.join(root, file_name) # full path
-    raise FileNotFoundError(f"File {file_name} not found in {search_path}")
-
-#########################################
-# Fourier features
-#########################################
-class FourierFeatures(nn.Module):
-    def __init__(self, scale, mapping_size, device):
-        super().__init__()
-        self.mapping_size = mapping_size
-        self.scale = scale
-        self.B = scale * torch.randn((self.mapping_size, 2)).to(device)
-
-    def forward(self, x):
-        # x is the set of coordinate and it is passed as a tensor (nx, ny, 2)
-        if self.scale != 0:
-            x_proj = torch.matmul((2. * np.pi * x), self.B.T)
-            inp = torch.cat([torch.sin(x_proj), torch.cos(x_proj)], axis=-1)
-            return inp
-        else:
-            return x
 
 #########################################
 # Some functions needed for loading the Navier-Stokes data
@@ -67,31 +38,6 @@ def downsample(u, N):
     return u_down
 
 
-#########################################
-# initial normalization
-#########################################    
-class UnitGaussianNormalizer(object):
-    """ 
-    Initial normalization is the point-wise gaussian normalization over the tensor x
-    dimension: (n_samples)*(nx)*(ny)
-    """
-    def __init__(self, x, eps = 1e-5):
-        self.mean = torch.mean(x, 0).to(x.device)
-        self.std = torch.std(x, 0).to(x.device)
-        self.eps = torch.tensor(eps).to(x.device)
-
-    @jaxtyped(typechecker=beartype)
-    def encode(self, x:Float[Tensor, "n_samples *n"]) -> Float[Tensor, "n_samples *n"]:
-        x = (x - self.mean) / (self.std + self.eps)
-        return x
-
-    @jaxtyped(typechecker=beartype)
-    def decode(self, x:Float[Tensor, "n_samples *n"]) -> Float[Tensor, "n_samples *n"]:
-        mean = self.mean.to(x.device)
-        std = self.std.to(x.device)
-        eps = self.eps.to(x.device)
-        x = x * (std + eps) + mean
-        return x
 #------------------------------------------------------------------------------
 # Navier-Stokes data (from Mishra CNO article)
 #   From 0 to 750 : training samples (750)
@@ -100,7 +46,7 @@ class UnitGaussianNormalizer(object):
 #   Out-of-distribution testing samples: 0 to 128 (128)
 
 class ShearLayerDataset(Dataset):
-    def __init__(self, which="training", nf=0, training_samples = 1024, s=64, in_dist = True, search_path='/'):
+    def __init__(self, which="training", nf=0, training_samples = 750, s=64, in_dist = True, search_path='/'):
         
         self.s = s
         self.in_dist = in_dist
@@ -174,9 +120,7 @@ class ShearLayerDataset(Dataset):
     def get_grid(self):
         x = torch.linspace(0, 1, self.s)
         y = torch.linspace(0, 1, self.s)
-
         x_grid, y_grid = torch.meshgrid(x, y)
-
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
@@ -205,12 +149,12 @@ class ShearLayer:
             ShearLayerDataset("training", self.N_Fourier_F, training_samples, s, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=True, 
-            num_workers=8)
+            num_workers=num_workers)
         self.val_loader = DataLoader(
             ShearLayerDataset("validation", self.N_Fourier_F, training_samples, s, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=False, 
-            num_workers=8)
+            num_workers=num_workers)
         self.test_loader = DataLoader(
             ShearLayerDataset("test", self.N_Fourier_F, training_samples, s, in_dist, search_path=search_path), 
             batch_size=batch_size, 
@@ -238,7 +182,7 @@ class SinFrequencyDataset(Dataset):
         self.max_data = self.reader['max_inp'][()]
         self.min_model = self.reader['min_out'][()]
         self.max_model = self.reader['max_out'][()]
-        self.s = s #Sampling rate
+        self.s = s # Sampling rate
 
         if which == "training":
             self.length = training_samples
@@ -288,9 +232,7 @@ class SinFrequencyDataset(Dataset):
     def get_grid(self):
         x = torch.linspace(0, 1, self.s)
         y = torch.linspace(0, 1, self.s)
-
         x_grid, y_grid = torch.meshgrid(x, y)
-
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
@@ -399,9 +341,7 @@ class WaveEquationDataset(Dataset):
     def get_grid(self):
         x = torch.linspace(0, 1, self.s)
         y = torch.linspace(0, 1, self.s)
-
         x_grid, y_grid = torch.meshgrid(x, y)
-
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
@@ -588,9 +528,7 @@ class ContTranslationDataset(Dataset):
     def get_grid(self):
         x = torch.linspace(0, 1, 64)
         y = torch.linspace(0, 1, 64)
-
         x_grid, y_grid = torch.meshgrid(x, y)
-
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
@@ -681,9 +619,7 @@ class DiscContTranslationDataset(Dataset):
     def get_grid(self):
         x = torch.linspace(0, 1, 64)
         y = torch.linspace(0, 1, 64)
-
         x_grid, y_grid = torch.meshgrid(x, y)
-
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
@@ -775,9 +711,7 @@ class AirfoilDataset(Dataset):
     def get_grid(self):
         x = torch.linspace(0, 1, 64)
         y = torch.linspace(0, 1, 64)
-
         x_grid, y_grid = torch.meshgrid(x, y)
-
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
@@ -870,13 +804,10 @@ class DarcyDataset(Dataset):
     def get_grid(self):
         x = torch.linspace(0, 1, 64)
         y = torch.linspace(0, 1, 64)
-
         x_grid, y_grid = torch.meshgrid(x, y)
-
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
-
         if self.N_Fourier_F > 0:
             FF = FourierFeatures(1, self.N_Fourier_F, grid.device)
             grid = FF(grid)
