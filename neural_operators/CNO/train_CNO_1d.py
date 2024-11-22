@@ -9,7 +9,7 @@ from CNO_1d import CNO1d
 
 import sys
 sys.path.append("../")
-from FNO.FNObenchmarks import find_file
+from utilities import find_file
 
 
 # In this script, we approxiamte solution of the 1d Allen-Cahn equation
