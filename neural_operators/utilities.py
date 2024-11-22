@@ -2,7 +2,6 @@
 In this file there are some utilities functions that are used in the main file.
 """
 import os
-import json
 from functools import reduce
 import operator
 import matplotlib.pyplot as plt
@@ -10,69 +9,23 @@ import numpy as np
 from torch import Tensor
 import torch
 import torch.nn as nn
-
-from FNO.FNObenchmarks import find_file
-from FNO.FNObenchmarks import Airfoil, DiscContTranslation, ContTranslation, AllenCahn, SinFrequency, WaveEquation, ShearLayer, Darcy
-from FNO.FNObenchmarks import Darcy_Zongyi, Burgers_Zongyi
-from FNO.FNObenchmarks import FitzHughNagumo, HodgkinHuxley
-from FNO.FNObenchmarks import CrossTruss
+from jaxtyping import jaxtyped, Float
+from beartype import beartype
 
 #########################################
-# function to load the data and model
+# Function to find a file in a directory
 #########################################
-def load_data_model(which_example:str, fno_architecture, device, batch_size, training_samples, in_dist, search_path:str='/'):
-    """
-    Function to load the data and the model.
-    """
-    match which_example:
-        case "shear_layer":
-            example = ShearLayer(fno_architecture, device, batch_size, training_samples, in_dist=in_dist, search_path=search_path)
-        case "poisson":
-            example = SinFrequency(fno_architecture, device, batch_size, training_samples, in_dist=in_dist, search_path=search_path)
-        case "wave_0_5":
-            example = WaveEquation(fno_architecture, device, batch_size, training_samples, in_dist=in_dist, search_path=search_path)
-        case "allen":
-            example = AllenCahn(fno_architecture, device, batch_size, training_samples, in_dist=in_dist, search_path=search_path)
-        case "cont_tran":
-            example = ContTranslation(fno_architecture, device, batch_size, training_samples, in_dist=in_dist, search_path=search_path)
-        case "disc_tran":
-            example = DiscContTranslation(fno_architecture, device, batch_size, training_samples, in_dist=in_dist, search_path=search_path)
-        case "airfoil":
-            example = Airfoil(fno_architecture, device, batch_size, training_samples, in_dist=in_dist, search_path=search_path)
-        case "darcy":
-            example = Darcy(fno_architecture, device, batch_size, training_samples, in_dist=in_dist, search_path=search_path)
-
-        case "burgers_zongyi":
-            example = Burgers_Zongyi(fno_architecture, batch_size, search_path=search_path)
-            fno_architecture["problem_dim"] = 1
-        case "darcy_zongyi":
-            example = Darcy_Zongyi(fno_architecture, batch_size, search_path=search_path)
-        case "navier_stokes_zongyi":
-            pass # TODO
-
-        case "fhn":
-            time = "_tf_100"
-            example = FitzHughNagumo(time, fno_architecture, batch_size, search_path=search_path)
-            fno_architecture["problem_dim"] = 1
-        case "fhn_long":
-            time = "_tf_200"
-            example = FitzHughNagumo(time, fno_architecture, batch_size, search_path=search_path)
-            fno_architecture["problem_dim"] = 1
-        case "hh":
-            example = HodgkinHuxley(fno_architecture, batch_size, search_path=search_path)
-            fno_architecture["problem_dim"] = 1
-
-        case "crosstruss":
-            example = CrossTruss(fno_architecture, batch_size, search_path=search_path)
-
-        case _:
-            raise ValueError("the variable which_example is typed wrong")
-
-    return example
-
+def find_file(file_name, search_path):
+    # Set the directory to start the search, for example 'C:\' on Windows or '/' on Unix-based systems.
+    # Walk through all directories and files in the search_path.
+    for root, dirs, files in os.walk(search_path):
+        if file_name in files:
+            print(f"File {file_name} found in {root}") # print the path where the file was found
+            return os.path.join(root, file_name) # full path
+    raise FileNotFoundError(f"File {file_name} not found in {search_path}")
 
 #########################################
-# function to count the number of parameters
+# Function to count the number of parameters
 #########################################
 def count_params(model):
     """ Count the number of parameters in a model. """
@@ -83,7 +36,33 @@ def count_params(model):
     return par_tot
 
 #########################################
-# function to plot the data
+# initial normalization
+#########################################    
+class UnitGaussianNormalizer(object):
+    """ 
+    Initial normalization is the point-wise gaussian normalization over the tensor x
+    dimension: (n_samples)*(nx)*(ny)
+    """
+    def __init__(self, x, eps = 1e-5):
+        self.mean = torch.mean(x, 0).to(x.device)
+        self.std = torch.std(x, 0).to(x.device)
+        self.eps = torch.tensor(eps).to(x.device)
+
+    @jaxtyped(typechecker=beartype)
+    def encode(self, x:Float[Tensor, "n_samples *n"]) -> Float[Tensor, "n_samples *n"]:
+        x = (x - self.mean) / (self.std + self.eps)
+        return x
+
+    @jaxtyped(typechecker=beartype)
+    def decode(self, x:Float[Tensor, "n_samples *n"]) -> Float[Tensor, "n_samples *n"]:
+        mean = self.mean.to(x.device)
+        std = self.std.to(x.device)
+        eps = self.eps.to(x.device)
+        x = x * (std + eps) + mean
+        return x
+
+#########################################
+# Function to plot the data
 #########################################
 def plot_data(data_plot:Tensor, idx:list, title:str, ep:int, writer, plotting:bool = True):
     """ 
@@ -134,35 +113,3 @@ class FourierFeatures(nn.Module):
             return inp
         else:
             return x
-
-#########################################
-# function to load the hyperparameters
-#########################################
-def FNO_initialize_hyperparameters(which_example:str, mode:str):
-    """
-    Function to initialize the hyperparameters in according to the best 
-    results obtained in the paper of Mishra on CNOs, by loading them from external JSON files.
-
-    which_example: str
-        The name of the example to load the hyperparameters for.
-    mode: str
-        The mode to use to load the hyperparameters (this can be either 'best' or 'default').
-    """
-    # Here I use relative path
-    config_directory = "./FNO/configurations/"
-    config_path = find_file(f"{mode}_{which_example}.json", config_directory)
-
-    # Check if the configuration file exists
-    if not os.path.exists(config_path):
-        raise ValueError(f"The configuration file with '{mode}' hyperparameters for '{which_example}' does not exist.")
-    
-    # Load the configuration from the JSON file
-    with open(config_path, 'r') as f:
-        config = json.load(f)
-    
-    # Extract the training properties and FNO architecture from the loaded configuration
-    training_properties = config["training_properties"]
-    fno_architecture = config["fno_architecture"]
-    fno_architecture["weights_norm"] = "Xavier" if fno_architecture["fun_act"] == 'gelu' else "Kaiming"
-    
-    return training_properties, fno_architecture
