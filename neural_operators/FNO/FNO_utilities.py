@@ -1,14 +1,12 @@
 """
 In this file there are some utilities functions that are used in the main file.
 """
-import os
 import json
-
 from utilities import find_file
-from FNO_benchmarks import Airfoil, DiscContTranslation, ContTranslation, AllenCahn, SinFrequency, WaveEquation, ShearLayer, Darcy
-from FNO_benchmarks import Darcy_Zongyi, Burgers_Zongyi
-from FNO_benchmarks import FitzHughNagumo, HodgkinHuxley
-from FNO_benchmarks import CrossTruss
+from FNO.FNO_benchmarks import Airfoil, DiscContTranslation, ContTranslation, AllenCahn, SinFrequency, WaveEquation, ShearLayer, Darcy
+from FNO.FNO_benchmarks import Darcy_Zongyi, Burgers_Zongyi
+from FNO.FNO_benchmarks import FitzHughNagumo, HodgkinHuxley
+from FNO.FNO_benchmarks import CrossTruss
 
 #########################################
 # function to load the data and model

@@ -39,7 +39,8 @@ import sys
 from Loss_fun import LprelLoss, H1relLoss_1D, H1relLoss
 from train_fun import train_fun, test_fun
 from FNO.FNO_arc import FNO_1D, FNO_2D
-from utilities import count_params, plot_data, FNO_initialize_hyperparameters, load_data_model
+from utilities import count_params, plot_data
+from FNO.FNO_utilities import FNO_initialize_hyperparameters, load_data_model
 
 #########################################
 # default values
