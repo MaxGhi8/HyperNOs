@@ -46,10 +46,10 @@ class CNOBlock(nn.Module):
 
         #-----------------------------------------
         # We apply Conv -> BN (optional) -> Activation
-        # Up/Downsampling happens inside Activation
+        # Up/Down-sampling happens inside Activation
 
         self.convolution = torch.nn.Conv1d(in_channels = self.in_channels, out_channels = self.out_channels,
-                                           kernel_size = 3, padding = 1)
+                                           kernel_size = 3, padding = 1, bias = not use_bn)
 
         if use_bn:
             self.batch_norm  = nn.BatchNorm1d(self.out_channels)
@@ -98,16 +98,18 @@ class ResidualBlock(nn.Module):
 
         #-----------------------------------------
         # We apply Conv -> BN (optional) -> Activation -> Conv -> BN (optional) -> Skip Connection
-        # Up/Downsampling happens inside Activation
+        # Up/Down-sampling happens inside Activation
         self.convolution1 = torch.nn.Conv1d(in_channels = self.channels,
                                             out_channels= self.channels,
                                             kernel_size = 3,
-                                            padding     = 1)
+                                            padding     = 1, 
+                                            bias        = not use_bn)
 
         self.convolution2 = torch.nn.Conv1d(in_channels = self.channels,
                                             out_channels= self.channels,
                                             kernel_size = 3,
-                                            padding     = 1)
+                                            padding     = 1,
+                                            bias        = not use_bn)
 
         if use_bn:
             self.batch_norm1 = nn.BatchNorm1d(self.channels)
@@ -260,9 +262,9 @@ class CNO1d(nn.Module):
                                         use_bn = use_bn))
 
         self.res_net_neck = ResNet(channels = self.encoder_features[self.N_layers],
-                                    size = self.encoder_sizes[self.N_layers],
-                                    num_blocks = self.N_res_neck,
-                                    use_bn = use_bn)
+                                   size = self.encoder_sizes[self.N_layers],
+                                   num_blocks = self.N_res_neck,
+                                   use_bn = use_bn)
 
         self.res_nets = torch.nn.Sequential(*self.res_nets)
 
@@ -296,7 +298,7 @@ class CNO1d(nn.Module):
             # Apply (U) block
             x = self.decoder[i](x)
 
-        # Cat & Execute Projetion
+        # Cat & Execute Projection
         x = torch.cat((x, self.ED_expansion[0](skip[0])),1)
         x = self.project(x)
 

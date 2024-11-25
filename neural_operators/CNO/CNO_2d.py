@@ -54,7 +54,8 @@ class CNOBlock(nn.Module):
         self.convolution = torch.nn.Conv2d(in_channels  = self.in_channels,
                                            out_channels = self.out_channels,
                                            kernel_size  = 3,
-                                           padding      = 1)
+                                           padding      = 1,
+                                           bias         = not use_bn)
 
         if use_bn:
             self.batch_norm = nn.BatchNorm2d(self.out_channels)
@@ -109,11 +110,13 @@ class ResidualBlock(nn.Module):
         self.convolution1 = torch.nn.Conv2d(in_channels  = self.channels,
                                             out_channels = self.channels,
                                             kernel_size  = 3,
-                                            padding      = 1)
+                                            padding      = 1,
+                                            bias         = not use_bn)
         self.convolution2 = torch.nn.Conv2d(in_channels  = self.channels,
                                             out_channels = self.channels,
                                             kernel_size  = 3,
-                                            padding      = 1)
+                                            padding      = 1,
+                                            bias         = not use_bn)
 
         if use_bn:
             self.batch_norm1 = nn.BatchNorm2d(self.channels)
