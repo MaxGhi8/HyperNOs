@@ -144,7 +144,7 @@ class ResNet(nn.Module):
 #########################################
 class CNO2d(nn.Module):
     def __init__(self, in_dim, out_dim, size, N_layers, N_res = 4, N_res_neck = 4,
-                channel_multiplier = 16, use_bn = True):
+                channel_multiplier = 16, use_bn = True, device = "cpu"):
         """
         CNO2d: Convolutional Neural Operator 2D
         
@@ -176,6 +176,7 @@ class CNO2d(nn.Module):
         """
         super(CNO2d, self).__init__()
 
+        self.problem_dim = 2 # 2D problem
         self.N_layers = int(N_layers)
         self.lift_dim = channel_multiplier//2 # Input is lifted to the half of channel_multiplier dimension
         self.in_dim   = in_dim
@@ -251,6 +252,9 @@ class CNO2d(nn.Module):
                                    num_blocks = self.N_res_neck,
                                    use_bn = use_bn)
 
+        # Move to device
+        self.to(device)
+
     def forward(self, x):
                 
         x = self.lift(x) # Execute Lift
@@ -259,7 +263,7 @@ class CNO2d(nn.Module):
         # Execute Encoder
         for i in range(self.N_layers):
 
-            # Apply ResNet & save the result
+            # Apply ResNet and save the result
             y = self.res_nets[i](x)
             skip.append(y)
 
@@ -272,7 +276,7 @@ class CNO2d(nn.Module):
         # Execute Decode
         for i in range(self.N_layers):
 
-            # Apply (I) block (ED_expansion) & cat if needed
+            # Apply (I) block (ED_expansion) and cat if needed
             if i == 0:
                 x = self.ED_expansion[self.N_layers - i](x) # BottleNeck : no cat
             else:
@@ -281,7 +285,7 @@ class CNO2d(nn.Module):
             # Apply (U) block
             x = self.decoder[i](x)
 
-        # Cat & Execute Projection
+        # Cat and Execute Projection
         x = torch.cat((x, self.ED_expansion[0](skip[0])), 1)
         x = self.project(x)
 

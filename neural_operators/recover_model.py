@@ -42,7 +42,7 @@ from scipy.io import savemat
 from Loss_fun import LprelLoss, H1relLoss_1D, H1relLoss
 from train_fun import test_fun, test_fun_tensors
 from utilities import count_params
-from FNO.FNO_utilities import load_data_model
+from FNO.FNO_utilities import FNO_load_data_model
 
 #########################################
 # default values
@@ -152,7 +152,7 @@ match p:
 # Data loader
 #########################################
 fno_architecture["problem_dim"] = 2 # default value
-example = load_data_model(which_example, fno_architecture, device, batch_size, training_samples, in_dist)
+example = FNO_load_data_model(which_example, fno_architecture, device, batch_size, training_samples, in_dist)
 train_loader = example.train_loader
 val_loader = example.val_loader 
 test_loader = example.test_loader # for final testing

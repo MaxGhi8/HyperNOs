@@ -12,7 +12,6 @@ sys.path.append("../")
 from utilities import find_file
 
 
-# In this script, we approxiamte solution of the 1d Allen-Cahn equation
 
 def main():
     n_train = 100 # number of training samples

@@ -42,9 +42,16 @@ from ray.tune.search.hyperopt import HyperOptSearch
 
 from train_fun import train_fun, test_fun
 from Loss_fun import LprelLoss, H1relLoss_1D, H1relLoss
+from utilities import count_params, plot_data, FNO_load_data_model
+
+# FNO imports
 from FNO.FNO_arc import FNO_1D, FNO_2D
-from utilities import count_params, plot_data, load_data_model
 from FNO.FNO_utilities import FNO_initialize_hyperparameters
+
+# CNO imports
+from CNO.CNO_1d import CNO1d
+from CNO.CNO_2d import CNO2d
+from CNO.CNO_utilities import CNO_load_data_model, CNO_initialize_hyperparameters 
 
 #########################################
 # raytune parameters
@@ -57,49 +64,51 @@ mode_str = "default" # test base hyperparameters, can be "default" or "best"
 #########################################
 # Choose the example to run from CLI
 #########################################
-if len(sys.argv) == 1:
-    raise ValueError("The user must choose the example to run")
-elif len(sys.argv) == 2:
-    which_example = sys.argv[1] # the example can be chosen by the user as second argument
-    exp_norm = "L1"
-    in_dist = True
+if len(sys.argv) < 3:
+    raise ValueError("The user must choose the example and the model to run")
 elif len(sys.argv) == 3:
     which_example = sys.argv[1]
-    exp_norm = sys.argv[2] # the norm can be chosen by the user as third argument (see Norm_dict below)
-    in_dist = True
+    arc           = sys.argv[2].upper()
+    exp_norm      = "L1" # default value
+    in_dist       = True # default value
 elif len(sys.argv) == 4:
     which_example = sys.argv[1]
-    exp_norm = sys.argv[2]
-    in_dist = sys.argv[3] # the in_dist can be chosen by the user as fourth argument
+    arc           = sys.argv[2].upper()
+    exp_norm      = sys.argv[3]
+    in_dist       = True # default value
+elif len(sys.argv) == 5:
+    which_example = sys.argv[1]
+    arc           = sys.argv[2].upper()
+    exp_norm      = sys.argv[3]
+    in_dist       = sys.argv[4]
 else:
     raise ValueError("The user must choose the example to run")
-
-Norm_dict = {"L1":0, "L2":1, "H1":2, "L1_smooth":3, "MSE":4}
 
 #########################################
 # Hyperparameters
 #########################################
-training_properties, fno_architecture = FNO_initialize_hyperparameters(which_example, mode=mode_str)
+hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(which_example, mode=mode_str)
 
 # loss function parameter
-training_properties["exp"] = Norm_dict[exp_norm]
+Norm_dict = {"L1":0, "L2":1, "H1":2, "L1_smooth":3, "MSE":4}
+hyperparams_train["exp"] = Norm_dict[exp_norm]
 
 # training hyperparameters 
-epochs           = training_properties["epochs"]
-p                = training_properties["exp"]
-beta             = training_properties["beta"]
-training_samples = training_properties["training_samples"]
-val_samples      = training_properties["val_samples"]
-test_samples     = training_properties["test_samples"]
+epochs           = hyperparams_train["epochs"]
+p                = hyperparams_train["exp"]
+beta             = hyperparams_train["beta"]
+training_samples = hyperparams_train["training_samples"]
+val_samples      = hyperparams_train["val_samples"]
+test_samples     = hyperparams_train["test_samples"]
 
 # fno fixed hyperparameters
-d_a          = fno_architecture["d_a"]
-d_u          = fno_architecture["d_u"]
-weights_norm = fno_architecture["weights_norm"]
-RNN          = fno_architecture["RNN"]
-FFTnorm      = fno_architecture["fft_norm"]
-retrain_fno  = fno_architecture["retrain"]
-FourierF     = fno_architecture["FourierF"]
+d_a          = hyperparams_arc["d_a"]
+d_u          = hyperparams_arc["d_u"]
+weights_norm = hyperparams_arc["weights_norm"]
+RNN          = hyperparams_arc["RNN"]
+FFTnorm      = hyperparams_arc["fft_norm"]
+retrain_fno  = hyperparams_arc["retrain"]
+FourierF     = hyperparams_arc["FourierF"]
 
 # Loss function
 match p:
@@ -108,9 +117,9 @@ match p:
     case 1:
         loss = LprelLoss(2, False) # L^2 relative norm
     case 2:
-        if fno_architecture["problem_dim"] == 1:
+        if hyperparams_arc["problem_dim"] == 1:
             loss = H1relLoss_1D(beta, False, 1.0)
-        elif fno_architecture["problem_dim"] == 2:
+        elif hyperparams_arc["problem_dim"] == 2:
             loss = H1relLoss(beta, False, 1.0) # H^1 relative norm
     case 3:
         loss = torch.nn.SmoothL1Loss() # L^1 smooth loss (Mishra)
@@ -144,14 +153,14 @@ def train_hyperparameter(config):
     print("Device: ", device)
 
     # Definition of the model
-    fno_architecture["problem_dim"] = 2 # default value
-    example = load_data_model(which_example, fno_architecture, device, batch_size, training_samples, in_dist)
+    hyperparams_arc["problem_dim"] = 2 # default value
+    example = FNO_load_data_model(which_example, hyperparams_arc, device, batch_size, training_samples, in_dist)
 
     # model = example.model
-    if fno_architecture["problem_dim"] == 1:
+    if hyperparams_arc["problem_dim"] == 1:
         model = FNO_1D(d_a, d_v, d_u, L, modes, fun_act, weights_norm, arc, 
                         RNN, FFTnorm, padding, device, retrain_fno)    
-    elif fno_architecture["problem_dim"] == 2:
+    elif hyperparams_arc["problem_dim"] == 2:
         model = FNO_2D(d_a, d_v, d_u, L, modes, modes, fun_act, weights_norm, arc, 
                         RNN, FFTnorm, padding, device, retrain_fno)    
 
@@ -203,17 +212,17 @@ def train_hyperparameter(config):
 def main(num_samples, max_num_epochs=epochs):
     # Default hyperparameters from Mishra article to start the optimization search
     default_mishra_params = [{
-        "learning_rate"  : training_properties["learning_rate"],
-        "weight_decay"   : training_properties["weight_decay"],
-        "scheduler_step" : training_properties["scheduler_step"],
-        "scheduler_gamma": training_properties["scheduler_gamma"],
-        "batch_size"     : training_properties["batch_size"],
-        "width"          : fno_architecture["width"],
-        "n_layers"       : fno_architecture["n_layers"],
-        "modes"          : fno_architecture["modes"],
-        "fun_act"        : fno_architecture["fun_act"],
-        "arc"            : fno_architecture["arc"],
-        "padding"        : fno_architecture["padding"]
+        "learning_rate"  : hyperparams_train["learning_rate"],
+        "weight_decay"   : hyperparams_train["weight_decay"],
+        "scheduler_step" : hyperparams_train["scheduler_step"],
+        "scheduler_gamma": hyperparams_train["scheduler_gamma"],
+        "batch_size"     : hyperparams_train["batch_size"],
+        "width"          : hyperparams_arc["width"],
+        "n_layers"       : hyperparams_arc["n_layers"],
+        "modes"          : hyperparams_arc["modes"],
+        "fun_act"        : hyperparams_arc["fun_act"],
+        "arc"            : hyperparams_arc["arc"],
+        "padding"        : hyperparams_arc["padding"]
     }]
 
     config = {

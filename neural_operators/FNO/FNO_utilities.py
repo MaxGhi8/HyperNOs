@@ -11,7 +11,7 @@ from FNO.FNO_benchmarks import CrossTruss
 #########################################
 # function to load the data and model
 #########################################
-def load_data_model(which_example:str, fno_architecture, device, batch_size, training_samples, in_dist, search_path:str='/'):
+def FNO_load_data_model(which_example:str, fno_architecture, device, batch_size, training_samples, in_dist, search_path:str='/'):
     """
     Function to load the data and the model.
     """

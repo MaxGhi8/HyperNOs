@@ -1,7 +1,15 @@
 data/
 TrainedModels/
-*.png
+plots/*.png
 *.jpeg
 *.jpg
 .python-version
 __pycache__/
+*.aux
+*.log
+*.out
+*.synctex.gz
+*.synctex(busy)
+*.fdb_latexmk
+*.fls
+*.tdo

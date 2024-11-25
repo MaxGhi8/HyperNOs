@@ -12,7 +12,7 @@ from torch.utils.data import Dataset
 import sys
 sys.path.append("../")
 from utilities import find_file, FourierFeatures
-from CNO_2d import CNO2d
+from CNO.CNO_2d import CNO2d as CNO
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -171,57 +171,18 @@ class ShearLayer:
             assert self.in_size <= 128        
         else:
             raise ValueError("You must specify the computational grid size.")
-        
-        if "N_layers" in network_properties:
-            N_layers = network_properties["N_layers"]
-        else:
-            raise ValueError("You must specify the number of (D) + (U) blocks.")
-        
-        if "N_res" in network_properties:
-                N_res = network_properties["N_res"]        
-        else:
-            raise ValueError("You must specify the number of (R) blocks.")
-        
-        if "N_res_neck" in network_properties:
-                N_res_neck = network_properties["N_res_neck"]        
-        else:
-            raise ValueError("You must specify the number of (R)-neck blocks.")
 
         if "s" in network_properties:
             s = size
         else:
             s = 64 # Default value
-        #----------------------------------------------------------------------
-        kernel_size = network_properties["kernel_size"]
-        channel_multiplier = network_properties["channel_multiplier"]
-        retrain = network_properties["retrain"]
-        self.N_Fourier_F = network_properties["FourierF"]
-        
-        # Filter properties: --------------------------------------------------
-        cutoff_den = network_properties["cutoff_den"]
-        filter_size = network_properties["filter_size"]
-        half_width_mult = network_properties["half_width_mult"]
-        lrelu_upsampling = network_properties["lrelu_upsampling"]
-        activation = network_properties["activation"]
 
+        # Seed
+        self.N_Fourier_F = network_properties["FourierF"]
         retrain = network_properties["retrain"]
         if retrain > 0:
             torch.manual_seed(retrain)
-            torch.cuda.manual_seed(retrain)
         
-        self.model = CNO2d(in_dim  = 1 + 2*self.N_Fourier_F,     # Number of input channels.
-                        in_size = self.in_size,                # Input spatial size
-                        N_layers = N_layers,                   # Number of (D) and (U) Blocks in the network
-                        N_res = N_res,                         # Number of (R) Blocks per level
-                        N_res_neck = N_res_neck,
-                        channel_multiplier = channel_multiplier,
-                        conv_kernel=kernel_size,
-                        cutoff_den = cutoff_den,
-                        filter_size=filter_size,  
-                        lrelu_upsampling = lrelu_upsampling,
-                        half_width_mult  = half_width_mult,
-                        activation = activation).to(device)
-
         # Change number of workers according to your preference
         num_workers = 0
         self.train_loader = DataLoader(
@@ -260,7 +221,7 @@ class SinFrequencyDataset(Dataset):
         self.max_model = self.reader['max_out'][()]
         
         if in_dist:
-            self.file_data = find_file("PoissonData_64x64_IN.h5", search_path)
+            self.file_data = file_data_train
         else:
             self.file_data = find_file("PoissonData_64x64_OUT.h5", search_path)
 
@@ -279,11 +240,6 @@ class SinFrequencyDataset(Dataset):
             else:
                 self.length = 256
                 self.start = 0 
-        
-        # Load different resolutions
-        if s!=64:
-            self.file_data = "data/PoissonData_NEW_s" + str(s) + ".h5"
-            self.start = 0
         
         # If the reader changed.
         self.reader = h5py.File(self.file_data, 'r')
@@ -328,59 +284,15 @@ class SinFrequency:
 
         if "in_size" in network_properties:
             self.in_size = network_properties["in_size"]
-            assert self.in_size<=128        
+            assert self.in_size <= 128        
         else:
             raise ValueError("You must specify the computational grid size.")
-        
-        if "N_layers" in network_properties:
-            N_layers = network_properties["N_layers"]
-        else:
-            raise ValueError("You must specify the number of (D) + (U) blocks.")
-        
-        if "N_res" in network_properties:
-                N_res = network_properties["N_res"]        
-        else:
-            raise ValueError("You must specify the number of (R) blocks.")
-        
-        if "N_res_neck" in network_properties:
-                N_res_neck = network_properties["N_res_neck"]        
-        else:
-            raise ValueError("You must specify the number of (R)-neck blocks.")
-        
-        #----------------------------------------------------------------------
-        kernel_size = network_properties["kernel_size"]
-        channel_multiplier = network_properties["channel_multiplier"]
-        retrain = network_properties["retrain"]
-        self.N_Fourier_F = network_properties["FourierF"]
-        
-        #Filter properties: ---------------------------------------------------
-        cutoff_den = network_properties["cutoff_den"]
-        filter_size = network_properties["filter_size"]
-        half_width_mult = network_properties["half_width_mult"]
-        lrelu_upsampling = network_properties["lrelu_upsampling"]
-        activation = network_properties["activation"]
 
+        # Seed
+        self.N_Fourier_F = network_properties["FourierF"]
         retrain = network_properties["retrain"]
         if retrain > 0:
             torch.manual_seed(retrain)
-        
-        self.model = CNO(in_dim  = 1 + 2*self.N_Fourier_F,      # Number of input channels.
-                        in_size = self.in_size,                # Input spatial size
-                        N_layers = N_layers,                   # Number of (D) and (U) Blocks in the network
-                        N_res = N_res,                         # Number of (R) Blocks per level
-                        N_res_neck = N_res_neck,
-                        channel_multiplier = channel_multiplier,
-                        conv_kernel=kernel_size,
-                        cutoff_den = cutoff_den,
-                        filter_size=filter_size,  
-                        lrelu_upsampling = lrelu_upsampling,
-                        half_width_mult  = half_width_mult,
-                        activation = activation).to(device)
-
-        
-
-        #Change number of workers according to your preference
-        num_workers = 0
 
         # Change number of workers according to your preference
         num_workers = 0
@@ -408,11 +320,12 @@ class SinFrequency:
 #   Out-of-distribution testing samples: 0 to 256 (256)
 
 class WaveEquationDataset(Dataset):
-    def __init__(self, which="training", nf=0, training_samples = 512, t = 5, s = 64, in_dist = True):
+    def __init__(self, which="training", nf=0, training_samples = 512, t = 5, s = 64, in_dist = True, search_path = "/"):
         
         # Note: Normalization constants for both ID and OOD should be used from the training set!
         #Load normalization constants from the TRAINING set:
-        file_data_train = "data/WaveData_64x64_IN.h5"
+        file_data_train = find_file("WaveData_64x64_IN.h5", search_path)
+
         self.reader = h5py.File(file_data_train, 'r')
         self.min_data = self.reader['min_u0'][()]
         self.max_data = self.reader['max_u0'][()]
@@ -421,9 +334,9 @@ class WaveEquationDataset(Dataset):
         
         #Default file:       
         if in_dist:
-            self.file_data = "data/WaveData_64x64_IN.h5"
+            self.file_data = file_data_train
         else:
-            self.file_data = "data/WaveData_64x64_OUT.h5"
+            self.file_data = find_file("WaveData_64x64_OUT.h5", search_path)
         
         #What time? DEFAULT : t = 5
         self.t = t
@@ -485,70 +398,42 @@ class WaveEquationDataset(Dataset):
 
 
 class WaveEquation:
-    def __init__(self, network_properties, device, batch_size, training_samples = 1024, s = 64, in_dist = True):
+    def __init__(self, network_properties, device, batch_size, training_samples = 1024, s = 64, in_dist = True, search_path = "/"):
         
         if "in_size" in network_properties:
             self.in_size = network_properties["in_size"]
-            assert self.in_size<=128        
+            assert self.in_size <= 128        
         else:
             raise ValueError("You must specify the computational grid size.")
         
-        if "N_layers" in network_properties:
-            N_layers = network_properties["N_layers"]
-        else:
-            raise ValueError("You must specify the number of (D) + (U) blocks.")
-        
-        if "N_res" in network_properties:
-                N_res = network_properties["N_res"]        
-        else:
-            raise ValueError("You must specify the number of (R) blocks.")
-        
-        if "N_res_neck" in network_properties:
-                N_res_neck = network_properties["N_res_neck"]        
-        else:
-            raise ValueError("You must specify the number of (R)-neck blocks.")
-        
-        #Load default parameters if they are not in network_properties
-        network_properties = default_param(network_properties)
-        
-        #----------------------------------------------------------------------
-        kernel_size = network_properties["kernel_size"]
-        channel_multiplier = network_properties["channel_multiplier"]
-        retrain = network_properties["retrain"]
+        # Seed
         self.N_Fourier_F = network_properties["FourierF"]
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            torch.manual_seed(retrain)
         
-        cutoff_den = network_properties["cutoff_den"]
-        filter_size = network_properties["filter_size"]
-        half_width_mult = network_properties["half_width_mult"]
-        lrelu_upsampling = network_properties["lrelu_upsampling"]
-        activation = network_properties["activation"]
-        ##----------------------------------------------------------------------
-        
-        torch.manual_seed(retrain)
-        
-        self.model = CNO(in_dim  = 1 + 2*self.N_Fourier_F,      # Number of input channels.
-                        in_size = self.in_size,                # Input spatial size
-                        N_layers = N_layers,                   # Number of (D) and (U) Blocks in the network
-                        N_res = N_res,                         # Number of (R) Blocks per level
-                        N_res_neck = N_res_neck,
-                        channel_multiplier = channel_multiplier,
-                        conv_kernel=kernel_size,
-                        cutoff_den = cutoff_den,
-                        filter_size=filter_size,  
-                        lrelu_upsampling = lrelu_upsampling,
-                        half_width_mult  = half_width_mult,
-                        activation = activation).to(device)
-
         #Change number of workers accoirding to your preference
         num_workers = 0
-        
-        self.train_loader = DataLoader(WaveEquationDataset("training", self.N_Fourier_F, training_samples, 5, s), batch_size=batch_size, shuffle=True, num_workers=num_workers)
-        self.val_loader = DataLoader(WaveEquationDataset("validation", self.N_Fourier_F, training_samples, 5, s), batch_size=batch_size, shuffle=False, num_workers=num_workers)
-        self.test_loader = DataLoader(WaveEquationDataset("test", self.N_Fourier_F, training_samples, 5, s, in_dist), batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        self.train_loader = DataLoader(
+            WaveEquationDataset("training", self.N_Fourier_F, training_samples, 5, s, search_path=search_path),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers
+            )
+        self.val_loader = DataLoader(
+            WaveEquationDataset("validation", self.N_Fourier_F, training_samples, 5, s, search_path=search_path),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers
+            )
+        self.test_loader = DataLoader(
+            WaveEquationDataset("test", self.N_Fourier_F, training_samples, 5, s, in_dist, search_path=search_path),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers
+            )
 
 #------------------------------------------------------------------------------
-#------------------------------------------------------------------------------
-
 # Allen-Cahn data
 #   From 0 to 256 : training samples (256)
 #   From 256 to 256 + 128 : validation samples (128)
@@ -556,11 +441,11 @@ class WaveEquation:
 #   Out-of-distribution testing samples: 0 to 128 (128)
 
 class AllenCahnDataset(Dataset):
-    def __init__(self, which="training", nf = 0, training_samples = 256, s=64, in_dist = True):
+    def __init__(self, which="training", nf = 0, training_samples = 256, s=64, in_dist = True, search_path = "/"):
 
         # Note: Normalization constants for both ID and OOD should be used from the training set!
         # Load normalization constants from the TRAINING set:
-        file_data_train = "data/AllenCahn_64x64_IN.h5"
+        file_data_train = find_file("AllenCahn_64x64_IN.h5", search_path)
         self.reader = h5py.File(file_data_train, 'r')
         self.min_data = self.reader['min_u0'][()]
         self.max_data = self.reader['max_u0'][()]
@@ -569,9 +454,10 @@ class AllenCahnDataset(Dataset):
         
         #Default file:
         if in_dist:
-            self.file_data = "data/AllenCahn_64x64_IN.h5"
+            self.file_data = file_data_train
         else:            
-            self.file_data = "data/AllenCahn_64x64_OUT.h5"
+            self.file_data = find_file("AllenCahn_64x64_OUT.h5", search_path)
+
         self.reader = h5py.File(self.file_data, 'r')
                 
         if which == "training":
@@ -624,88 +510,57 @@ class AllenCahnDataset(Dataset):
         return grid
 
 class AllenCahn:
-    def __init__(self, network_properties, device, batch_size, training_samples = 1024,  s = 64, in_dist = True):
+    def __init__(self, network_properties, device, batch_size, training_samples = 1024,  s = 64, in_dist = True, search_path = "/"):
         
         if "in_size" in network_properties:
             self.in_size = network_properties["in_size"]
-            assert self.in_size<=128        
+            assert self.in_size <= 128        
         else:
             raise ValueError("You must specify the computational grid size.")
         
-        if "N_layers" in network_properties:
-            N_layers = network_properties["N_layers"]
-        else:
-            raise ValueError("You must specify the number of (D) + (U) blocks.")
-        
-        if "N_res" in network_properties:
-                N_res = network_properties["N_res"]        
-        else:
-            raise ValueError("You must specify the number of (R) blocks.")
-        
-        if "N_res_neck" in network_properties:
-                N_res_neck = network_properties["N_res_neck"]        
-        else:
-            raise ValueError("You must specify the number of (R)-neck blocks.")
-        
-        #Load default parameters if they are not in network_properties
-        network_properties = default_param(network_properties)
-        
-        #----------------------------------------------------------------------
-        kernel_size = network_properties["kernel_size"]
-        channel_multiplier = network_properties["channel_multiplier"]
-        retrain = network_properties["retrain"]
+        # Seed 
         self.N_Fourier_F = network_properties["FourierF"]
-        
-        cutoff_den = network_properties["cutoff_den"]
-        filter_size = network_properties["filter_size"]
-        half_width_mult = network_properties["half_width_mult"]
-        lrelu_upsampling = network_properties["lrelu_upsampling"]
-        activation = network_properties["activation"]
-        ##----------------------------------------------------------------------
-        
-        torch.manual_seed(retrain)
-        
-        self.model = CNO(in_dim  = 1 + 2*self.N_Fourier_F,      # Number of input channels.
-                        in_size = self.in_size,                # Input spatial size
-                        N_layers = N_layers,                   # Number of (D) and (U) Blocks in the network
-                        N_res = N_res,                         # Number of (R) Blocks per level
-                        N_res_neck = N_res_neck,
-                        channel_multiplier = channel_multiplier,
-                        conv_kernel=kernel_size,
-                        cutoff_den = cutoff_den,
-                        filter_size=filter_size,  
-                        lrelu_upsampling = lrelu_upsampling,
-                        half_width_mult  = half_width_mult,
-                        activation = activation).to(device)
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            torch.manual_seed(retrain)
 
-        #----------------------------------------------------------------------
-        
-
-        #Change number of workers accoirding to your preference
+        # Change number of workers according to your preference
         num_workers = 0
-
-        self.train_loader = DataLoader(AllenCahnDataset("training", self.N_Fourier_F, training_samples, s), batch_size=batch_size, shuffle=True, num_workers=num_workers)
-        self.val_loader = DataLoader(AllenCahnDataset("validation", self.N_Fourier_F, training_samples, s), batch_size=batch_size, shuffle=True, num_workers=num_workers)
-        self.test_loader = DataLoader(AllenCahnDataset("test", self.N_Fourier_F, training_samples, s, in_dist), batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        self.train_loader = DataLoader(
+            AllenCahnDataset("training", self.N_Fourier_F, training_samples, s, search_path=search_path),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers
+            )
+        self.val_loader = DataLoader(
+            AllenCahnDataset("validation", self.N_Fourier_F, training_samples, s, search_path=search_path),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers
+            )
+        self.test_loader = DataLoader(
+            AllenCahnDataset("test", self.N_Fourier_F, training_samples, s, in_dist, search_path=search_path),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers
+            )
 
 #------------------------------------------------------------------------------
-#------------------------------------------------------------------------------
-
-#Smooth Transport data
+# Smooth Transport data
 #   From 0 to 512 : training samples (512)
 #   From 512 to 512 + 256 : validation samples (256)
 #   From 512 + 256 to 512 + 256 + 256 : test samples (256)
 #   Out-of-distribution testing samples: 0 to 256 (256)
 
 class ContTranslationDataset(Dataset):
-    def __init__(self, which="training", nf=0, training_samples = 512, s = 64, in_dist = True):
+    def __init__(self, which="training", nf=0, training_samples = 512, s = 64, in_dist = True, search_path = "/"):
         
         #The data is already normalized        
         #Default file:       
         if in_dist:
-            self.file_data = "data/ContTranslation_64x64_IN.h5"
+            self.file_data = find_file("ContTranslation_64x64_IN.h5", search_path)
         else:
-            self.file_data = "data/ContTranslation_64x64_OUT.h5"
+            self.file_data = find_file("ContTranslation_64x64_OUT.h5", search_path)
         
         self.reader = h5py.File(self.file_data, 'r') 
 
@@ -756,7 +611,7 @@ class ContTranslationDataset(Dataset):
         return grid
 
 class ContTranslation:
-    def __init__(self, network_properties, device, batch_size, training_samples = 512,  s = 64, in_dist = True):
+    def __init__(self, network_properties, device, batch_size, training_samples = 512,  s = 64, in_dist = True, search_path = "/"):
 
         if "in_size" in network_properties:
             self.in_size = network_properties["in_size"]
@@ -764,79 +619,49 @@ class ContTranslation:
         else:
             raise ValueError("You must specify the computational grid size.")
         
-        if "N_layers" in network_properties:
-            N_layers = network_properties["N_layers"]
-        else:
-            raise ValueError("You must specify the number of (D) + (U) blocks.")
-        
-        if "N_res" in network_properties:
-                N_res = network_properties["N_res"]        
-        else:
-            raise ValueError("You must specify the number of (R) blocks.")
-        
-        if "N_res_neck" in network_properties:
-                N_res_neck = network_properties["N_res_neck"]        
-        else:
-            raise ValueError("You must specify the number of (R)-neck blocks.")
-        
-        #Load default parameters if they are not in network_properties
-        network_properties = default_param(network_properties)
-        
-        #----------------------------------------------------------------------
-        kernel_size = network_properties["kernel_size"]
-        channel_multiplier = network_properties["channel_multiplier"]
-        retrain = network_properties["retrain"]
+        # Seed
         self.N_Fourier_F = network_properties["FourierF"]
-        
-        cutoff_den = network_properties["cutoff_den"]
-        filter_size = network_properties["filter_size"]
-        half_width_mult = network_properties["half_width_mult"]
-        lrelu_upsampling = network_properties["lrelu_upsampling"]
-        activation = network_properties["activation"]
-        ##----------------------------------------------------------------------
-        
-        torch.manual_seed(retrain)
-        
-        self.model = CNO(in_dim  = 1 + 2*self.N_Fourier_F,      # Number of input channels.
-                        in_size = self.in_size,                # Input spatial size
-                        N_layers = N_layers,                   # Number of (D) and (U) Blocks in the network
-                        N_res = N_res,                         # Number of (R) Blocks per level
-                        N_res_neck = N_res_neck,
-                        channel_multiplier = channel_multiplier,
-                        conv_kernel=kernel_size,
-                        cutoff_den = cutoff_den,
-                        filter_size=filter_size,  
-                        lrelu_upsampling = lrelu_upsampling,
-                        half_width_mult  = half_width_mult,
-                        activation = activation).to(device)
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            torch.manual_seed(retrain)
 
-        #----------------------------------------------------------------------
-
-        #Change number of workers accoirding to your preference
+        # Change number of workers according to your preference
         num_workers = 0
-
-        self.train_loader = DataLoader(ContTranslationDataset("training", self.N_Fourier_F, training_samples, s), batch_size=batch_size, shuffle=True, num_workers=num_workers)
-        self.val_loader = DataLoader(ContTranslationDataset("validation", self.N_Fourier_F, training_samples, s), batch_size=batch_size, shuffle=False, num_workers=num_workers)
-        self.test_loader = DataLoader(ContTranslationDataset("test", self.N_Fourier_F, training_samples, s,in_dist), batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        self.train_loader = DataLoader(
+            ContTranslationDataset("training", self.N_Fourier_F, training_samples, s, search_path=search_path),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers
+            )
+        self.val_loader = DataLoader(
+            ContTranslationDataset("validation", self.N_Fourier_F, training_samples, s, search_path=search_path),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers
+            )
+        self.test_loader = DataLoader(
+            ContTranslationDataset("test", self.N_Fourier_F, training_samples, s,in_dist, search_path=search_path),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers
+            )
 
 #------------------------------------------------------------------------------
-#------------------------------------------------------------------------------
-
-#Discontinuous Transport data
+# Discontinuous Transport data
 #   From 0 to 512 : training samples (512)
 #   From 512 to 512 + 256 : validation samples (256)
 #   From 512 + 256 to 512 + 256 + 256 : test samples (256)
 #   Out-of-distribution testing samples: 0 to 256 (256)
 
 class DiscContTranslationDataset(Dataset):
-    def __init__(self, which="training", nf=0, training_samples = 512, s = 64, in_dist = True):
+    def __init__(self, which="training", nf=0, training_samples = 512, s = 64, in_dist = True, search_path = "/"):
         
         #The data is already normalized
         
         if in_dist:
-            self.file_data = "data/DiscTranslation_64x64_IN.h5"
+            self.file_data = find_file("DiscTranslation_64x64_IN.h5", search_path)
         else:
-            self.file_data = "data/DiscTranslation_64x64_OUT.h5"
+            self.file_data = find_file("DiscTranslation_64x64_OUT.h5", search_path)
         
         if which == "training":
             self.length = training_samples
@@ -889,86 +714,57 @@ class DiscContTranslationDataset(Dataset):
         return grid
 
 class DiscContTranslation:
-    def __init__(self, network_properties, device, batch_size, training_samples = 512, s = 64, in_dist = True):
+    def __init__(self, network_properties, device, batch_size, training_samples = 512, s = 64, in_dist = True, search_path = "/"):
         
         
         if "in_size" in network_properties:
             self.in_size = network_properties["in_size"]
-            assert self.in_size<=128        
+            assert self.in_size <= 128        
         else:
             raise ValueError("You must specify the computational grid size.")
 
-        if "N_layers" in network_properties:
-            N_layers = network_properties["N_layers"]
-        else:
-            raise ValueError("You must specify the number of (D) + (U) blocks.")
-
-        if "N_res" in network_properties:
-            N_res = network_properties["N_res"]        
-        else:
-            raise ValueError("You must specify the number of (R) blocks.")
-
-        if "N_res_neck" in network_properties:
-            N_res_neck = network_properties["N_res_neck"]        
-        else:
-            raise ValueError("You must specify the number of (R)-neck blocks.")
-
-        #Load default parameters if they are not in network_properties
-        network_properties = default_param(network_properties)
-
-        #----------------------------------------------------------------------
-        kernel_size = network_properties["kernel_size"]
-        channel_multiplier = network_properties["channel_multiplier"]
-        retrain = network_properties["retrain"]
+        # Seed
         self.N_Fourier_F = network_properties["FourierF"]
-
-        cutoff_den = network_properties["cutoff_den"]
-        filter_size = network_properties["filter_size"]
-        half_width_mult = network_properties["half_width_mult"]
-        lrelu_upsampling = network_properties["lrelu_upsampling"]
-        activation = network_properties["activation"]
-
-        torch.manual_seed(retrain)
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            torch.manual_seed(retrain)
         
-        self.model = CNO(in_dim  = 1 + 2*self.N_Fourier_F,      # Number of input channels.
-                        in_size = self.in_size,                # Input spatial size
-                        N_layers = N_layers,                   # Number of (D) and (U) Blocks in the network
-                        N_res = N_res,                         # Number of (R) Blocks per level
-                        N_res_neck = N_res_neck,
-                        channel_multiplier = channel_multiplier,
-                        conv_kernel=kernel_size,
-                        cutoff_den = cutoff_den,
-                        filter_size=filter_size,  
-                        lrelu_upsampling = lrelu_upsampling,
-                        half_width_mult  = half_width_mult,
-                        activation = activation).to(device)
-
-
         #Change number of workers accoirding to your preference
         num_workers = 0
-
-        self.train_loader = DataLoader(DiscContTranslationDataset("training", self.N_Fourier_F, training_samples, s), batch_size=batch_size, shuffle=True, num_workers=num_workers)
-        self.val_loader = DataLoader(DiscContTranslationDataset("validation", self.N_Fourier_F, training_samples, s), batch_size=batch_size, shuffle=False, num_workers=num_workers)
-        self.test_loader = DataLoader(DiscContTranslationDataset("test", self.N_Fourier_F, training_samples, s, in_dist), batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        self.train_loader = DataLoader(
+            DiscContTranslationDataset("training", self.N_Fourier_F, training_samples, s, search_path=search_path),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers
+            )
+        self.val_loader = DataLoader(
+            DiscContTranslationDataset("validation", self.N_Fourier_F, training_samples, s, search_path=search_path),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers
+            )
+        self.test_loader = DataLoader(
+            DiscContTranslationDataset("test", self.N_Fourier_F, training_samples, s, in_dist, search_path=search_path),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers
+            )
 
 #------------------------------------------------------------------------------
-#------------------------------------------------------------------------------
-
-#Compressible Euler data
+# Compressible Euler data
 #   From 0 to 750 : training samples (750)
 #   From 750 to 750 + 128 : validation samples (128)
 #   From 750 + 128 to 750 + 128 + 128 : test samples (128)
 #   Out-of-distribution testing samples: 0 to 128 (128)
 
 class AirfoilDataset(Dataset):
-    def __init__(self, which="training", nf=0, training_samples = 512, s = 128, in_dist = True):
+    def __init__(self, which="training", nf=0, training_samples = 512, s = 128, in_dist = True, search_path = "/"):
         
         #We DO NOT normalize the data in this case
-        
         if in_dist:
-            self.file_data = "data/Airfoil_128x128_IN.h5"
+            self.file_data = find_file("Airfoil_128x128_IN.h5", search_path)
         else:
-            self.file_data = "data/Airfoil_128x128_OUT.h5"
+            self.file_data = find_file("Airfoil_128x128_OUT.h5", search_path)
         
         #in_dist = False
         
@@ -1023,96 +819,66 @@ class AirfoilDataset(Dataset):
         return grid
 
 class Airfoil:
-    def __init__(self, network_properties, device, batch_size, training_samples = 512, s = 128, in_dist = True):
+    def __init__(self, network_properties, device, batch_size, training_samples = 512, s = 128, in_dist = True, search_path = "/"):
         #Must have parameters: ------------------------------------------------        
 
         if "in_size" in network_properties:
             self.in_size = network_properties["in_size"]
-            assert self.in_size<=128        
+            assert self.in_size <= 128        
         else:
             raise ValueError("You must specify the computational grid size.")
         
-        if "N_layers" in network_properties:
-            N_layers = network_properties["N_layers"]
-        else:
-            raise ValueError("You must specify the number of (D) + (U) blocks.")
-        
-        if "N_res" in network_properties:
-                N_res = network_properties["N_res"]        
-        else:
-            raise ValueError("You must specify the number of (R) blocks.")
-        
-        if "N_res_neck" in network_properties:
-                N_res_neck = network_properties["N_res_neck"]        
-        else:
-            raise ValueError("You must specify the number of (R)-neck blocks.")
-        
-        #Load default parameters if they are not in network_properties
-        network_properties = default_param(network_properties)
-        
-        #----------------------------------------------------------------------
-        kernel_size = network_properties["kernel_size"]
-        channel_multiplier = network_properties["channel_multiplier"]
-        retrain = network_properties["retrain"]
+        # Seed
         self.N_Fourier_F = network_properties["FourierF"]
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            torch.manual_seed(retrain)
         
-        #Filter properties: ---------------------------------------------------
-        cutoff_den = network_properties["cutoff_den"]
-        filter_size = network_properties["filter_size"]
-        half_width_mult = network_properties["half_width_mult"]
-        lrelu_upsampling = network_properties["lrelu_upsampling"]
-        activation = network_properties["activation"]
-        ##----------------------------------------------------------------------
-        
-        torch.manual_seed(retrain)
-        
-        self.model = CNO(in_dim  = 1 + 2*self.N_Fourier_F,      # Number of input channels.
-                        in_size = self.in_size,                # Input spatial size
-                        N_layers = N_layers,                   # Number of (D) and (U) Blocks in the network
-                        N_res = N_res,                         # Number of (R) Blocks per level
-                        N_res_neck = N_res_neck,
-                        channel_multiplier = channel_multiplier,
-                        conv_kernel=kernel_size,
-                        cutoff_den = cutoff_den,
-                        filter_size=filter_size,  
-                        lrelu_upsampling = lrelu_upsampling,
-                        half_width_mult  = half_width_mult,
-                        activation = activation).to(device)
-        
-        #----------------------------------------------------------------------
-
-        #Change number of workers accoirding to your preference
+        # Change number of workers according to your preference
         num_workers = 0
-
-        self.train_loader = DataLoader(AirfoilDataset("training", self.N_Fourier_F, training_samples, s), batch_size=batch_size, shuffle=True, num_workers=num_workers)
-        self.val_loader = DataLoader(AirfoilDataset("validation", self.N_Fourier_F, training_samples, s), batch_size=batch_size, shuffle=False, num_workers=num_workers)
-        self.test_loader = DataLoader(AirfoilDataset("test", self.N_Fourier_F, training_samples, s, in_dist), batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        self.train_loader = DataLoader(
+            AirfoilDataset("training", self.N_Fourier_F, training_samples, s, search_path=search_path), 
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers
+            )
+        self.val_loader = DataLoader(
+            AirfoilDataset("validation", self.N_Fourier_F, training_samples, s, search_path=search_path),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers
+            )
+        self.test_loader = DataLoader(
+            AirfoilDataset("test", self.N_Fourier_F, training_samples, s, in_dist, search_path=search_path),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers
+            )
 
 #------------------------------------------------------------------------------
-#------------------------------------------------------------------------------
-
-#Darcy Flow data
+# Darcy Flow data
 #   From 0 to 256 : training samples (256)
 #   From 256 to 256 + 128 : validation samples (128)
 #   From 256 + 128 to 256 + 128 + 128 : test samples (128)
 #   Out-of-distribution testing samples: 0 to 128 (128)
 
 class DarcyDataset(Dataset):
-    def __init__(self, which="training", nf=0, training_samples=256, insample=True):
+    def __init__(self, which="training", nf=0, training_samples=256, insample=True, search_path = "/"):
         
         # Note: Normalization constants for both ID and OOD should be used from the training set!
         # Load normalization constants from the TRAINING set:
-        file_data_train = "data/Darcy_64x64_IN.h5"
+        file_data_train = find_file("Darcy_64x64_IN.h5", search_path)
+
         self.reader = h5py.File(file_data_train, 'r')
-        self.min_data = self.reader['min_u0'][()]
-        self.max_data = self.reader['max_u0'][()]
-        self.min_model = self.reader['min_u'][()]
-        self.max_model = self.reader['max_u'][()]
+        self.min_data = self.reader['min_inp'][()]
+        self.max_data = self.reader['max_inp'][()]
+        self.min_model = self.reader['min_out'][()]
+        self.max_model = self.reader['max_out'][()]
         
         if insample:
-            self.file_data = "data/Darcy_64x64_IN.h5"
+            self.file_data = file_data_train
         else:
-            self.file_data = "data/Darcy_64x64_OUT.h5"
+            self.file_data = find_file("Darcy_64x64_OUT.h5", find_file)
     
         self.reader = h5py.File(self.file_data, 'r')
                 
@@ -1165,67 +931,39 @@ class DarcyDataset(Dataset):
         return grid
     
 class Darcy:
-    def __init__(self, network_properties, device, batch_size, training_samples = 512,  s = 64, in_dist = True):
+    def __init__(self, network_properties, device, batch_size, training_samples = 512,  s = 64, in_dist = True, search_path = "/"):
         
         #Must have parameters: ------------------------------------------------        
 
         if "in_size" in network_properties:
             self.in_size = network_properties["in_size"]
-            assert self.in_size<=128        
+            assert self.in_size <= 128        
         else:
             raise ValueError("You must specify the computational grid size.")
 
-        if "N_layers" in network_properties:
-            N_layers = network_properties["N_layers"]
-        else:
-            raise ValueError("You must specify the number of (D) + (U) blocks.")
-        
-        if "N_res" in network_properties:
-            N_res = network_properties["N_res"]        
-        else:
-            raise ValueError("You must specify the number of (R) blocks.")
-
-        if "N_res_neck" in network_properties:
-            N_res_neck = network_properties["N_res_neck"]        
-        else:
-            raise ValueError("You must specify the number of (R)-neck blocks.")
-
-        #Load default parameters if they are not in network_properties
-        network_properties = default_param(network_properties)
-
-        #----------------------------------------------------------------------
-        kernel_size = network_properties["kernel_size"]
-        channel_multiplier = network_properties["channel_multiplier"]
-        retrain = network_properties["retrain"]
+        # Seed
         self.N_Fourier_F = network_properties["FourierF"]
-        
-        cutoff_den = network_properties["cutoff_den"]
-        filter_size = network_properties["filter_size"]
-        half_width_mult = network_properties["half_width_mult"]
-        lrelu_upsampling = network_properties["lrelu_upsampling"]
-        activation = network_properties["activation"]
-        ##----------------------------------------------------------------------
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            torch.manual_seed(retrain)
 
-        torch.manual_seed(retrain)
-
-        self.model = CNO(in_dim  = 1 + 2*self.N_Fourier_F,      # Number of input channels.
-                        in_size = self.in_size,                 # Input spatial size
-                        N_layers = N_layers,                    # Number of (D) and (U) Blocks in the network
-                        N_res = N_res,                          # Number of (R) Blocks per level
-                        N_res_neck = N_res_neck,
-                        channel_multiplier = channel_multiplier,
-                        conv_kernel=kernel_size,
-                        cutoff_den = cutoff_den,
-                        filter_size=filter_size,  
-                        lrelu_upsampling = lrelu_upsampling,
-                        half_width_mult  = half_width_mult,
-                        activation = activation).to(device)
-
-        #----------------------------------------------------------------------
-
-        #Change number of workers accoirding to your preference
+        # Change number of workers according to your preference
         num_workers = 0
-
-        self.train_loader = DataLoader(DarcyDataset("training", self.N_Fourier_F, training_samples), batch_size=batch_size, shuffle=True, num_workers=num_workers)
-        self.val_loader = DataLoader(DarcyDataset("validation", self.N_Fourier_F, training_samples), batch_size=batch_size, shuffle=True, num_workers=num_workers)
-        self.test_loader = DataLoader(DarcyDataset("testing", self.N_Fourier_F, training_samples, in_dist), batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        self.train_loader = DataLoader(
+            DarcyDataset("training", self.N_Fourier_F, training_samples, search_path=search_path),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers
+            )
+        self.val_loader = DataLoader(
+            DarcyDataset("validation", self.N_Fourier_F, training_samples, search_path=search_path),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers
+            )
+        self.test_loader = DataLoader(
+            DarcyDataset("testing", self.N_Fourier_F, training_samples, in_dist, search_path=search_path),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers
+            )
