@@ -149,17 +149,20 @@ class ShearLayer:
             ShearLayerDataset("training", self.N_Fourier_F, training_samples, s, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=True, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
         self.val_loader = DataLoader(
             ShearLayerDataset("validation", self.N_Fourier_F, training_samples, s, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=False, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
         self.test_loader = DataLoader(
             ShearLayerDataset("test", self.N_Fourier_F, training_samples, s, in_dist, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=False, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
 
 #------------------------------------------------------------------------------
 # Poisson data (from Mishra CNO article) 
@@ -253,17 +256,20 @@ class SinFrequency:
             SinFrequencyDataset("training", self.N_Fourier_F, training_samples, s, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=True, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
         self.val_loader = DataLoader(
             SinFrequencyDataset("validation", self.N_Fourier_F, training_samples, s, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=False, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
         self.test_loader = DataLoader(
             SinFrequencyDataset("test", self.N_Fourier_F, training_samples, s, in_dist, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=False, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
 
 #------------------------------------------------------------------------------
 # Wave data (from Mishra CNO article)
@@ -363,17 +369,20 @@ class WaveEquation:
             WaveEquationDataset("training", self.N_Fourier_F, training_samples, 5, s, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=True, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
         self.val_loader = DataLoader(
             WaveEquationDataset("validation", self.N_Fourier_F, training_samples, 5, s, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=False, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
         self.test_loader = DataLoader(
             WaveEquationDataset("test", self.N_Fourier_F, training_samples, 5, s, in_dist, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=False, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
 
 #------------------------------------------------------------------------------
 # Allen-Cahn data (from Mishra CNO article)
@@ -461,17 +470,20 @@ class AllenCahn:
             AllenCahnDataset("training", self.N_Fourier_F, training_samples, s, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=True, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
         self.val_loader = DataLoader(
             AllenCahnDataset("validation", self.N_Fourier_F, training_samples, s, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=False, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
         self.test_loader = DataLoader(
             AllenCahnDataset("test", self.N_Fourier_F, training_samples, s, in_dist, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=False, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
         
 #------------------------------------------------------------------------------
 # Smooth Transport data (from Mishra CNO article)
@@ -550,17 +562,20 @@ class ContTranslation:
             ContTranslationDataset("training", self.N_Fourier_F, training_samples, s, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=True, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
         self.val_loader = DataLoader(
             ContTranslationDataset("validation", self.N_Fourier_F, training_samples, s, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=False, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
         self.test_loader = DataLoader(
             ContTranslationDataset("test", self.N_Fourier_F, training_samples, s, in_dist, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=False, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
 
         
 #------------------------------------------------------------------------------
@@ -642,17 +657,20 @@ class DiscContTranslation:
             DiscContTranslationDataset("training", self.N_Fourier_F, training_samples, s, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=True, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
         self.val_loader = DataLoader(
             DiscContTranslationDataset("validation", self.N_Fourier_F, training_samples, s, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=False, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
         self.test_loader = DataLoader(
             DiscContTranslationDataset("test", self.N_Fourier_F, training_samples, s, in_dist, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=False, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
 
 #------------------------------------------------------------------------------
 # Compressible Euler data (from Mishra CNO article)
@@ -734,17 +752,20 @@ class Airfoil:
             AirfoilDataset("training", self.N_Fourier_F, training_samples, s, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=True, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
         self.val_loader = DataLoader(
             AirfoilDataset("validation", self.N_Fourier_F, training_samples, s, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=False, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
         self.test_loader = DataLoader(
             AirfoilDataset("test", self.N_Fourier_F, training_samples, s, in_dist, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=False, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
 
 #------------------------------------------------------------------------------
 #Darcy Flow data (from Mishra CNO article)
@@ -829,17 +850,20 @@ class Darcy:
             DarcyDataset("training", self.N_Fourier_F, training_samples, search_path=search_path),
             batch_size=batch_size,
             shuffle=True,
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
         self.val_loader = DataLoader(
             DarcyDataset("validation", self.N_Fourier_F, training_samples, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=False, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
         self.test_loader = DataLoader(
             DarcyDataset("testing", self.N_Fourier_F, training_samples, in_dist, search_path=search_path), 
             batch_size=batch_size, 
             shuffle=False, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
 
 
 #------------------------------------------------------------------------------
@@ -921,19 +945,22 @@ class Darcy_Zongyi:
             TensorDataset(a_train, u_train),
             batch_size=batch_size,
             shuffle=True,
-            num_workers=num_workers
+            num_workers=num_workers,
+            pin_memory=True
         )
         self.val_loader = DataLoader(
             TensorDataset(a_val, u_val),
             batch_size=batch_size,
             shuffle=False,
-            num_workers=num_workers
+            num_workers=num_workers,
+            pin_memory=True
         )
         self.test_loader = DataLoader(
             TensorDataset(a_test, u_test),
             batch_size=batch_size,
             shuffle=False,
-            num_workers=num_workers
+            num_workers=num_workers,
+            pin_memory=True
         )
           
 #------------------------------------------------------------------------------
@@ -997,19 +1024,22 @@ class Burgers_Zongyi:
             TensorDataset(a_train, u_train),
             batch_size=batch_size,
             shuffle=True,
-            num_workers=num_workers
+            num_workers=num_workers,
+            pin_memory=True
         )
         self.val_loader = DataLoader(
             TensorDataset(a_val, u_val),
             batch_size=batch_size,
             shuffle=False,
-            num_workers=num_workers
+            num_workers=num_workers,
+            pin_memory=True
         )
         self.test_loader = DataLoader(
             TensorDataset(a_test, u_test),
             batch_size=batch_size,
             shuffle=False,
-            num_workers=num_workers
+            num_workers=num_workers,
+            pin_memory=True
         )
 
 #------------------------------------------------------------------------------
@@ -1089,19 +1119,22 @@ class FitzHughNagumo:
             TensorDataset(a_train, u_train),
             batch_size=batch_size,
             shuffle=True,
-            num_workers=num_workers
+            num_workers=num_workers,
+            pin_memory=True
         )
         self.val_loader = DataLoader(
             TensorDataset(a_val, u_val),
             batch_size=batch_size,
             shuffle=False,
-            num_workers=num_workers
+            num_workers=num_workers,
+            pin_memory=True
         )
         self.test_loader = DataLoader(
             TensorDataset(a_test, u_test),
             batch_size=batch_size,
             shuffle=False,
-            num_workers=num_workers
+            num_workers=num_workers,
+            pin_memory=True
         )
         
         
@@ -1200,19 +1233,22 @@ class HodgkinHuxley:
             TensorDataset(a_train, u_train),
             batch_size=batch_size,
             shuffle=True,
-            num_workers=num_workers
+            num_workers=num_workers,
+            pin_memory=True
         )
         self.val_loader = DataLoader(
             TensorDataset(a_val, u_val),
             batch_size=batch_size,
             shuffle=False,
-            num_workers=num_workers
+            num_workers=num_workers,
+            pin_memory=True
         )
         self.test_loader = DataLoader(
             TensorDataset(a_test, u_test),
             batch_size=batch_size,
             shuffle=False,
-            num_workers=num_workers
+            num_workers=num_workers,
+            pin_memory=True
         )
         
 #------------------------------------------------------------------------------
@@ -1263,14 +1299,17 @@ class CrossTruss(Dataset):
             TensorDataset(inputs_train, outputs_train),
             batch_size=batch_size,
             shuffle=True,
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
         self.val_loader = DataLoader(
             TensorDataset(inputs_val, outputs_val),
             batch_size=batch_size, 
             shuffle=False, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
         self.test_loader = DataLoader(
             TensorDataset(inputs_test, outputs_test),
             batch_size=batch_size, 
             shuffle=False, 
-            num_workers=num_workers)
+            num_workers=num_workers,
+            pin_memory=True)
