@@ -1,20 +1,7 @@
-# For up/downsampling, the antialias interpolation functions from the 
-# torch library are utilized, limiting the ability to design
-# your own low-pass filters at present.
-
-# While acknowledging this suboptimal setup, the performance of CNO1d remains commendable. 
-# Additionally, a training script is available, offering a solid foundation for personal projects.
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 torch.manual_seed(0) #!
-
-# CNO LReLu activation fucntion
-# CNO building block (CNOBlock) → Conv1d - BatchNorm - Activation
-# Lift/Project Block (Important for embeddings)
-# Residual Block → Conv1d - BatchNorm - Activation - Conv1d - BatchNorm - Skip Connection
-# ResNet → Stacked ResidualBlocks (several blocks applied iteratively)
 
 #########################################
 # Activation Function:
@@ -45,18 +32,15 @@ class CNOBlock(nn.Module):
         self.in_size  = in_size
         self.out_size = out_size
 
-        #-----------------------------------------
-        # We apply Conv -> BN (optional) -> Activation
-        # Up/Down-sampling happens inside Activation
-
         self.convolution = torch.nn.Conv1d(in_channels = self.in_channels, out_channels = self.out_channels,
                                            kernel_size = 3, padding = 1, bias = not use_bn)
 
         if use_bn:
-            self.batch_norm  = nn.BatchNorm1d(self.out_channels)
+            self.batch_norm = nn.BatchNorm1d(self.out_channels)
         else:
-            self.batch_norm  = nn.Identity()
+            self.batch_norm = nn.Identity()
 
+        # Up/Down-sampling happens inside Activation
         self.act = CNO_LReLu(in_size = self.in_size, out_size = self.out_size)
 
     def forward(self, x):
@@ -71,16 +55,16 @@ class LiftProjectBlock(nn.Module):
     def __init__(self, in_channels, out_channels, size, latent_dim = 64):
         super(LiftProjectBlock, self).__init__()
 
-        self.inter_CNOBlock = CNOBlock(in_channels   = in_channels,
-                                        out_channels = latent_dim,
-                                        in_size      = size,
-                                        out_size     = size,
-                                        use_bn       = False)
+        self.inter_CNOBlock = CNOBlock(in_channels  = in_channels,
+                                       out_channels = latent_dim,
+                                       in_size      = size,
+                                       out_size     = size,
+                                       use_bn       = False)
 
-        self.convolution = torch.nn.Conv1d(in_channels   = latent_dim,
-                                            out_channels = out_channels,
-                                            kernel_size  = 3,
-                                            padding      = 1)
+        self.convolution = torch.nn.Conv1d(in_channels  = latent_dim,
+                                           out_channels = out_channels,
+                                           kernel_size  = 3,
+                                           padding      = 1)
 
     def forward(self, x):
         x = self.inter_CNOBlock(x)
@@ -97,20 +81,17 @@ class ResidualBlock(nn.Module):
         self.channels = channels
         self.size = size
 
-        #-----------------------------------------
-        # We apply Conv -> BN (optional) -> Activation -> Conv -> BN (optional) -> Skip Connection
-        # Up/Down-sampling happens inside Activation
-        self.convolution1 = torch.nn.Conv1d(in_channels = self.channels,
-                                            out_channels= self.channels,
-                                            kernel_size = 3,
-                                            padding     = 1, 
-                                            bias        = not use_bn)
+        self.convolution1 = torch.nn.Conv1d(in_channels  = self.channels,
+                                            out_channels = self.channels,
+                                            kernel_size  = 3,
+                                            padding      = 1, 
+                                            bias         = not use_bn)
 
-        self.convolution2 = torch.nn.Conv1d(in_channels = self.channels,
-                                            out_channels= self.channels,
-                                            kernel_size = 3,
-                                            padding     = 1,
-                                            bias        = not use_bn)
+        self.convolution2 = torch.nn.Conv1d(in_channels  = self.channels,
+                                            out_channels = self.channels,
+                                            kernel_size  = 3,
+                                            padding      = 1,
+                                            bias         = not use_bn)
 
         if use_bn:
             self.batch_norm1 = nn.BatchNorm1d(self.channels)
@@ -120,6 +101,7 @@ class ResidualBlock(nn.Module):
             self.batch_norm1 = nn.Identity()
             self.batch_norm2 = nn.Identity()
 
+        # Up/Down-sampling happens inside Activation
         self.act = CNO_LReLu(in_size = self.size, out_size = self.size)
 
 
@@ -182,10 +164,10 @@ class CNO1d(nn.Module):
             Number of (R) blocks in the neck.
             
         channel_multiplier: int
-            How the number of channels evolve?
+            multiplier of the number of channels in the network
             
-        use_bn: bool
-            Add BN? We do not add BN in lifting/projection
+        use_bn: bool    
+            choose if Batch Normalization is used.
         """
         super(CNO1d, self).__init__()
 
