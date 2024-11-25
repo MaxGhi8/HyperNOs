@@ -41,7 +41,8 @@ from scipy.io import savemat
 
 from Loss_fun import LprelLoss, H1relLoss_1D, H1relLoss
 from train_fun import test_fun, test_fun_tensors
-from utilities import count_params, load_data_model
+from utilities import count_params
+from FNO.FNO_utilities import load_data_model
 
 #########################################
 # default values
@@ -482,7 +483,9 @@ def save_tensor(input_tensor, output_tensor, prediction_tensor, which_example:st
     if flag:
         directory = f"../data/{which_example}/"
         os.makedirs(directory, exist_ok=True) # Create the directory if it doesn't exist
-        savemat(f"{directory}{which_example}_train{norm_str}_n_{output_tensor.shape[0]}_points_{output_tensor.shape[1]}_tf_{'200' if 'long' in which_example else '100'}.mat", data_to_save) # Save the data
+        str_file = f"{directory}{which_example}_train{norm_str}_n_{output_tensor.shape[0]}_points_{output_tensor.shape[1]}_tf_{'200' if 'long' in which_example else '100'}.mat"
+        savemat(str_file, data_to_save)
+        print(f"Data saved in {str_file}")
     else:
         raise ValueError("The example chosen is not allowed")
 
@@ -495,7 +498,7 @@ plot_histogram(test_rel_h1_tensor, "H1")
 
 # call the function to plot data
 test_plot_samples(input_tensor, output_tensor, prediction_tensor, test_rel_l1_tensor,
-                  "best", which_example, ntest=100, str_norm=exp_norm, n_idx=5)
+                  "random", which_example, ntest=100, str_norm=exp_norm, n_idx=5)
 
 # call the function to save tensors
 save_tensor(input_tensor, output_tensor, prediction_tensor, which_example, exp_norm)
