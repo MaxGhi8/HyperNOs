@@ -8,6 +8,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+torch.manual_seed(0) #!
 
 # CNO LReLu activation fucntion
 # CNO building block (CNOBlock) → Conv1d - BatchNorm - Activation
@@ -221,7 +222,7 @@ class CNO1d(nn.Module):
                                      out_channels = self.encoder_features[0],
                                      size = size)
 
-        self.project = LiftProjectBlock(in_channels = self.encoder_features[0] + self.decoder_features_out[-1],
+        self.project = LiftProjectBlock(in_channels = self.encoder_features[0] + self.decoder_features_out[-1], # concatenation with the ResNet
                                         out_channels = out_dim,
                                         size = size)
 
@@ -232,7 +233,7 @@ class CNO1d(nn.Module):
                                                 out_size     = self.encoder_sizes[i+1],
                                                 use_bn       = use_bn) for i in range(self.N_layers) ])
 
-        # After the ResNets are executed, the sizes of encoder and decoder might not match (if out_size>1)
+        # After the ResNets are executed, the sizes of encoder and decoder might not match
         # We must ensure that the sizes are the same, by applying CNO Blocks
         self.ED_expansion = nn.ModuleList([ CNOBlock(in_channels = self.encoder_features[i],
                                                      out_channels = self.encoder_features[i],
@@ -246,37 +247,33 @@ class CNO1d(nn.Module):
                                                 out_size     = self.decoder_sizes[i+1],
                                                 use_bn       = use_bn) for i in range(self.N_layers) ])
 
-        ####################### Define ResNets Blocks ################################################################
-        # Operator UNet:
-        # Outputs of the middle networks are patched (or padded) to corresponding sets of feature maps in the decoder
-
-        self.res_nets = []
+        #### Define ResNets Blocks
+        self.res_nets = nn.ModuleList()
         self.N_res = int(N_res)
         self.N_res_neck = int(N_res_neck)
 
         # Define the ResNet networks (before the neck)
-        for l in range(self.N_layers):
-            self.res_nets.append(ResNet(channels = self.encoder_features[l],
-                                        size = self.encoder_sizes[l],
+        for i in range(self.N_layers):
+            self.res_nets.append(ResNet(channels = self.encoder_features[i],
+                                        size = self.encoder_sizes[i],
                                         num_blocks = self.N_res,
                                         use_bn = use_bn))
-
+        
         self.res_net_neck = ResNet(channels = self.encoder_features[self.N_layers],
                                    size = self.encoder_sizes[self.N_layers],
                                    num_blocks = self.N_res_neck,
                                    use_bn = use_bn)
 
-        self.res_nets = torch.nn.Sequential(*self.res_nets)
 
     def forward(self, x):
 
-        x = self.lift(x) #Execute Lift
+        x = self.lift(x)
         skip = []
 
         # Execute Encoder
         for i in range(self.N_layers):
 
-            #Apply ResNet & save the result
+            # Apply ResNet & save the result
             y = self.res_nets[i](x)
             skip.append(y)
 
@@ -291,15 +288,15 @@ class CNO1d(nn.Module):
 
             # Apply (I) block (ED_expansion) & cat if needed
             if i == 0:
-                x = self.ED_expansion[self.N_layers - i](x) #BottleNeck : no cat
+                x = self.ED_expansion[self.N_layers - i](x) # BottleNeck : no cat
             else:
-                x = torch.cat((x, self.ED_expansion[self.N_layers - i](skip[-i])),1)
+                x = torch.cat((x, self.ED_expansion[self.N_layers - i](skip[-i])), 1)
 
             # Apply (U) block
             x = self.decoder[i](x)
 
         # Cat & Execute Projection
-        x = torch.cat((x, self.ED_expansion[0](skip[0])),1)
+        x = torch.cat((x, self.ED_expansion[0](skip[0])), 1)
         x = self.project(x)
 
         return x
