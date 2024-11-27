@@ -18,7 +18,7 @@ class CNO_LReLu(nn.Module):
     def forward(self, x):
         x = F.interpolate(x, size = (2 * self.in_size, 2 * self.in_size), mode = "bicubic", antialias = True)
         x = self.act(x)
-        x = F.interpolate(x, size = (self.out_size,self.out_size), mode = "bicubic", antialias = True)
+        x = F.interpolate(x, size = (self.out_size, self.out_size), mode = "bicubic", antialias = True)
         return x
 
 #########################################
@@ -137,7 +137,6 @@ class ResNet(nn.Module):
         for i in range(self.num_blocks):
             x = self.res_nets[i](x)
         return x
-    
     
 #########################################
 # CNO:
