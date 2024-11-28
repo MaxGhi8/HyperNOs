@@ -81,12 +81,12 @@ The data set is created using Matlab ode15s with $T=1$. We randomly choose the i
 \begin{center}
     \begin{tabular}{cccc}
         \hline
-        Name    & Range of values for the current & Range of values for $T_{stim}$ & $n_{examples}$       \\
+        Name    & Range of values for the current & Range of values for $T_{stim}$ & $n_{examples}$ \\
         \hline\hline
-        $t_0$   & $(0.1,2)$                       & $(0,0)$                        & \textcolor{red}{200} \\
+        $t_0$   & $(0.1,2)$                       & $(0,0)$                        & 20             \\
 
-        General & $(0.1,2)$                       & $(0.01,1)$                     & 2300                 \\
-        nap     & $(1e-7,0.01)$                   & $(0.1,1)$                      & 500                  \\
+        General & $(0.1,2)$                       & $(0.01,1)$                     & 2300           \\
+        nap     & $(1e-4,0.01)$                   & $(0.1,1)$                      & 500            \\
         \hline
     \end{tabular}
 \end{center}
@@ -94,12 +94,12 @@ For testing, we generate 375 examples where the dataset is split into four.
 \begin{center}
     \begin{tabular}{cccc}
         \hline
-        Name      & Range of values for the current & Range of values for $T_{stim}$ & $n_{examples}$      \\
+        Name      & Range of values for the current & Range of values for $T_{stim}$ & $n_{examples}$ \\
         \hline\hline
-        $t_0$     & $(0.1,2)$                       & $(0,0)$                        & \textcolor{red}{20} \\
-        General   & $(0.1,2)$                       & $(0.01,1)$                     & 285                 \\
-        nap       & $(1e-7,0.01)$                   & $(0.1,1)$                      & 30                  \\
-        $t_{fin}$ & $(0.3,2)$                       & $(1,1)$                        & 50                  \\
+        $t_0$     & $(0.1,2)$                       & $(0,0)$                        & 10             \\
+        General   & $(0.1,2)$                       & $(0.01,1)$                     & 285            \\
+        nap       & $(1e-4,0.01)$                   & $(0.1,1)$                      & 30             \\
+        $t_{fin}$ & $(0.3,2)$                       & $(1,1)$                        & 50             \\
         \hline
     \end{tabular}
 \end{center}
@@ -183,12 +183,13 @@ The dataset is formed using odes15s of matlab with $T=1$. Where we radomly pick 
 \begin{center}
     \begin{tabular}{cccc}
         \hline
-        Name       & Range of sampling for the current & Range of sampling for $T_{stim}$ & $n_{examples}$       \\
+        Name       & Range of sampling for the current & Range of sampling for $T_{stim}$ & $n_{examples}$ \\
         \hline\hline
-        $t_0$      & $(2,10)$                          & $(0,0)$                          & \textcolor{red}{200} \\
-        General    & $(2,10)$                          & $(0.01,1)$                       & 2200                 \\
-        nap        & $(1e-7,2)$                        & $(0.1,1)$                        & 300                  \\
-        $i_{high}$ & $(50,200)$                        & $(0.1,1)$                        & 300                  \\
+        $t_0$      & $(2,10)$                          & $(0,0)$                          & 20             \\
+        General    & $(2,10)$                          & $(0.01,1)$                       & 2380           \\
+        nap        & $(1e-4,2)$                        & $(0.1,1)$                        & 100            \\
+        $i_{high}$ & $(50,200)$                        & $(0.1,1)$                        & 300            \\
+        $t_{fin}$  & $(2,30)$                          & $(1,1)$                          & 200            \\
         \hline
     \end{tabular}
 \end{center}
@@ -196,13 +197,13 @@ For the testing we genera 375 example where the dataset is splitted in four.
 \begin{center}
     \begin{tabular}{cccc}
         \hline
-        Name       & Range of sampling for the current & Range of sampling for $T_{stim}$ & $n_{examples}$      \\
+        Name       & Range of sampling for the current & Range of sampling for $T_{stim}$ & $n_{examples}$ \\
         \hline\hline
-        $t_0$      & $(0.1,2)$                         & $(0,0)$                          & \textcolor{red}{10} \\
-        General    & $(0.1,2)$                         & $(0.01,1)$                       & 275                 \\
-        nap        & $(1e-7,0.01)$                     & $(0.1,1)$                        & 30                  \\
-        $i_{high}$ & $(50,200)$                        & $(0.1,1)$                        & 30                  \\
-        $t_{fin}$  & $(10,30)$                         & $(1,1)$                          & 30                  \\
+        $t_0$      & $(0.1,2)$                         & $(0,0)$                          & 10             \\
+        General    & $(0.1,2)$                         & $(0.01,1)$                       & 275            \\
+        nap        & $(1e-4,2)$                        & $(0.1,1)$                        & 30             \\
+        $i_{high}$ & $(50,200)$                        & $(0.1,1)$                        & 30             \\
+        $t_{fin}$  & $(2,30)$                          & $(1,1)$                          & 30             \\
         \hline
     \end{tabular}
 \end{center}
