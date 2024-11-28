@@ -92,11 +92,11 @@ except:
 # Hyperparameters
 #########################################
 # Load `training_properties` from JSON
-with open(folder + '/training_properties.json', 'r') as f:
+with open(folder + '/hyperparams_train.json', 'r') as f:
     training_properties = json.load(f)
 
 # Load `fno_architecture` from JSON
-with open(folder + '/net_architecture.json', 'r') as f:
+with open(folder + '/hyperparams_arc.json', 'r') as f:
     fno_architecture = json.load(f)
 
 # Choose the Loss function
