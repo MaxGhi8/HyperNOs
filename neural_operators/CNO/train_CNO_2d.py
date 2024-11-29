@@ -3,7 +3,8 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 import torch.nn.functional as F
 from torch.optim import AdamW
-from CNO_2d import CNO2d
+# from CNO_2d import CNO2d
+from CNO2d import CNO2d
 
 from CNO_benchmarks import SinFrequency 
 from CNO_utilities import CNO_initialize_hyperparameters
@@ -48,10 +49,10 @@ def main():
     step_size = 15
     gamma = 0.5
 
-    N_layers = 4
-    N_res    = 4
-    N_res_neck = 4
-    channel_multiplier = 16
+    N_layers = 3
+    N_res    = 6
+    N_res_neck = 2
+    channel_multiplier = 32
 
     s = 128
     
@@ -68,6 +69,11 @@ def main():
     #-----------
     # TRAIN:
     #-----------
+    
+    nparams = 0
+    for param in cno.parameters():
+        nparams += param.numel()
+    print(f'Total number of model parameters: {nparams}')
     
     optimizer = AdamW(cno.parameters(), lr=learning_rate, weight_decay=1e-8)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=gamma)
