@@ -13,3 +13,10 @@ __pycache__/
 *.fdb_latexmk
 *.fls
 *.tdo
+
+
+cli.py
+client_secrets.json
+dataset-loader-442913-3ac688262e7b.json
+login_key.json
+token.json
