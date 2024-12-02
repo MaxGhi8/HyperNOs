@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch.optim import AdamW
 
 # from CNO_2d import CNO2d
-from CNO2d import CNO2d
+from CNO_2d import CNO2d
 
 from CNO_benchmarks import SinFrequency
 from CNO_utilities import CNO_initialize_hyperparameters
@@ -60,8 +60,8 @@ def main():
     gamma = 0.5
 
     N_layers = 3
-    N_res = 6
-    N_res_neck = 2
+    N_res = 4
+    N_res_neck = 8
     channel_multiplier = 32
 
     s = 128
@@ -74,7 +74,7 @@ def main():
         N_res=N_res,  # Number of (R) blocks per level (except the neck)
         N_res_neck=N_res_neck,  # Number of (R) blocks in the neck
         channel_multiplier=channel_multiplier,  # How the number of channels evolve?
-        use_bn=False,
+        use_bn=True,
     )
 
     cno.to(device)
@@ -84,6 +84,7 @@ def main():
 
     nparams = 0
     for param in cno.parameters():
+        print(param.size())
         nparams += param.numel()
     print(f"Total number of model parameters: {nparams}")
 
