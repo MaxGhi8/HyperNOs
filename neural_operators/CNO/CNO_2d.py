@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-torch.manual_seed(0)  #!
+# torch.manual_seed(0)  #!
 
 
 #########################################
@@ -44,7 +44,7 @@ class CNOBlock(nn.Module):
             out_channels=self.out_channels,
             kernel_size=3,
             padding=1,
-            bias=not use_bn,
+            # bias=not use_bn, #!
         )
 
         if use_bn:
@@ -101,14 +101,14 @@ class ResidualBlock(nn.Module):
             out_channels=self.channels,
             kernel_size=3,
             padding=1,
-            bias=not use_bn,
+            # bias=not use_bn, #!
         )
         self.convolution2 = torch.nn.Conv2d(
             in_channels=self.channels,
             out_channels=self.channels,
             kernel_size=3,
             padding=1,
-            bias=not use_bn,
+            # bias=not use_bn, #!
         )
 
         if use_bn:
@@ -296,6 +296,23 @@ class CNO2d(nn.Module):
             ]
         )
 
+        self.inv_features = self.decoder_features_in
+        self.inv_features.append(
+            self.encoder_features[0] + self.decoder_features_out[-1]
+        )
+        self.decoder_inv = nn.ModuleList(
+            [
+                CNOBlock(
+                    in_channels=self.inv_features[i],
+                    out_channels=self.inv_features[i],
+                    in_size=self.decoder_sizes[i],
+                    out_size=self.decoder_sizes[i],
+                    use_bn=use_bn,
+                )
+                for i in range(self.N_layers + 1)
+            ]
+        )
+
         #### Define ResNets Blocks
         self.res_nets = nn.ModuleList()
         self.N_res = int(N_res)
@@ -348,6 +365,9 @@ class CNO2d(nn.Module):
                 x = self.ED_expansion[self.N_layers - i](x)  # BottleNeck : no cat
             else:
                 x = torch.cat((x, self.ED_expansion[self.N_layers - i](skip[-i])), 1)
+
+            #! if self.add_inv:
+            x = self.decoder_inv[i](x)  #!
 
             # Apply (U) block
             x = self.decoder[i](x)
