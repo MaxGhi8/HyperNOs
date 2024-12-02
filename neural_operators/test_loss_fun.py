@@ -1,48 +1,51 @@
 """
 This file contains the tests for the loss functions defined in Loss_fun.py.
 """
+
 import numpy as np
 import torch
 import pytest
 import random
 
 import sys
-sys.path.append('.')
+
+sys.path.append(".")
 from Loss_fun import LprelLoss, H1relLoss
+
 
 def test_L1relLoss():
     # test 1: test L1(x, x)
-    x = torch.tensor( [[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]] )
+    x = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
     result = LprelLoss(1, False)(x, x)
     assert result.item() == 0.0
-    
+
     # test 2: as test 1 but with a single sample
     x = torch.rand(1, 32, 32)
     result = LprelLoss(1, False)(x, x)
     assert result.item() == 0.0
-    
+
     # test 3: random test 1
     x = torch.rand(24, 32, 32)
     result = LprelLoss(1, False)(x, x)
     assert result.item() == 0.0
-    
+
     # test 4: hands on test
-    x = torch.tensor( [[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]] )
-    y = torch.tensor( [[[0.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]] )
+    x = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
+    y = torch.tensor([[[0.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
     result = LprelLoss(1, False)(x, y)
-    assert np.abs(result.item() - 1/9) < 1e-6 # single precision
+    assert np.abs(result.item() - 1 / 9) < 1e-6  # single precision
 
     # test 5: test on division by zero
     x = torch.randn(10, 3, 3)
     y = torch.zeros(10, 3, 3)
     with pytest.raises(ValueError, match="Division by zero"):
         LprelLoss(1, False)(x, y)
-    
+
     # test 6: test with x = 0 and y = random
     n = 100
     x = torch.zeros(n, 23, 23)
     y = torch.randn(n, 23, 23)
-    assert LprelLoss(1, False)(x, y).item() == n 
+    assert LprelLoss(1, False)(x, y).item() == n
 
     # test 7: test y with norm 1 and x=y+1
     n = 30
@@ -63,42 +66,43 @@ def test_L1relLoss():
     k = 24
     y = torch.ones(n, k, k, dtype=torch.float64)
     const = random.normalvariate(0, 1)
-    x = y + const 
-    assert np.abs(LprelLoss(1, False)(x, y).item() - np.abs(const)*n) < 1e-12
+    x = y + const
+    assert np.abs(LprelLoss(1, False)(x, y).item() - np.abs(const) * n) < 1e-12
+
 
 def test_L2relLoss():
     # test 1: test L2(x, x)
-    x = torch.tensor( [[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]] )
+    x = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
     result = LprelLoss(2, False)(x, x)
     assert result.item() == 0.0
-    
+
     # test 2: as test 1 but with a single sample
     x = torch.rand(1, 32, 32)
     result = LprelLoss(2, False)(x, x)
     assert result.item() == 0.0
-    
+
     # test 3: random test 1
     x = torch.rand(24, 32, 32)
     result = LprelLoss(2, False)(x, x)
     assert result.item() == 0.0
-    
+
     # test 4: hands on test
-    x = torch.tensor( [[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]] )
-    y = torch.tensor( [[[0.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]] )
+    x = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
+    y = torch.tensor([[[0.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
     result = LprelLoss(2, False)(x, y)
-    assert np.abs(result.item() - 1/(np.sqrt(29))) < 1e-6 # single precision
+    assert np.abs(result.item() - 1 / (np.sqrt(29))) < 1e-6  # single precision
 
     # test 5: test on division by zero
     x = torch.randn(10, 3, 3)
     y = torch.zeros(10, 3, 3)
     with pytest.raises(ValueError, match="Division by zero"):
         LprelLoss(2, False)(x, y)
-    
+
     # test 6: test with x = 0 and y = random
     n = 100
     x = torch.zeros(n, 23, 23)
     y = torch.randn(n, 23, 23)
-    assert LprelLoss(2, False)(x, y).item() == n 
+    assert LprelLoss(2, False)(x, y).item() == n
 
     # test 7: test y with norm 1 and x=y+1
     n = 30
@@ -119,25 +123,26 @@ def test_L2relLoss():
     k = 24
     y = torch.ones(n, k, k, dtype=torch.float64)
     const = random.normalvariate(0, 1)
-    x = y + const 
-    assert np.abs(LprelLoss(2, False)(x, y).item() - np.abs(const)*n) < 1e-12
+    x = y + const
+    assert np.abs(LprelLoss(2, False)(x, y).item() - np.abs(const) * n) < 1e-12
+
 
 def test_H1relLoss():
     # test 1: test H1(x, x)
-    x = torch.tensor( [[[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]] )
+    x = torch.tensor([[[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]])
     result = H1relLoss()(x, x)
     assert result.item() == 0.0
-    
+
     # test 2: as test 1 but with a single sample
     x = torch.rand(1, 32, 32, 1)
     result = H1relLoss()(x, x)
     assert result.item() == 0.0
-    
+
     # test 3: random test 1
     x = torch.rand(24, 32, 32, 1)
     result = H1relLoss()(x, x)
     assert result.item() == 0.0
-    
+
     # test 4: test on division by zero
     x = torch.randn(10, 3, 3, 1)
     y = torch.zeros(10, 3, 3, 1)
@@ -163,6 +168,5 @@ def test_H1relLoss():
     k = 42
     y = torch.ones(n, k, k, 1, dtype=torch.float64)
     const = random.normalvariate(0, 1)
-    x = y + const 
-    assert np.abs(H1relLoss()(x, y).item() - np.abs(const)*n) < 1e-12
-    
+    x = y + const
+    assert np.abs(H1relLoss()(x, y).item() - np.abs(const) * n) < 1e-12
