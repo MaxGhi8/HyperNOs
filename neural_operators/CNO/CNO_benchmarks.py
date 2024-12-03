@@ -208,7 +208,7 @@ class ShearLayer:
         device,
         batch_size,
         training_samples,
-        size,
+        size=64,
         in_dist=True,
         search_path="/",
     ):
