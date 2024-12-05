@@ -37,7 +37,6 @@ import tempfile
 from ray import train, tune, init
 from ray.train import Checkpoint
 
-# from ray.tune.search.bayesopt import BayesOptSearch
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.search.hyperopt import HyperOptSearch
 
@@ -197,6 +196,16 @@ def train_hyperparameter(config):
             retrain_fno,
         )
 
+    # Definition of the optimizer
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=learning_rate, weight_decay=weight_decay
+    )
+
+    # Definition of the scheduler
+    scheduler = torch.optim.lr_scheduler.StepLR(
+        optimizer, step_size=scheduler_step, gamma=scheduler_gamma
+    )
+
     # Load existing checkpoint through `get_checkpoint()` API.
     start_epoch = 0
     checkpoint = train.get_checkpoint()
@@ -211,16 +220,6 @@ def train_hyperparameter(config):
     train_loader = example.train_loader
     val_loader = example.val_loader
     test_loader = example.test_loader  # for final testing
-
-    # Definition of the optimizer
-    optimizer = torch.optim.AdamW(
-        model.parameters(), lr=learning_rate, weight_decay=weight_decay
-    )
-
-    # Definition of the scheduler
-    scheduler = torch.optim.lr_scheduler.StepLR(
-        optimizer, step_size=scheduler_step, gamma=scheduler_gamma
-    )
 
     ## Training process
     for ep in range(start_epoch, epochs):
@@ -278,9 +277,9 @@ def main(num_samples, max_num_epochs=epochs):
     config = {
         "learning_rate": tune.quniform(1e-4, 1e-2, 1e-5),
         "weight_decay": tune.quniform(1e-6, 1e-3, 1e-6),
-        "scheduler_step": tune.randint(1, 100),
-        "scheduler_gamma": tune.quniform(0.75, 0.99, 0.001),
-        "batch_size": tune.choice([20, 32, 48, 64]),
+        # "scheduler_step": tune.randint(1, 100), #! fix to 10
+        "scheduler_gamma": tune.quniform(0.75, 0.99, 0.01),
+        # "batch_size": tune.choice([20, 32, 48, 64]), #! fix to 32
         "width": tune.choice([4, 8, 16, 32, 64, 128, 256]),
         "n_layers": tune.randint(1, 6),
         "modes": tune.choice([2, 4, 8, 12, 16, 20, 24, 28, 32]),  # modes1 = modes2
