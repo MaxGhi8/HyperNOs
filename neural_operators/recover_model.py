@@ -197,6 +197,30 @@ print("Total number of parameters is: ", par_tot)
 # Compute error and print error
 #########################################
 (
+    val_relative_l1,
+    val_relative_l2,
+    val_relative_semih1,
+    val_relative_h1,
+    train_loss,
+) = test_fun(
+    model,
+    val_loader,
+    train_loader,
+    loss,
+    exp_norm,
+    val_samples,
+    training_samples,
+    device,
+    which_example,
+    statistic=True,
+)
+print("Train loss: ", train_loss)
+print("Validation relative l1 norm: ", val_relative_l1)
+print("Validation relative l2 norm: ", val_relative_l2)
+print("Validation relative semi h1 norm: ", val_relative_semih1)
+print("Validation relative h1 norm: ", val_relative_h1)
+
+(
     test_relative_l1,
     test_relative_l2,
     test_relative_semih1,
@@ -208,18 +232,17 @@ print("Total number of parameters is: ", par_tot)
     train_loader,
     loss,
     exp_norm,
-    val_samples,
+    test_samples,
     training_samples,
     device,
     which_example,
     statistic=True,
 )
 
-print("Test relative L1 norm: ", test_relative_l1)
-print("Test relative L2 norm: ", test_relative_l2)
-print("Test relative semi H1 norm: ", test_relative_semih1)
-print("Test relative H1 norm: ", test_relative_h1)
-print("Train loss: ", train_loss)
+print("Test relative l1 norm: ", test_relative_l1)
+print("Test relative l2 norm: ", test_relative_l2)
+print("Test relative semi h1 norm: ", test_relative_semih1)
+print("Test relative h1 norm: ", test_relative_h1)
 
 # Compute all the relative errors and outputs
 (
@@ -658,7 +681,7 @@ test_plot_samples(
     output_tensor,
     prediction_tensor,
     test_rel_l1_tensor,
-    "random",
+    "worst",
     which_example,
     ntest=100,
     str_norm=exp_norm,
