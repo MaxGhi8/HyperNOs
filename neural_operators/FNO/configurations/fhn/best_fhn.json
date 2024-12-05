@@ -26,8 +26,5 @@
 		"include_grid": 1,
 		"weights_norm": "Kaiming",
 		"retrain": 4
-	},
-	"loss_function": {
-		"loss": "L1_smooth"
 	}
 }

@@ -7,8 +7,8 @@
 		"epochs": 1000,
 		"batch_size": 32,
 		"weight_decay": 3e-6,
-		"scheduler_step": 11,
-		"scheduler_gamma": 0.916,
+		"scheduler_step": 10,
+		"scheduler_gamma": 0.92,
 		"beta": 1
 	},
 	"fno_architecture": {
