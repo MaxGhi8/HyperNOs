@@ -148,7 +148,7 @@ match arc:
         padding = hyperparams_arc["padding"]
         retrain = hyperparams_arc["retrain"]
         FourierF = hyperparams_arc["FourierF"]
-        hyperparams_arc["problem_dim"] = 2  # default value
+        problem_dim = hyperparams_arc["problem_dim"]
 
     case "CNO":
         # cno architecture hyperparameters
@@ -161,7 +161,7 @@ match arc:
         n_res = hyperparams_arc["N_res"]
         bn = hyperparams_arc["bn"]
         retrain = hyperparams_arc["retrain"]
-        hyperparams_arc["problem_dim"] = 2  # default value
+        problem_dim = hyperparams_arc["problem_dim"]
 
     case _:
         raise ValueError("This architecture is not allowed")
@@ -211,7 +211,7 @@ with open(folder + "/hyperparams_arc.json", "w") as f:
 #########################################
 match arc:
     case "FNO":
-        if hyperparams_arc["problem_dim"] == 1:
+        if problem_dim == 1:
             model = FNO_1D(
                 d_a,
                 d_v,
@@ -227,7 +227,7 @@ match arc:
                 device,
                 retrain,
             )
-        elif hyperparams_arc["problem_dim"] == 2:
+        elif problem_dim == 2:
             model = FNO_2D(
                 d_a,
                 d_v,
@@ -245,11 +245,11 @@ match arc:
                 retrain,
             )
     case "CNO":
-        if hyperparams_arc["problem_dim"] == 1:
+        if problem_dim == 1:
             model = CNO1d(
                 in_dim, out_dim, size, n_layers, n_res, n_res_neck, chan_mul, bn, device
             )
-        elif hyperparams_arc["problem_dim"] == 2:
+        elif problem_dim == 2:
             model = CNO2d(
                 in_dim, out_dim, size, n_layers, n_res, n_res_neck, chan_mul, bn, device
             )
@@ -278,9 +278,9 @@ match p:
     case 1:
         loss = LprelLoss(2, False)  # L^2 relative norm
     case 2:
-        if hyperparams_arc["problem_dim"] == 1:
+        if problem_dim == 1:
             loss = H1relLoss_1D(beta, False, 1.0)
-        elif hyperparams_arc["problem_dim"] == 2:
+        elif problem_dim == 2:
             loss = H1relLoss(beta, False, 1.0)  # H^1 relative norm
     case 3:
         loss = torch.nn.SmoothL1Loss()  # L^1 smooth loss (Mishra)
@@ -347,7 +347,7 @@ for epoch in range(epochs):
 
         # save the results on tensorboard
         writer.add_scalars(
-            f"FNO_{hyperparams_arc["problem_dim"]}D_" + which_example,
+            f"FNO_{problem_dim}D_" + which_example,
             {
                 "Train loss " + exp_norm: train_loss,
                 "Test rel. L^1 error": test_relative_l1,

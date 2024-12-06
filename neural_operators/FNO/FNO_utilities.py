@@ -112,7 +112,6 @@ def FNO_load_data_model(
             example = Burgers_Zongyi(
                 fno_architecture, batch_size, search_path=search_path
             )
-            fno_architecture["problem_dim"] = 1
         case "darcy_zongyi":
             example = Darcy_Zongyi(
                 fno_architecture, batch_size, search_path=search_path
@@ -125,18 +124,15 @@ def FNO_load_data_model(
             example = FitzHughNagumo(
                 time, fno_architecture, batch_size, search_path=search_path
             )
-            fno_architecture["problem_dim"] = 1
         case "fhn_long":
             time = "_tf_200"
             example = FitzHughNagumo(
                 time, fno_architecture, batch_size, search_path=search_path
             )
-            fno_architecture["problem_dim"] = 1
         case "hh":
             example = HodgkinHuxley(
                 fno_architecture, batch_size, search_path=search_path
             )
-            fno_architecture["problem_dim"] = 1
 
         case "crosstruss":
             example = CrossTruss(fno_architecture, batch_size, search_path=search_path)

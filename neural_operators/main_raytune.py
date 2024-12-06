@@ -103,7 +103,9 @@ match arc:
 Norm_dict = {"L1": 0, "L2": 1, "H1": 2, "L1_smooth": 3, "MSE": 4}
 hyperparams_train["exp"] = Norm_dict[exp_norm]
 
-# training hyperparameters
+#########################################
+# Load the fixed hyperparameters
+#########################################
 epochs = hyperparams_train["epochs"]
 p = hyperparams_train["exp"]
 beta = hyperparams_train["beta"]
@@ -113,15 +115,33 @@ test_samples = hyperparams_train["test_samples"]
 batch_size = hyperparams_train["batch_size"]
 scheduler_step = hyperparams_train["scheduler_step"]
 
+match arc:
+    case "FNO":
+        # fno fixed hyperparameters
+        d_a = hyperparams_arc["d_a"]
+        d_u = hyperparams_arc["d_u"]
+        weights_norm = hyperparams_arc["weights_norm"]
+        RNN = hyperparams_arc["RNN"]
+        FFTnorm = hyperparams_arc["fft_norm"]
+        retrain_fno = hyperparams_arc["retrain"]
+        FourierF = hyperparams_arc["FourierF"]
+        problem_dim = hyperparams_arc["problem_dim"]
 
-# fno fixed hyperparameters
-d_a = hyperparams_arc["d_a"]
-d_u = hyperparams_arc["d_u"]
-weights_norm = hyperparams_arc["weights_norm"]
-RNN = hyperparams_arc["RNN"]
-FFTnorm = hyperparams_arc["fft_norm"]
-retrain_fno = hyperparams_arc["retrain"]
-FourierF = hyperparams_arc["FourierF"]
+    case "CNO":
+        # cno architecture hyperparameters
+        in_dim = hyperparams_arc["in_dim"]
+        out_dim = hyperparams_arc["out_dim"]
+        size = hyperparams_arc["in_size"]
+        bn = hyperparams_arc["bn"]
+        retrain = hyperparams_arc["retrain"]
+        problem_dim = hyperparams_arc["problem_dim"]
+        # n_layers = hyperparams_arc["N_layers"]
+        # chan_mul = hyperparams_arc["channel_multiplier"]
+        # n_res_neck = hyperparams_arc["N_res_neck"]
+        # n_res = hyperparams_arc["N_res"]
+
+    case _:
+        raise ValueError("This architecture is not allowed")
 
 # Loss function
 match p:
@@ -130,9 +150,9 @@ match p:
     case 1:
         loss = LprelLoss(2, False)  # L^2 relative norm
     case 2:
-        if hyperparams_arc["problem_dim"] == 1:
+        if problem_dim == 1:
             loss = H1relLoss_1D(beta, False, 1.0)
-        elif hyperparams_arc["problem_dim"] == 2:
+        elif problem_dim == 2:
             loss = H1relLoss(beta, False, 1.0)  # H^1 relative norm
     case 3:
         loss = torch.nn.SmoothL1Loss()  # L^1 smooth loss (Mishra)
@@ -165,13 +185,12 @@ def train_hyperparameter(config):
     print("Device: ", device)
 
     # Definition of the model
-    hyperparams_arc["problem_dim"] = 2  # default value
     example = FNO_load_data_model(
         which_example, hyperparams_arc, device, batch_size, training_samples, in_dist
     )
 
     # model = example.model
-    if hyperparams_arc["problem_dim"] == 1:
+    if problem_dim == 1:
         model = FNO_1D(
             d_a,
             d_v,
@@ -187,7 +206,7 @@ def train_hyperparameter(config):
             device,
             retrain_fno,
         )
-    elif hyperparams_arc["problem_dim"] == 2:
+    elif problem_dim == 2:
         model = FNO_2D(
             d_a,
             d_v,

@@ -151,6 +151,7 @@ FFTnorm = fno_architecture["fft_norm"]
 padding = fno_architecture["padding"]
 retrain_fno = fno_architecture["retrain"]
 FourierF = fno_architecture["FourierF"]
+problem_dim = fno_architecture["problem_dim"]
 
 # Loss function
 match p:
@@ -159,9 +160,9 @@ match p:
     case 1:
         loss = LprelLoss(2, False)  # L^2 relative norm
     case 2:
-        if fno_architecture["problem_dim"] == 1:
+        if problem_dim == 1:
             loss = H1relLoss_1D(beta, False, 1.0)
-        elif fno_architecture["problem_dim"] == 2:
+        elif problem_dim == 2:
             loss = H1relLoss(beta, False, 1.0)  # H^1 relative norm
     case 3:
         loss = torch.nn.SmoothL1Loss()  # L^1 smooth loss (Mishra)
@@ -173,7 +174,6 @@ match p:
 #########################################
 # Data loader
 #########################################
-fno_architecture["problem_dim"] = 2  # default value
 example = FNO_load_data_model(
     which_example, fno_architecture, device, batch_size, training_samples, in_dist
 )
@@ -186,8 +186,6 @@ print(
     next(iter(val_loader))[0].shape,
     next(iter(test_loader))[0].shape,
 )
-
-problem_dim = fno_architecture["problem_dim"]
 
 # Count and print the total number of parameters
 par_tot = count_params(model)
