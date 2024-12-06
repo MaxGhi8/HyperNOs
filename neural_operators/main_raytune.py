@@ -264,6 +264,11 @@ def train_hyperparameter(config):
     print("Training completed")
 
 
+def custom_trial_dirname_creator(trial):
+    # Create a shorter name for each trial of ray tune
+    return f"trial_{trial.trial_id}"
+
+
 def main(num_samples, max_num_epochs=epochs):
     # Default hyperparameters from Mishra article to start the optimization search
     default_mishra_params = [
@@ -325,6 +330,7 @@ def main(num_samples, max_num_epochs=epochs):
             scheduler=scheduler,
             search_alg=optim_algo,
             num_samples=num_samples,
+            trial_dirname_creator=custom_trial_dirname_creator,
         ),
     )
     # Run the hyperparameter search
