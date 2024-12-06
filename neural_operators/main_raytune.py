@@ -57,7 +57,7 @@ from CNO.CNO_utilities import CNO_load_data_model, CNO_initialize_hyperparameter
 # raytune parameters
 #########################################
 checkpoint_frequency = 500  # frequency to save the model
-grace_period = 500  # minimum number of epochs to run before early stopping
+grace_period = 250  # minimum number of epochs to run before early stopping
 reduce_factor = 2  # the factor to reduce the number of trials
 mode_str = "default"  # test base hyperparameters, can be "default" or "best"
 
@@ -135,10 +135,6 @@ match arc:
         bn = hyperparams_arc["bn"]
         retrain = hyperparams_arc["retrain"]
         problem_dim = hyperparams_arc["problem_dim"]
-        # n_layers = hyperparams_arc["N_layers"]
-        # chan_mul = hyperparams_arc["channel_multiplier"]
-        # n_res_neck = hyperparams_arc["N_res_neck"]
-        # n_res = hyperparams_arc["N_res"]
 
     case _:
         raise ValueError("This architecture is not allowed")
@@ -170,59 +166,114 @@ match p:
 
 
 def train_hyperparameter(config):
+    # Hyperparameters to optimize for training process
     learning_rate = config["learning_rate"]
     weight_decay = config["weight_decay"]
     scheduler_gamma = config["scheduler_gamma"]
-    d_v = config["width"]
-    L = config["n_layers"]
-    modes = config["modes"]
-    fun_act = config["fun_act"]
-    arc = config["arc"]
-    padding = config["padding"]
+
+    match arc:
+        # FNO hyperparameters
+        case "FNO":
+            d_v = config["width"]
+            L = config["n_layers"]
+            modes = config["modes"]
+            fun_act = config["fun_act"]
+            fno_arc = config["arc"]
+            padding = config["padding"]
+
+        # CNO hyperparameters
+        case "CNO":
+            n_layers = config["N_layers"]
+            chan_mul = config["channel_multiplier"]
+            n_res_neck = config["N_res_neck"]
+            n_res = config["N_res"]
 
     # Device I can handle different devices for different ray trials
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Device: ", device)
 
     # Definition of the model
-    example = FNO_load_data_model(
-        which_example, hyperparams_arc, device, batch_size, training_samples, in_dist
-    )
+    match arc:
+        case "FNO":
+            example = FNO_load_data_model(
+                which_example,
+                hyperparams_arc,
+                device,
+                batch_size,
+                training_samples,
+                in_dist,
+            )
+        case "CNO":
+            example = CNO_load_data_model(
+                which_example,
+                hyperparams_arc,
+                device,
+                batch_size,
+                training_samples,
+                in_dist,
+            )
 
     # model = example.model
-    if problem_dim == 1:
-        model = FNO_1D(
-            d_a,
-            d_v,
-            d_u,
-            L,
-            modes,
-            fun_act,
-            weights_norm,
-            arc,
-            RNN,
-            FFTnorm,
-            padding,
-            device,
-            retrain_fno,
-        )
-    elif problem_dim == 2:
-        model = FNO_2D(
-            d_a,
-            d_v,
-            d_u,
-            L,
-            modes,
-            modes,
-            fun_act,
-            weights_norm,
-            arc,
-            RNN,
-            FFTnorm,
-            padding,
-            device,
-            retrain_fno,
-        )
+    match arc:
+        case "FNO":
+            if problem_dim == 1:
+                model = FNO_1D(
+                    d_a,
+                    d_v,
+                    d_u,
+                    L,
+                    modes,
+                    fun_act,
+                    weights_norm,
+                    fno_arc,
+                    RNN,
+                    FFTnorm,
+                    padding,
+                    device,
+                    retrain_fno,
+                )
+            elif problem_dim == 2:
+                model = FNO_2D(
+                    d_a,
+                    d_v,
+                    d_u,
+                    L,
+                    modes,
+                    modes,
+                    fun_act,
+                    weights_norm,
+                    fno_arc,
+                    RNN,
+                    FFTnorm,
+                    padding,
+                    device,
+                    retrain_fno,
+                )
+        case "CNO":
+            if problem_dim == 1:
+                model = CNO1d(
+                    in_dim,
+                    out_dim,
+                    size,
+                    n_layers,
+                    n_res,
+                    n_res_neck,
+                    chan_mul,
+                    bn,
+                    device,
+                )
+            elif problem_dim == 2:
+                model = CNO2d(
+                    in_dim,
+                    out_dim,
+                    size,
+                    n_layers,
+                    n_res,
+                    n_res_neck,
+                    chan_mul,
+                    bn,
+                    device,
+                )
 
     # Definition of the optimizer
     optimizer = torch.optim.AdamW(
@@ -290,31 +341,60 @@ def custom_trial_dirname_creator(trial):
 
 def main(num_samples, max_num_epochs=epochs):
     # Default hyperparameters from Mishra article to start the optimization search
-    default_mishra_params = [
-        {
-            "learning_rate": hyperparams_train["learning_rate"],
-            "weight_decay": hyperparams_train["weight_decay"],
-            "scheduler_gamma": hyperparams_train["scheduler_gamma"],
-            "width": hyperparams_arc["width"],
-            "n_layers": hyperparams_arc["n_layers"],
-            "modes": hyperparams_arc["modes"],
-            "fun_act": hyperparams_arc["fun_act"],
-            "arc": hyperparams_arc["arc"],
-            "padding": hyperparams_arc["padding"],
-        }
-    ]
+    match arc:
+        case "FNO":
+            default_hyper_params = [
+                {
+                    "learning_rate": hyperparams_train["learning_rate"],
+                    "weight_decay": hyperparams_train["weight_decay"],
+                    "scheduler_gamma": hyperparams_train["scheduler_gamma"],
+                    "width": hyperparams_arc["width"],
+                    "n_layers": hyperparams_arc["n_layers"],
+                    "modes": hyperparams_arc["modes"],
+                    "fun_act": hyperparams_arc["fun_act"],
+                    "arc": hyperparams_arc["arc"],
+                    "padding": hyperparams_arc["padding"],
+                }
+            ]
+        case "CNO":
+            default_hyper_params = [
+                {
+                    "learning_rate": hyperparams_train["learning_rate"],
+                    "weight_decay": hyperparams_train["weight_decay"],
+                    "scheduler_gamma": hyperparams_train["scheduler_gamma"],
+                    "N_layers": hyperparams_arc["N_layers"],
+                    "channel_multiplier": hyperparams_arc["channel_multiplier"],
+                    "N_res_neck": hyperparams_arc["N_res_neck"],
+                    "N_res": hyperparams_arc["N_res"],
+                }
+            ]
 
-    config = {
-        "learning_rate": tune.quniform(1e-4, 1e-2, 1e-5),
-        "weight_decay": tune.quniform(1e-6, 1e-3, 1e-6),
-        "scheduler_gamma": tune.quniform(0.75, 0.99, 0.01),
-        "width": tune.choice([4, 8, 16, 32, 64, 128, 256]),
-        "n_layers": tune.randint(1, 6),
-        "modes": tune.choice([2, 4, 8, 12, 16, 20, 24, 28, 32]),  # modes1 = modes2
-        "fun_act": tune.choice(["tanh", "relu", "gelu", "leaky_relu"]),
-        "arc": tune.choice(["Classic", "Zongyi", "Residual"]),
-        "padding": tune.randint(0, 16),
-    }
+    # Hyperparameter search space
+    match arc:
+        case "FNO":
+            config = {
+                "learning_rate": tune.quniform(1e-4, 1e-2, 1e-5),
+                "weight_decay": tune.quniform(1e-6, 1e-3, 1e-6),
+                "scheduler_gamma": tune.quniform(0.75, 0.99, 0.01),
+                "width": tune.choice([4, 8, 16, 32, 64, 128, 256]),
+                "n_layers": tune.randint(1, 6),
+                "modes": tune.choice(
+                    [2, 4, 8, 12, 16, 20, 24, 28, 32]
+                ),  # modes1 = modes2
+                "fun_act": tune.choice(["tanh", "relu", "gelu", "leaky_relu"]),
+                "arc": tune.choice(["Classic", "Zongyi", "Residual"]),
+                "padding": tune.randint(0, 16),
+            }
+        case "CNO":
+            config = {
+                "learning_rate": tune.quniform(1e-4, 1e-2, 1e-5),
+                "weight_decay": tune.quniform(1e-6, 1e-3, 1e-6),
+                "scheduler_gamma": tune.quniform(0.75, 0.99, 0.01),
+                "N_layers": tune.randint(1, 5),
+                "channel_multiplier": tune.choice([8, 16, 24, 32, 40, 48, 56]),
+                "N_res_neck": tune.randint(1, 6),
+                "N_res": tune.randint(1, 8),
+            }
 
     # Automatically detect the available resources and use them
     init(
@@ -334,7 +414,7 @@ def main(num_samples, max_num_epochs=epochs):
     optim_algo = HyperOptSearch(
         metric="relative_loss",
         mode="min",
-        points_to_evaluate=default_mishra_params,
+        points_to_evaluate=default_hyper_params,
         n_initial_points=20,  # number of random points to evaluate before starting the hyperparameter search (default = 20)
         random_state_seed=None,
     )

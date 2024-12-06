@@ -84,7 +84,7 @@ def train_fun(
                     / (input_batch.shape[0] * (step + 1)),
                 }
             )
-        except:
+        except Exception:
             pass
 
     # update the learning rate after an epoch
