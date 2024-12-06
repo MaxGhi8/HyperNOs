@@ -54,7 +54,7 @@ from CNO.CNO_2d import CNO2d
 from CNO.CNO_utilities import CNO_load_data_model, CNO_initialize_hyperparameters
 
 #########################################
-# raytune parameters
+# ray-tune parameters
 #########################################
 checkpoint_frequency = 500  # frequency to save the model
 grace_period = 250  # minimum number of epochs to run before early stopping
