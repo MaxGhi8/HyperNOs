@@ -87,9 +87,17 @@ else:
 #########################################
 # Hyperparameters
 #########################################
-hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
-    which_example, mode=mode_str
-)
+match arc:
+    case "FNO":
+        hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
+            which_example, mode=mode_str
+        )
+    case "CNO":
+        hyperparams_train, hyperparams_arc = CNO_initialize_hyperparameters(
+            which_example, mode=mode_str
+        )
+    case _:
+        raise ValueError("This architecture is not allowed")
 
 # loss function parameter
 Norm_dict = {"L1": 0, "L2": 1, "H1": 2, "L1_smooth": 3, "MSE": 4}
@@ -102,6 +110,9 @@ beta = hyperparams_train["beta"]
 training_samples = hyperparams_train["training_samples"]
 val_samples = hyperparams_train["val_samples"]
 test_samples = hyperparams_train["test_samples"]
+batch_size = hyperparams_train["batch_size"]
+scheduler_step = hyperparams_train["scheduler_step"]
+
 
 # fno fixed hyperparameters
 d_a = hyperparams_arc["d_a"]
@@ -141,9 +152,7 @@ match p:
 def train_hyperparameter(config):
     learning_rate = config["learning_rate"]
     weight_decay = config["weight_decay"]
-    scheduler_step = config["scheduler_step"]
     scheduler_gamma = config["scheduler_gamma"]
-    batch_size = config["batch_size"]
     d_v = config["width"]
     L = config["n_layers"]
     modes = config["modes"]
@@ -219,7 +228,6 @@ def train_hyperparameter(config):
     # Load data
     train_loader = example.train_loader
     val_loader = example.val_loader
-    test_loader = example.test_loader  # for final testing
 
     ## Training process
     for ep in range(start_epoch, epochs):
@@ -262,9 +270,7 @@ def main(num_samples, max_num_epochs=epochs):
         {
             "learning_rate": hyperparams_train["learning_rate"],
             "weight_decay": hyperparams_train["weight_decay"],
-            "scheduler_step": hyperparams_train["scheduler_step"],
             "scheduler_gamma": hyperparams_train["scheduler_gamma"],
-            "batch_size": hyperparams_train["batch_size"],
             "width": hyperparams_arc["width"],
             "n_layers": hyperparams_arc["n_layers"],
             "modes": hyperparams_arc["modes"],
@@ -277,9 +283,7 @@ def main(num_samples, max_num_epochs=epochs):
     config = {
         "learning_rate": tune.quniform(1e-4, 1e-2, 1e-5),
         "weight_decay": tune.quniform(1e-6, 1e-3, 1e-6),
-        # "scheduler_step": tune.randint(1, 100), #! fix to 10
         "scheduler_gamma": tune.quniform(0.75, 0.99, 0.01),
-        # "batch_size": tune.choice([20, 32, 48, 64]), #! fix to 32
         "width": tune.choice([4, 8, 16, 32, 64, 128, 256]),
         "n_layers": tune.randint(1, 6),
         "modes": tune.choice([2, 4, 8, 12, 16, 20, 24, 28, 32]),  # modes1 = modes2
