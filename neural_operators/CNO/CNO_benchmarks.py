@@ -338,9 +338,6 @@ class SinFrequency:
         search_path="/",
     ):
 
-        # Load default parameters if they are not in network_properties
-        network_properties = default_param(network_properties)
-
         if "in_size" in network_properties:
             self.in_size = network_properties["in_size"]
             assert self.in_size <= 128

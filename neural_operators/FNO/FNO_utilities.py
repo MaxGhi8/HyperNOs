@@ -3,6 +3,7 @@ In this file there are some utilities functions that are used in the main file.
 """
 
 import json
+import torch
 from utilities import find_file
 from FNO.FNO_benchmarks import (
     Airfoil,
@@ -25,10 +26,10 @@ from FNO.FNO_benchmarks import CrossTruss
 def FNO_load_data_model(
     which_example: str,
     fno_architecture,
-    device,
-    batch_size,
-    training_samples,
-    in_dist,
+    device: torch.device,
+    batch_size: int,
+    training_samples: int,
+    in_dist: bool,
     search_path: str = "/",
 ):
     """

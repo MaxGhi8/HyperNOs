@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch import Tensor
+from jaxtyping import jaxtyped, Float
+from beartype import beartype
 
 torch.manual_seed(0)  #!
 
@@ -16,7 +19,10 @@ class CNO_LReLu(nn.Module):
         self.out_size = out_size
         self.act = nn.LeakyReLU()
 
-    def forward(self, x):
+    @jaxtyped(typechecker=beartype)
+    def forward(
+        self, x: Float[Tensor, "batch channel in_size"]
+    ) -> Float[Tensor, "batch channel out_size"]:
         x = F.interpolate(
             x.unsqueeze(2), size=(1, 2 * self.in_size), mode="bicubic", antialias=True
         )
@@ -53,7 +59,10 @@ class CNOBlock(nn.Module):
         # Up/Down-sampling happens inside Activation
         self.act = CNO_LReLu(in_size=self.in_size, out_size=self.out_size)
 
-    def forward(self, x):
+    @jaxtyped(typechecker=beartype)
+    def forward(
+        self, x: Float[Tensor, "batch in_channel in_size"]
+    ) -> Float[Tensor, "batch out_channel out_size"]:
         x = self.convolution(x)
         x = self.batch_norm(x)
         return self.act(x)
@@ -78,7 +87,10 @@ class LiftProjectBlock(nn.Module):
             in_channels=latent_dim, out_channels=out_channels, kernel_size=3, padding=1
         )
 
-    def forward(self, x):
+    @jaxtyped(typechecker=beartype)
+    def forward(
+        self, x: Float[Tensor, "batch in_channel size"]
+    ) -> Float[Tensor, "batch out_channel size"]:
         x = self.inter_CNOBlock(x)
         x = self.convolution(x)
         return x
@@ -121,7 +133,10 @@ class ResidualBlock(nn.Module):
         # Up/Down-sampling happens inside Activation
         self.act = CNO_LReLu(in_size=self.size, out_size=self.size)
 
-    def forward(self, x):
+    @jaxtyped(typechecker=beartype)
+    def forward(
+        self, x: Float[Tensor, "batch channel in_size"]
+    ) -> Float[Tensor, "batch channel out_size"]:
         out = self.convolution1(x)
         out = self.batch_norm1(out)
         out = self.act(out)
@@ -149,7 +164,10 @@ class ResNet(nn.Module):
 
         self.res_nets = torch.nn.Sequential(*self.res_nets)
 
-    def forward(self, x):
+    @jaxtyped(typechecker=beartype)
+    def forward(
+        self, x: Float[Tensor, "batch channel in_size"]
+    ) -> Float[Tensor, "batch channel out_size"]:
         for i in range(self.num_blocks):
             x = self.res_nets[i](x)
         return x
@@ -321,7 +339,10 @@ class CNO1d(nn.Module):
         # Move to device
         self.to(device)
 
-    def forward(self, x):
+    @jaxtyped(typechecker=beartype)
+    def forward(
+        self, x: Float[Tensor, "batch size in_dim"]
+    ) -> Float[Tensor, "batch size out_dim"]:
 
         x = self.lift(x.permute(0, 2, 1))
         skip = []

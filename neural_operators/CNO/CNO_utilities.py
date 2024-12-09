@@ -2,9 +2,8 @@
 In this file there are some utilities functions that are used in the main file.
 """
 
-import os
 import json
-
+import torch
 from utilities import find_file
 from CNO.CNO_benchmarks import (
     Airfoil,
@@ -27,10 +26,10 @@ from CNO.CNO_benchmarks import CrossTruss
 def CNO_load_data_model(
     which_example: str,
     cno_architecture,
-    device,
-    batch_size,
-    training_samples,
-    in_dist,
+    device: torch.device,
+    batch_size: int,
+    training_samples: int,
+    in_dist: bool,
     search_path: str = "/",
 ):
     """
