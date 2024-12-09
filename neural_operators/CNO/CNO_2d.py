@@ -340,8 +340,9 @@ class CNO2d(nn.Module):
         self.to(device)
 
     def forward(self, x):
+        # input has shape equals to (batch, size, size, d_a)
 
-        x = self.lift(x)  # Execute Lift
+        x = self.lift(x.permute(0, 3, 1, 2))  # Execute Lift
         skip = []
 
         # Execute Encoder
@@ -374,6 +375,8 @@ class CNO2d(nn.Module):
 
         # Cat and Execute Projection
         x = torch.cat((x, self.ED_expansion[0](skip[0])), 1)
-        x = self.project(x)
+
+        # project and reshape (for consistency with the rest of the models)
+        x = self.project(x).permute(0, 2, 3, 1)
 
         return x

@@ -150,14 +150,14 @@ class ShearLayerDataset(Dataset):
                     self.reader["Sample_" + str(index + self.start)]["input"][:]
                 )
                 .type(torch.float32)
-                .reshape(1, self.s, self.s)
+                .reshape(self.s, self.s, 1)
             )
             labels = (
                 torch.from_numpy(
                     self.reader["Sample_" + str(index + self.start)]["output"][:]
                 )
                 .type(torch.float32)
-                .reshape(1, self.s, self.s)
+                .reshape(self.s, self.s, 1)
             )
 
         else:
@@ -170,8 +170,8 @@ class ShearLayerDataset(Dataset):
             ].reshape(1, 1, self.s, self.s)
 
             if self.s < 128:
-                inputs = downsample(inputs, self.s).reshape(1, self.s, self.s)
-                labels = downsample(labels, self.s).reshape(1, self.s, self.s)
+                inputs = downsample(inputs, self.s).reshape(self.s, self.s, 1)
+                labels = downsample(labels, self.s).reshape(self.s, self.s, 1)
             else:
                 inputs = inputs.reshape(1, 128, 128)
                 labels = labels.reshape(1, 128, 128)
@@ -335,14 +335,14 @@ class SinFrequencyDataset(Dataset):
                 self.reader["Sample_" + str(index + self.start)]["input"][:]
             )
             .type(torch.float32)
-            .reshape(1, self.s, self.s)
+            .reshape(self.s, self.s, 1)
         )
         labels = (
             torch.from_numpy(
                 self.reader["Sample_" + str(index + self.start)]["output"][:]
             )
             .type(torch.float32)
-            .reshape(1, self.s, self.s)
+            .reshape(self.s, self.s, 1)
         )
 
         inputs = (inputs - self.min_data) / (self.max_data - self.min_data)
@@ -510,7 +510,7 @@ class WaveEquationDataset(Dataset):
                 ][:]
             )
             .type(torch.float32)
-            .reshape(1, self.s, self.s)
+            .reshape(self.s, self.s, 1)
         )
         labels = (
             torch.from_numpy(
@@ -519,7 +519,7 @@ class WaveEquationDataset(Dataset):
                 ][:]
             )
             .type(torch.float32)
-            .reshape(1, self.s, self.s)
+            .reshape(self.s, self.s, 1)
         )
 
         inputs = (inputs - self.min_data) / (self.max_data - self.min_data)
@@ -676,14 +676,14 @@ class AllenCahnDataset(Dataset):
                 self.reader["Sample_" + str(index + self.start)]["input"][:]
             )
             .type(torch.float32)
-            .reshape(1, 64, 64)
+            .reshape(64, 64, 1)
         )
         labels = (
             torch.from_numpy(
                 self.reader["Sample_" + str(index + self.start)]["output"][:]
             )
             .type(torch.float32)
-            .reshape(1, 64, 64)
+            .reshape(64, 64, 1)
         )
 
         inputs = (inputs - self.min_data) / (self.max_data - self.min_data)
@@ -830,14 +830,14 @@ class ContTranslationDataset(Dataset):
                 self.reader["Sample_" + str(index + self.start)]["input"][:]
             )
             .type(torch.float32)
-            .reshape(1, 64, 64)
+            .reshape(64, 64, 1)
         )
         labels = (
             torch.from_numpy(
                 self.reader["Sample_" + str(index + self.start)]["output"][:]
             )
             .type(torch.float32)
-            .reshape(1, 64, 64)
+            .reshape(64, 64, 1)
         )
 
         if self.N_Fourier_F > 0:
@@ -982,14 +982,14 @@ class DiscContTranslationDataset(Dataset):
                 self.reader["Sample_" + str(index + self.start)]["input"][:]
             )
             .type(torch.float32)
-            .reshape(1, 64, 64)
+            .reshape(64, 64, 1)
         )
         labels = (
             torch.from_numpy(
                 self.reader["Sample_" + str(index + self.start)]["output"][:]
             )
             .type(torch.float32)
-            .reshape(1, 64, 64)
+            .reshape(64, 64, 1)
         )
 
         if self.N_Fourier_F > 0:
@@ -1135,14 +1135,14 @@ class AirfoilDataset(Dataset):
                 self.reader["Sample_" + str(index + self.start)]["input"][:]
             )
             .type(torch.float32)
-            .reshape(1, 128, 128)
+            .reshape(128, 128, 1)
         )
         labels = (
             torch.from_numpy(
                 self.reader["Sample_" + str(index + self.start)]["output"][:]
             )
             .type(torch.float32)
-            .reshape(1, 128, 128)
+            .reshape(128, 128, 1)
         )
 
         if self.N_Fourier_F > 0:
@@ -1292,14 +1292,14 @@ class DarcyDataset(Dataset):
                 self.reader["sample_" + str(index + self.start)]["input"][:]
             )
             .type(torch.float32)
-            .reshape(1, 64, 64)
+            .reshape(64, 64, 1)
         )
         labels = (
             torch.from_numpy(
                 self.reader["sample_" + str(index + self.start)]["output"][:]
             )
             .type(torch.float32)
-            .reshape(1, 64, 64)
+            .reshape(64, 64, 1)
         )
 
         inputs = (inputs - self.min_data) / (self.max_data - self.min_data)
