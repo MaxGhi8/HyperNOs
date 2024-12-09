@@ -2,19 +2,16 @@
 This file contains the necessary functions to load the data for the Fourier Neural Operator benchmarks.
 """
 
-import os
 import h5py
 import numpy as np
 import scipy.io
 import scipy.fft as fft
 import torch
+import sys
+from torch.utils.data import DataLoader, TensorDataset, Dataset
 from torch import Tensor
-from torch.utils.data import DataLoader, TensorDataset
-from torch.utils.data import Dataset
 from jaxtyping import jaxtyped, Float
 from beartype import beartype
-
-import sys
 
 sys.path.append("../")
 from utilities import find_file, FourierFeatures, UnitGaussianNormalizer
