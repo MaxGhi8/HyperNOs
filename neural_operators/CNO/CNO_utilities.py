@@ -16,10 +16,9 @@ from CNO.CNO_benchmarks import (
     ShearLayer,
     Darcy,
 )
-
-# from CNO_benchmarks import Darcy_Zongyi, Burgers_Zongyi # todo
-# from CNO_benchmarks import FitzHughNagumo, HodgkinHuxley # todo
-# from CNO_benchmarks import CrossTruss # todo
+from CNO.CNO_benchmarks import Darcy_Zongyi, Burgers_Zongyi
+from CNO.CNO_benchmarks import FitzHughNagumo, HodgkinHuxley
+from CNO.CNO_benchmarks import CrossTruss
 
 
 #########################################
@@ -111,30 +110,38 @@ def CNO_load_data_model(
                 search_path=search_path,
             )
 
-        # todo
-        # case "burgers_zongyi":
-        #     example = Burgers_Zongyi(cno_architecture, batch_size, search_path=search_path)
-        #     cno_architecture["problem_dim"] = 1
-        # case "darcy_zongyi":
-        #     example = Darcy_Zongyi(cno_architecture, batch_size, search_path=search_path)
-        # case "navier_stokes_zongyi":
-        #     pass # TODO
+        case "burgers_zongyi":
+            example = Burgers_Zongyi(
+                cno_architecture, batch_size, search_path=search_path
+            )
+            cno_architecture["problem_dim"] = 1
+        case "darcy_zongyi":
+            example = Darcy_Zongyi(
+                cno_architecture, batch_size, search_path=search_path
+            )
+        case "navier_stokes_zongyi":
+            pass  # TODO
 
-        # todo
-        # case "fhn":
-        #     time = "_tf_100"
-        #     example = FitzHughNagumo(time, cno_architecture, batch_size, search_path=search_path)
-        #     cno_architecture["problem_dim"] = 1
-        # case "fhn_long":
-        #     time = "_tf_200"
-        #     example = FitzHughNagumo(time, cno_architecture, batch_size, search_path=search_path)
-        #     cno_architecture["problem_dim"] = 1
-        # case "hh":
-        #     example = HodgkinHuxley(cno_architecture, batch_size, search_path=search_path)
-        #     cno_architecture["problem_dim"] = 1
+        case "fhn":
+            time = "_tf_100"
+            example = FitzHughNagumo(
+                time, cno_architecture, batch_size, search_path=search_path
+            )
+            cno_architecture["problem_dim"] = 1
+        case "fhn_long":
+            time = "_tf_200"
+            example = FitzHughNagumo(
+                time, cno_architecture, batch_size, search_path=search_path
+            )
+            cno_architecture["problem_dim"] = 1
+        case "hh":
+            example = HodgkinHuxley(
+                cno_architecture, batch_size, search_path=search_path
+            )
+            cno_architecture["problem_dim"] = 1
 
-        # case "crosstruss":
-        #     example = CrossTruss(cno_architecture, batch_size, search_path=search_path)
+        case "crosstruss":
+            example = CrossTruss(cno_architecture, batch_size, search_path=search_path)
 
         case _:
             raise ValueError("the variable which_example is typed wrong")

@@ -2,19 +2,18 @@
 This file contains the necessary functions to load the data for the Fourier Neural Operator benchmarks.
 """
 
-import random
 import h5py
 import numpy as np
 import scipy
 import torch
-from torch.utils.data import DataLoader
-from torch.utils.data import Dataset
-
 import sys
+from torch.utils.data import DataLoader, Dataset, TensorDataset
+from torch import Tensor
+from jaxtyping import jaxtyped, Float
+from beartype import beartype
 
 sys.path.append("../")
-from utilities import find_file, FourierFeatures
-from CNO.CNO_2d import CNO2d as CNO
+from utilities import find_file, FourierFeatures, UnitGaussianNormalizer
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -38,46 +37,6 @@ def downsample(u, N):
     u_hat_down = u_hat[:, :, sel, :][:, :, :, sel]
     u_down = samples_ifft(u_hat_down)
     return u_down
-
-
-#! I want to delete this function after I create the configurations file
-# Load default parameters:
-def default_param(network_properties):
-
-    if "channel_multiplier" not in network_properties:
-        network_properties["channel_multiplier"] = 32
-
-    if "half_width_mult" not in network_properties:
-        network_properties["half_width_mult"] = 1
-
-    if "lrelu_upsampling" not in network_properties:
-        network_properties["lrelu_upsampling"] = 2
-
-    if "filter_size" not in network_properties:
-        network_properties["filter_size"] = 6
-
-    if "out_size" not in network_properties:
-        network_properties["out_size"] = 1
-
-    if "radial" not in network_properties:
-        network_properties["radial_filter"] = 0
-
-    if "cutoff_den" not in network_properties:
-        network_properties["cutoff_den"] = 2.0001
-
-    if "FourierF" not in network_properties:
-        network_properties["FourierF"] = 0
-
-    if "retrain" not in network_properties:
-        network_properties["retrain"] = 4
-
-    if "kernel_size" not in network_properties:
-        network_properties["kernel_size"] = 3
-
-    if "activation" not in network_properties:
-        network_properties["activation"] = "cno_lrelu"
-
-    return network_properties
 
 
 # ------------------------------------------------------------------------------
@@ -1386,4 +1345,581 @@ class Darcy:
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
+        )
+
+
+# ------------------------------------------------------------------------------
+# Darcy's Equation data (from Zongyi Li FNO article)
+#   Training samples (1000)
+#   Testing samples  (200)
+#   Validation samples (200)
+
+
+@jaxtyped(typechecker=beartype)
+def MatReader_darcy(
+    file_path: str,
+) -> tuple[Float[Tensor, "n_samples n_x n_y"], Float[Tensor, "n_samples n_x n_y"]]:
+    """
+    Function to read .mat files for the darcy_zongyi problem.
+    I prefer to makes a separate function to use jaxtyped decorator to check dimensions.
+
+    Parameters
+    ----------
+    file_path : string
+        path to the .mat file
+
+    Returns
+    -------
+    a : tensor
+        point-wise evaluation of the coefficient tensor a(x) in the Darcy equation
+    u : tensor
+        point-wise evaluation of the solution approximation of the solution u(x) of the Darcy equation
+
+    Note: The grid is uniform and with 421 points in each direction.
+
+    """
+    data = scipy.io.loadmat(file_path)
+    a = data["coeff"]
+    a = torch.from_numpy(a).float()
+    u = data["sol"]
+    u = torch.from_numpy(u).float()
+    a, u = a.to("cpu"), u.to("cpu")
+    return a, u
+
+
+class Darcy_Zongyi:
+    def __init__(
+        self,
+        network_properties,
+        batch_size,
+        ntrain=1000,
+        ntest=200,
+        s=5,
+        search_path="/",
+    ):
+        # s = 5 --> (421)//s + 1 = 85 points per direction
+
+        self.TrainDataPath = find_file("piececonst_r421_N1024_smooth1.mat", search_path)
+        a_train, u_train = MatReader_darcy(self.TrainDataPath)
+        self.TestDataPath = find_file("piececonst_r421_N1024_smooth2.mat", search_path)
+        a_test, u_test = MatReader_darcy(self.TestDataPath)
+
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            torch.manual_seed(retrain)
+
+        # Training data
+        g = torch.Generator().manual_seed(1)
+        idx_train = torch.randperm(1024, device="cpu", generator=g)[:ntrain]
+        a_train, u_train = a_train[idx_train, ::s, ::s], u_train[idx_train, ::s, ::s]
+        # Compute mean and std (for gaussian point-wise normalization)
+        a_normalizer = UnitGaussianNormalizer(a_train)
+        u_normalizer = UnitGaussianNormalizer(u_train)
+        # Normalize
+        a_train = a_normalizer.encode(a_train).unsqueeze(-1)
+        u_train = u_normalizer.encode(u_train).unsqueeze(-1)
+
+        # Validation data
+        idx_test_tot = torch.randperm(1024, device="cpu", generator=g)
+        idx_val = idx_test_tot[:ntest]
+        a_val, u_val = a_test[idx_val, ::s, ::s], u_test[idx_val, ::s, ::s]
+        a_val = a_normalizer.encode(a_val).unsqueeze(-1)
+        u_val = u_normalizer.encode(u_val).unsqueeze(-1)
+
+        # Test data
+        idx_test = idx_test_tot[ntest : 2 * ntest]
+        a_test, u_test = a_test[idx_test, ::s, ::s], u_test[idx_test, ::s, ::s]
+        a_test = a_normalizer.encode(a_test).unsqueeze(-1)
+        u_test = u_normalizer.encode(u_test).unsqueeze(-1)
+
+        # Change number of workers according to your preference
+        num_workers = 0
+
+        self.train_loader = DataLoader(
+            TensorDataset(a_train, u_train),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            pin_memory=True,
+        )
+        self.val_loader = DataLoader(
+            TensorDataset(a_val, u_val),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+        )
+        self.test_loader = DataLoader(
+            TensorDataset(a_test, u_test),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+        )
+
+
+# ------------------------------------------------------------------------------
+# 1D Burger's Equation data (from Zongyi Li FNO article)
+#   Training samples (1000)
+#   Testing samples  (200)
+#   Validation samples (200)
+
+
+@jaxtyped(typechecker=beartype)
+def MatReader_burgers(
+    file_path: str,
+) -> tuple[Float[Tensor, "n_samples n_x"], Float[Tensor, "n_samples n_x"]]:
+    """
+    Function to read .mat files for the burgers_zongyi problem
+    """
+    data = scipy.io.loadmat(file_path)
+    a = data["a"]
+    a = torch.from_numpy(a).float()
+    u = data["u"]
+    u = torch.from_numpy(u).float()
+    a, u = a.to("cpu"), u.to("cpu")
+    return a, u
+
+
+class Burgers_Zongyi:
+    def __init__(
+        self,
+        network_properties,
+        batch_size,
+        ntrain=1000,
+        ntest=200,
+        s=8,
+        search_path="/",
+    ):
+        # s = 8 --> (8192)//s + 1 = 1025 points
+
+        self.DataPath = find_file("burgers_data_R10.mat", search_path)
+        a, u = MatReader_burgers(self.DataPath)
+
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            torch.manual_seed(retrain)
+
+        # Training data
+        g = torch.Generator().manual_seed(1)
+        idx = torch.randperm(2048, device="cpu", generator=g)
+        idx_train = idx[:ntrain]
+        a_train, u_train = a[idx_train, ::s], u[idx_train, ::s]
+        # Compute mean and std (for gaussian point-wise normalization)
+        a_normalizer = UnitGaussianNormalizer(a_train)
+        u_normalizer = UnitGaussianNormalizer(u_train)
+        # Normalize
+        a_train = a_normalizer.encode(a_train).unsqueeze(-1)
+        u_train = u_normalizer.encode(u_train).unsqueeze(-1)
+
+        # Validation data
+        idx_val = idx[ntrain : ntrain + ntest]
+        a_val, u_val = a[idx_val, ::s], u[idx_val, ::s]
+        a_val = a_normalizer.encode(a_val).unsqueeze(-1)
+        u_val = u_normalizer.encode(u_val).unsqueeze(-1)
+
+        # Test data
+        idx_test = idx[ntrain + ntest : ntrain + 2 * ntest]
+        a_test, u_test = a[idx_test, ::s], u[idx_test, ::s]
+        a_test = a_normalizer.encode(a_test).unsqueeze(-1)
+        u_test = u_normalizer.encode(u_test).unsqueeze(-1)
+
+        # Change number of workers according to your preference
+        num_workers = 0
+
+        self.train_loader = DataLoader(
+            TensorDataset(a_train, u_train),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            pin_memory=True,
+        )
+        self.val_loader = DataLoader(
+            TensorDataset(a_val, u_val),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+        )
+        self.test_loader = DataLoader(
+            TensorDataset(a_test, u_test),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+        )
+
+
+# ------------------------------------------------------------------------------
+# Navier Stokes's Equation data (from Zongyi Li FNO article)
+
+
+# ------------------------------------------------------------------------------
+# 0D FitzHugh-Nagumo model data
+#   Training samples (3000)
+#   Testing samples  (375)
+#   Validation samples (375)
+
+
+@jaxtyped(typechecker=beartype)
+def MatReader_fhn(
+    file_path: str,
+) -> tuple[
+    Float[Tensor, "n_samples n_x"],
+    Float[Tensor, "n_samples n_x"],
+    Float[Tensor, "n_samples n_x"],
+]:
+    """
+    Function to read .mat files for the FitzHugh-Nagumo problem
+    """
+    data = scipy.io.loadmat(file_path)
+    a = data["I_app_dataset"]
+    a = torch.from_numpy(a).transpose(0, 1).float()
+    v = data["V_dataset"]
+    v = torch.from_numpy(v).transpose(0, 1).float()
+    w = data["w_dataset"]
+    w = torch.from_numpy(w).transpose(0, 1).float()
+    a, v, w = a.to("cpu"), v.to("cpu"), w.to("cpu")
+    return a, v, w
+
+
+class FitzHughNagumo:
+    def __init__(
+        self,
+        time: str,
+        network_properties,
+        batch_size,
+        ntrain=3000,
+        ntest=375,
+        s=4,
+        search_path="/",
+    ):
+        # s = 4 --> (5040)//s  = 1260 points
+
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            torch.manual_seed(retrain)
+
+        # Training data
+        self.TrainDataPath = find_file(
+            f"Training_dataset_FHN_n_3000_points_5040{time}.mat", search_path
+        )
+        a, v, w = MatReader_fhn(self.TrainDataPath)
+        a_train, v_train, w_train = (
+            a[:, ::s].unsqueeze(-1),
+            v[:, ::s].unsqueeze(-1),
+            w[:, ::s].unsqueeze(-1),
+        )
+        # Compute mean and std (for gaussian point-wise normalization)
+        self.a_normalizer = UnitGaussianNormalizer(a_train)
+        self.v_normalizer = UnitGaussianNormalizer(v_train)
+        self.w_normalizer = UnitGaussianNormalizer(w_train)
+        # Normalize
+        a_train = self.a_normalizer.encode(a_train)
+        u_train = torch.concatenate(
+            (self.v_normalizer.encode(v_train), self.w_normalizer.encode(w_train)),
+            dim=2,
+        )
+
+        # Validation data
+        self.ValDataPath = find_file(
+            f"Validation_dataset_FHN_n_375_points_5040{time}.mat", search_path
+        )
+        a, v, w = MatReader_fhn(self.ValDataPath)
+        a_val, v_val, w_val = (
+            a[:, ::s].unsqueeze(-1),
+            v[:, ::s].unsqueeze(-1),
+            w[:, ::s].unsqueeze(-1),
+        )
+        a_val = self.a_normalizer.encode(a_val)
+        u_val = torch.concatenate(
+            (self.v_normalizer.encode(v_val), self.w_normalizer.encode(w_val)), dim=2
+        )
+
+        # Test data
+        self.TestDataPath = find_file(
+            f"Test_dataset_FHN_n_375_points_5040{time}.mat", search_path
+        )
+        a, v, w = MatReader_fhn(self.TestDataPath)
+        a_test, v_test, w_test = (
+            a[:, ::s].unsqueeze(-1),
+            v[:, ::s].unsqueeze(-1),
+            w[:, ::s].unsqueeze(-1),
+        )
+        a_test = self.a_normalizer.encode(a_test)
+        u_test = torch.concatenate(
+            (self.v_normalizer.encode(v_test), self.w_normalizer.encode(w_test)), dim=2
+        )
+
+        # Change number of workers according to your preference
+        num_workers = 0
+
+        self.train_loader = DataLoader(
+            TensorDataset(a_train, u_train),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            pin_memory=True,
+        )
+        self.val_loader = DataLoader(
+            TensorDataset(a_val, u_val),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+        )
+        self.test_loader = DataLoader(
+            TensorDataset(a_test, u_test),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+        )
+
+
+# ------------------------------------------------------------------------------
+# 0D Hodgkin-Huxley model data
+#   Training samples (3000)
+#   Testing samples  (375)
+#   Validation samples (375)
+
+
+@jaxtyped(typechecker=beartype)
+def MatReader_hh(
+    file_path: str,
+) -> tuple[
+    Float[Tensor, "n_samples n_x"],
+    Float[Tensor, "n_samples n_x"],
+    Float[Tensor, "n_samples n_x"],
+    Float[Tensor, "n_samples n_x"],
+    Float[Tensor, "n_samples n_x"],
+]:
+    """
+    Function to read .mat files for the Hodgkin-Huxley problem
+    """
+    data = scipy.io.loadmat(file_path)
+
+    a = data["I_app_dataset"]
+    a = torch.from_numpy(a).transpose(0, 1).float()
+
+    v = data["V_dataset"]
+    v = torch.from_numpy(v).transpose(0, 1).float()
+
+    m = data["m_dataset"]
+    m = torch.from_numpy(m).transpose(0, 1).float()
+
+    h = data["h_dataset"]
+    h = torch.from_numpy(h).transpose(0, 1).float()
+
+    n = data["n_dataset"]
+    n = torch.from_numpy(n).transpose(0, 1).float()
+
+    return a.to("cpu"), v.to("cpu"), m.to("cpu"), h.to("cpu"), n.to("cpu")
+
+
+class HodgkinHuxley:
+    def __init__(
+        self,
+        network_properties,
+        batch_size,
+        ntrain=3000,
+        ntest=375,
+        s=4,
+        search_path="/",
+    ):
+        # s = 4 --> (5040)//s  = 1260 points
+
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            torch.manual_seed(retrain)
+
+        # Training data
+        self.TrainDataPath = find_file(
+            "Training_dataset_HH_n_3000_points_5040_tf_100.mat", search_path
+        )
+        a, v, m, h, n = MatReader_hh(self.TrainDataPath)
+        a_train, v_train, m_train, h_train, n_train = (
+            a[:, ::s].unsqueeze(-1),
+            v[:, ::s].unsqueeze(-1),
+            m[:, ::s].unsqueeze(-1),
+            h[:, ::s].unsqueeze(-1),
+            n[:, ::s].unsqueeze(-1),
+        )
+        # Compute mean and std (for gaussian point-wise normalization)
+        self.a_normalizer = UnitGaussianNormalizer(a_train)
+        self.v_normalizer = UnitGaussianNormalizer(v_train)
+        self.m_normalizer = UnitGaussianNormalizer(m_train)
+        self.h_normalizer = UnitGaussianNormalizer(h_train)
+        self.n_normalizer = UnitGaussianNormalizer(n_train)
+        # Normalize
+        a_train = self.a_normalizer.encode(a_train)
+        u_train = torch.concatenate(
+            (
+                self.v_normalizer.encode(v_train),
+                self.m_normalizer.encode(m_train),
+                self.h_normalizer.encode(h_train),
+                self.n_normalizer.encode(n_train),
+            ),
+            dim=2,
+        )
+
+        # Validation data
+        self.ValDataPath = find_file(
+            "Validation_dataset_HH_n_375_points_5040_tf_100.mat", search_path
+        )
+        a, v, m, h, n = MatReader_hh(self.ValDataPath)
+        a_val, v_val, m_val, h_val, n_val = (
+            a[:, ::s].unsqueeze(-1),
+            v[:, ::s].unsqueeze(-1),
+            m[:, ::s].unsqueeze(-1),
+            h[:, ::s].unsqueeze(-1),
+            n[:, ::s].unsqueeze(-1),
+        )
+        a_val = self.a_normalizer.encode(a_val)
+        u_val = torch.concatenate(
+            (
+                self.v_normalizer.encode(v_val),
+                self.m_normalizer.encode(m_val),
+                self.h_normalizer.encode(h_val),
+                self.n_normalizer.encode(n_val),
+            ),
+            dim=2,
+        )
+
+        # Test data
+        self.TestDataPath = find_file(
+            "Test_dataset_HH_n_375_points_5040_tf_100.mat", search_path
+        )
+        a, v, m, h, n = MatReader_hh(self.TestDataPath)
+        a_test, v_test, m_test, h_test, n_test = (
+            a[:, ::s].unsqueeze(-1),
+            v[:, ::s].unsqueeze(-1),
+            m[:, ::s].unsqueeze(-1),
+            h[:, ::s].unsqueeze(-1),
+            n[:, ::s].unsqueeze(-1),
+        )
+        a_test = self.a_normalizer.encode(a_test)
+        u_test = torch.concatenate(
+            (
+                self.v_normalizer.encode(v_test),
+                self.m_normalizer.encode(m_test),
+                self.h_normalizer.encode(h_test),
+                self.n_normalizer.encode(n_test),
+            ),
+            dim=2,
+        )
+
+        # Change number of workers according to your preference
+        num_workers = 0
+
+        self.train_loader = DataLoader(
+            TensorDataset(a_train, u_train),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            pin_memory=True,
+        )
+        self.val_loader = DataLoader(
+            TensorDataset(a_val, u_val),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+        )
+        self.test_loader = DataLoader(
+            TensorDataset(a_test, u_test),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+        )
+
+
+# ------------------------------------------------------------------------------
+# Cross truss data
+# Training samples (1000)
+# Testing samples (250)
+# Validation samples (250)
+
+
+class CrossTruss(Dataset):
+    def __init__(
+        self,
+        network_properties,
+        batch_size,
+        ntrain=1000,
+        ntest=250,
+        s=2,
+        search_path="/",
+    ):
+        # s = 2 --> (211)//s + 1 = 105 points
+        # Read the data
+        self.file_data = find_file("elasticity_dataset_211x211_n1500.h5", search_path)
+        self.reader = h5py.File(self.file_data, "r")
+        inputs = torch.from_numpy(self.reader["domain"][:]).type(torch.float32)
+        outputs = torch.from_numpy(self.reader["displacements"][:]).type(torch.float32)
+        # Train set
+        inputs_train = inputs[:ntrain, ::s, ::s].unsqueeze(-1)
+        outputs_train = outputs[:ntrain, ::s, ::s]
+        # Validation set
+        inputs_val = inputs[ntrain : ntrain + ntest, ::s, ::s].unsqueeze(-1)
+        outputs_val = outputs[ntrain : ntrain + ntest, ::s, ::s]
+        # Test set
+        inputs_test = inputs[ntrain + ntest : ntrain + 2 * ntest, ::s, ::s].unsqueeze(
+            -1
+        )
+        outputs_test = outputs[ntrain + ntest : ntrain + 2 * ntest, ::s, ::s]
+
+        # Normalize the outputs (min-max normalization), the inputs are already normalized in {0,1}
+        self.min_x = torch.min(outputs_train[:, :, :, 0])
+        self.max_x = torch.max(outputs_train[:, :, :, 0])
+        outputs_train[:, :, :, 0] = (outputs_train[:, :, :, 0] - self.min_x) / (
+            self.max_x - self.min_x
+        )
+        outputs_val[:, :, :, 0] = (outputs_val[:, :, :, 0] - self.min_x) / (
+            self.max_x - self.min_x
+        )
+        outputs_test[:, :, :, 0] = (outputs_test[:, :, :, 0] - self.min_x) / (
+            self.max_x - self.min_x
+        )
+
+        self.min_y = torch.min(outputs_train[:, :, :, 1])
+        self.max_y = torch.max(outputs_train[:, :, :, 1])
+        outputs_train[:, :, :, 1] = (outputs_train[:, :, :, 1] - self.min_y) / (
+            self.max_y - self.min_y
+        )
+        outputs_val[:, :, :, 1] = (outputs_val[:, :, :, 1] - self.min_y) / (
+            self.max_y - self.min_y
+        )
+        outputs_test[:, :, :, 1] = (outputs_test[:, :, :, 1] - self.min_y) / (
+            self.max_y - self.min_y
+        )
+
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            torch.manual_seed(retrain)
+
+        # Change number of workers according to your preference
+        num_workers = 0
+
+        self.train_loader = DataLoader(
+            TensorDataset(inputs_train, outputs_train),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            pin_memory=True,
+        )
+        self.val_loader = DataLoader(
+            TensorDataset(inputs_val, outputs_val),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+        )
+        self.test_loader = DataLoader(
+            TensorDataset(inputs_test, outputs_test),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
         )
