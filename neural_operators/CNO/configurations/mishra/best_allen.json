@@ -20,6 +20,7 @@
 		"N_res_neck": 4,
 		"N_res": 4,
 		"bn": true,
+		"kernel_size": 3,
 		"FourierF": 0,
 		"retrain": 4,
 		"problem_dim": 2

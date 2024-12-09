@@ -19,6 +19,7 @@
 		"channel_multiplier": 48,
 		"N_res_neck": 4,
 		"N_res": 2,
+		"kernel_size": 3,
 		"bn": true,
 		"FourierF": 0,
 		"retrain": 4,
