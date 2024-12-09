@@ -323,7 +323,7 @@ class CNO1d(nn.Module):
 
     def forward(self, x):
 
-        x = self.lift(x)
+        x = self.lift(x.permute(0, 2, 1))
         skip = []
 
         # Execute Encoder
@@ -355,4 +355,4 @@ class CNO1d(nn.Module):
         x = torch.cat((x, self.ED_expansion[0](skip[0])), 1)
         x = self.project(x)
 
-        return x
+        return x.permute(0, 2, 1)
