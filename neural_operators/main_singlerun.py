@@ -70,12 +70,12 @@ elif len(sys.argv) == 3:
 elif len(sys.argv) == 4:
     which_example = sys.argv[1]
     arc = sys.argv[2].upper()
-    exp_norm = sys.argv[3]
+    exp_norm = sys.argv[3].upper()
     in_dist = True  # default value
 elif len(sys.argv) == 5:
     which_example = sys.argv[1]
     arc = sys.argv[2].upper()
-    exp_norm = sys.argv[3]
+    exp_norm = sys.argv[3].upper()
     in_dist = sys.argv[4]
 else:
     raise ValueError("The user must choose the example to run")
@@ -116,7 +116,7 @@ match arc:
         raise ValueError("This architecture is not allowed")
 
 # choose the Loss function
-Norm_dict = {"L1": 0, "L2": 1, "H1": 2, "L1_smooth": 3, "MSE": 4}
+Norm_dict = {"L1": 0, "L2": 1, "H1": 2, "L1_SMOOTH": 3, "MSE": 4}
 hyperparams_train["exp"] = Norm_dict[exp_norm]
 
 # Training hyperparameters

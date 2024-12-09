@@ -223,7 +223,7 @@ def test_fun(
             }
         )
         tepoch.close()
-    except:
+    except Exception:
         pass
 
     if statistic:
@@ -235,8 +235,15 @@ def test_fun(
             train_loss,
         )
     else:
-        # return test_relative_l1 # return only the L^1 rel error # !!
-        return test_relative_l2  # return only the L^1 rel error
+        match exp_norm:
+            case "L1":
+                return test_relative_l1
+            case "L2":
+                return test_relative_l2
+            case "H1":
+                return test_relative_h1
+            case _:
+                raise ValueError("The norm is not implemented")
 
 
 def test_fun_tensors(

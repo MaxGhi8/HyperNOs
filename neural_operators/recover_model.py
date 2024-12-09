@@ -67,16 +67,16 @@ elif len(sys.argv) == 2:
     in_dist = True
 elif len(sys.argv) == 3:
     which_example = sys.argv[1]
-    exp_norm = sys.argv[2]
+    exp_norm = sys.argv[2].upper()
     in_dist = True
 elif len(sys.argv) == 4:
     which_example = sys.argv[1]
-    exp_norm = sys.argv[2]
+    exp_norm = sys.argv[2].upper()
     in_dist = sys.argv[3]
 else:
     raise ValueError("The user must choose the example to run")
 
-Norm_dict = {"L1": 0, "L2": 1, "H1": 2, "L1_smooth": 3, "MSE": 4}
+Norm_dict = {"L1": 0, "L2": 1, "H1": 2, "L1_SMOOTH": 3, "MSE": 4}
 
 # upload the model and the hyperparameters
 arc = "FNO"
