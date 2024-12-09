@@ -187,6 +187,7 @@ def train_hyperparameter(config):
             chan_mul = config["channel_multiplier"]
             n_res_neck = config["N_res_neck"]
             n_res = config["N_res"]
+            kernel_size = config["kernel_size"]
 
     # Device I can handle different devices for different ray trials
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -259,6 +260,7 @@ def train_hyperparameter(config):
                     n_res,
                     n_res_neck,
                     chan_mul,
+                    kernel_size,
                     bn,
                     device,
                 )
@@ -271,6 +273,7 @@ def train_hyperparameter(config):
                     n_res,
                     n_res_neck,
                     chan_mul,
+                    kenel_size,
                     bn,
                     device,
                 )
@@ -366,6 +369,7 @@ def main(num_samples, max_num_epochs=epochs):
                     "channel_multiplier": hyperparams_arc["channel_multiplier"],
                     "N_res_neck": hyperparams_arc["N_res_neck"],
                     "N_res": hyperparams_arc["N_res"],
+                    "kernel_size": hyperparams_arc["kernel_size"],
                 }
             ]
 
@@ -394,6 +398,9 @@ def main(num_samples, max_num_epochs=epochs):
                 "channel_multiplier": tune.choice([8, 16, 24, 32, 40, 48, 56]),
                 "N_res_neck": tune.randint(1, 6),
                 "N_res": tune.randint(1, 8),
+                "kernel_size": tune.choice(
+                    [3, 5, 7, 9, 11, 13, 15]
+                ),  # todo: find good values
             }
 
     # Automatically detect the available resources and use them

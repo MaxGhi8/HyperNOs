@@ -5,7 +5,7 @@ from torch import Tensor
 from jaxtyping import jaxtyped, Float
 from beartype import beartype
 
-torch.manual_seed(0)  #!
+# torch.manual_seed(0)  #!
 
 
 #########################################
@@ -35,23 +35,28 @@ class CNO_LReLu(nn.Module):
 # CNO Block or Invariant Block:
 #########################################
 class CNOBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, in_size, out_size, use_bn=True):
+    def __init__(
+        self, in_channels, out_channels, in_size, out_size, kernel_size=3, use_bn=True
+    ):
         super(CNOBlock, self).__init__()
 
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.in_size = in_size
         self.out_size = out_size
+        self.kernel_size = kernel_size
+        self.padding = self.kernel_size // 2
+        self.use_bn = use_bn
 
         self.convolution = torch.nn.Conv1d(
             in_channels=self.in_channels,
             out_channels=self.out_channels,
-            kernel_size=3,
-            padding=1,
-            bias=not use_bn,
+            kernel_size=self.kernel_size,
+            padding=self.padding,
+            bias=not self.use_bn,
         )
 
-        if use_bn:
+        if self.use_bn:
             self.batch_norm = nn.BatchNorm1d(self.out_channels)
         else:
             self.batch_norm = nn.Identity()
@@ -72,19 +77,30 @@ class CNOBlock(nn.Module):
 # Lift/Project Block:
 #########################################
 class LiftProjectBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, size, latent_dim=64):
+    def __init__(self, in_channels, out_channels, size, latent_dim=64, kernel_size=3):
         super(LiftProjectBlock, self).__init__()
 
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.size = size
+        self.latent_dim = latent_dim
+        self.kernel_size = kernel_size
+        self.padding = self.kernel_size // 2
+
         self.inter_CNOBlock = CNOBlock(
-            in_channels=in_channels,
-            out_channels=latent_dim,
-            in_size=size,
-            out_size=size,
+            in_channels=self.in_channels,
+            out_channels=self.latent_dim,
+            in_size=self.size,
+            out_size=self.size,
+            kernel_size=self.kernel_size,
             use_bn=False,
         )
 
         self.convolution = torch.nn.Conv1d(
-            in_channels=latent_dim, out_channels=out_channels, kernel_size=3, padding=1
+            in_channels=self.latent_dim,
+            out_channels=self.out_channels,
+            kernel_size=self.kernel_size,
+            padding=self.padding,
         )
 
     @jaxtyped(typechecker=beartype)
@@ -100,29 +116,32 @@ class LiftProjectBlock(nn.Module):
 # Residual Block:
 #########################################
 class ResidualBlock(nn.Module):
-    def __init__(self, channels, size, use_bn=True):
+    def __init__(self, channels, size, kernel_size=3, use_bn=True):
         super(ResidualBlock, self).__init__()
 
         self.channels = channels
         self.size = size
+        self.kernel_size = kernel_size
+        self.padding = self.kernel_size // 2
+        self.use_bn = use_bn
 
         self.convolution1 = torch.nn.Conv1d(
             in_channels=self.channels,
             out_channels=self.channels,
-            kernel_size=3,
-            padding=1,
-            bias=not use_bn,
+            kernel_size=self.kernel_size,
+            padding=self.padding,
+            bias=not self.use_bn,
         )
 
         self.convolution2 = torch.nn.Conv1d(
             in_channels=self.channels,
             out_channels=self.channels,
-            kernel_size=3,
-            padding=1,
-            bias=not use_bn,
+            kernel_size=self.kernel_size,
+            padding=self.padding,
+            bias=not self.use_bn,
         )
 
-        if use_bn:
+        if self.use_bn:
             self.batch_norm1 = nn.BatchNorm1d(self.channels)
             self.batch_norm2 = nn.BatchNorm1d(self.channels)
 
@@ -149,17 +168,24 @@ class ResidualBlock(nn.Module):
 # ResNet:
 #########################################
 class ResNet(nn.Module):
-    def __init__(self, channels, size, num_blocks, use_bn=True):
+    def __init__(self, channels, size, num_blocks, kernel_size=3, use_bn=True):
         super(ResNet, self).__init__()
 
         self.channels = channels
         self.size = size
         self.num_blocks = num_blocks
+        self.kernel_size = kernel_size
+        self.use_bn = use_bn
 
         self.res_nets = []
         for _ in range(self.num_blocks):
             self.res_nets.append(
-                ResidualBlock(channels=channels, size=size, use_bn=use_bn)
+                ResidualBlock(
+                    channels=self.channels,
+                    size=self.size,
+                    kernel_size=self.kernel_size,
+                    use_bn=self.use_bn,
+                )
             )
 
         self.res_nets = torch.nn.Sequential(*self.res_nets)
@@ -186,6 +212,7 @@ class CNO1d(nn.Module):
         N_res=4,
         N_res_neck=4,
         channel_multiplier=16,
+        kernel_size=3,
         use_bn=True,
         device="cpu",
     ):
@@ -213,6 +240,9 @@ class CNO1d(nn.Module):
         channel_multiplier: int
             multiplier of the number of channels in the network
 
+        kernel_size: int
+            size of the convolutional kernel
+
         use_bn: bool
             choose if Batch Normalization is used.
         """
@@ -226,6 +256,8 @@ class CNO1d(nn.Module):
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.channel_multiplier = channel_multiplier  # The growth of the channels
+        self.kernel_size = kernel_size
+        self.use_bn = use_bn
 
         #### Num of channels/features - evolution
         # Encoder (at every layer the number of channels is doubled)
@@ -261,7 +293,10 @@ class CNO1d(nn.Module):
 
         #### Define Lift and Project blocks
         self.lift = LiftProjectBlock(
-            in_channels=in_dim, out_channels=self.encoder_features[0], size=size
+            in_channels=in_dim,
+            out_channels=self.encoder_features[0],
+            size=size,
+            kernel_size=self.kernel_size,
         )
 
         self.project = LiftProjectBlock(
@@ -269,6 +304,7 @@ class CNO1d(nn.Module):
             + self.decoder_features_out[-1],  # concatenation with the ResNet
             out_channels=out_dim,
             size=size,
+            kernel_size=self.kernel_size,
         )
 
         #### Define Encoder, ED Linker and Decoder networks
@@ -279,7 +315,8 @@ class CNO1d(nn.Module):
                     out_channels=self.encoder_features[i + 1],
                     in_size=self.encoder_sizes[i],
                     out_size=self.encoder_sizes[i + 1],
-                    use_bn=use_bn,
+                    use_bn=self.use_bn,
+                    kernel_size=self.kernel_size,
                 )
                 for i in range(self.N_layers)
             ]
@@ -294,7 +331,8 @@ class CNO1d(nn.Module):
                     out_channels=self.encoder_features[i],
                     in_size=self.encoder_sizes[i],
                     out_size=self.decoder_sizes[self.N_layers - i],
-                    use_bn=use_bn,
+                    kernel_size=self.kernel_size,
+                    use_bn=self.use_bn,
                 )
                 for i in range(self.N_layers + 1)
             ]
@@ -307,7 +345,8 @@ class CNO1d(nn.Module):
                     out_channels=self.decoder_features_out[i],
                     in_size=self.decoder_sizes[i],
                     out_size=self.decoder_sizes[i + 1],
-                    use_bn=use_bn,
+                    kernel_size=self.kernel_size,
+                    use_bn=self.use_bn,
                 )
                 for i in range(self.N_layers)
             ]
@@ -325,7 +364,8 @@ class CNO1d(nn.Module):
                     channels=self.encoder_features[i],
                     size=self.encoder_sizes[i],
                     num_blocks=self.N_res,
-                    use_bn=use_bn,
+                    kernel_size=self.kernel_size,
+                    use_bn=self.use_bn,
                 )
             )
 
@@ -333,7 +373,8 @@ class CNO1d(nn.Module):
             channels=self.encoder_features[self.N_layers],
             size=self.encoder_sizes[self.N_layers],
             num_blocks=self.N_res_neck,
-            use_bn=use_bn,
+            kernel_size=self.kernel_size,
+            use_bn=self.use_bn,
         )
 
         # Move to device

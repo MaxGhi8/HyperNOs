@@ -159,6 +159,7 @@ match arc:
         chan_mul = hyperparams_arc["channel_multiplier"]
         n_res_neck = hyperparams_arc["N_res_neck"]
         n_res = hyperparams_arc["N_res"]
+        kernel_size = hyperparams_arc["kernel_size"]
         bn = hyperparams_arc["bn"]
         retrain = hyperparams_arc["retrain"]
         problem_dim = hyperparams_arc["problem_dim"]
@@ -246,11 +247,29 @@ match arc:
     case "CNO":
         if problem_dim == 1:
             model = CNO1d(
-                in_dim, out_dim, size, n_layers, n_res, n_res_neck, chan_mul, bn, device
+                in_dim,
+                out_dim,
+                size,
+                n_layers,
+                n_res,
+                n_res_neck,
+                chan_mul,
+                kernel_size,
+                bn,
+                device,
             )
         elif problem_dim == 2:
             model = CNO2d(
-                in_dim, out_dim, size, n_layers, n_res, n_res_neck, chan_mul, bn, device
+                in_dim,
+                out_dim,
+                size,
+                n_layers,
+                n_res,
+                n_res_neck,
+                chan_mul,
+                kernel_size,
+                bn,
+                device,
             )
 
 # count and print the total number of parameters
