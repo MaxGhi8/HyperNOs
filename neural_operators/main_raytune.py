@@ -273,7 +273,7 @@ def train_hyperparameter(config):
                     n_res,
                     n_res_neck,
                     chan_mul,
-                    kenel_size,
+                    kernel_size,
                     bn,
                     device,
                 )
