@@ -398,10 +398,12 @@ def main(num_samples, max_num_epochs=epochs):
                 "channel_multiplier": tune.choice([8, 16, 24, 32, 40, 48, 56]),
                 "N_res_neck": tune.randint(1, 6),
                 "N_res": tune.randint(1, 8),
-                "kernel_size": tune.choice(
-                    [3, 5, 7, 9, 11, 13, 15]
-                ),  # todo: find good values
             }
+            # kernel size is different for different problem dimensions
+            if problem_dim == 1:
+                config["kernel_size"] = tune.choice([11, 21, 31, 41, 51])
+            if problem_dim == 2:
+                config["kernel_size"] = tune.choice([3, 5, 7, 9])
 
     # Automatically detect the available resources and use them
     init(
