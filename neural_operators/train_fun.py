@@ -92,6 +92,8 @@ def train_fun(
 
     if n_idx > 0:
         return esempio_test, soluzione_test
+    else:
+        return None
 
 
 #########################################

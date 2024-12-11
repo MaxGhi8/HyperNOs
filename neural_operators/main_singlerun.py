@@ -339,7 +339,6 @@ for epoch in range(epochs):
                 device,
                 which_example,
                 tepoch,
-                n_idx,
             )
 
         # test the model for one epoch
