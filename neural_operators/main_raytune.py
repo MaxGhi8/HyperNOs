@@ -403,7 +403,7 @@ def main(num_samples, max_num_epochs=epochs):
             if problem_dim == 1:
                 config["kernel_size"] = tune.choice([11, 21, 31, 41, 51])
             if problem_dim == 2:
-                config["kernel_size"] = tune.choice([3, 5, 7, 9])
+                config["kernel_size"] = tune.choice([3, 5, 7])
 
     # Automatically detect the available resources and use them
     init(
