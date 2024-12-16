@@ -59,28 +59,24 @@ from CNO.CNO_utilities import CNO_load_data_model, CNO_initialize_hyperparameter
 checkpoint_frequency = 500  # frequency to save the model
 grace_period = 250  # minimum number of epochs to run before early stopping
 reduce_factor = 2  # the factor to reduce the number of trials
-mode_str = "default"  # test base hyperparameters, can be "default" or "best"
 
 #########################################
 # Choose the example to run from CLI
 #########################################
-if len(sys.argv) < 3:
+if len(sys.argv) < 5:
     raise ValueError("The user must choose the example and the model to run")
-elif len(sys.argv) == 3:
-    which_example = sys.argv[1]
-    arc = sys.argv[2].upper()
-    exp_norm = "L1"  # default value
-    in_dist = True  # default value
-elif len(sys.argv) == 4:
-    which_example = sys.argv[1]
-    arc = sys.argv[2].upper()
-    exp_norm = sys.argv[3].upper()
-    in_dist = True  # default value
 elif len(sys.argv) == 5:
-    which_example = sys.argv[1]
-    arc = sys.argv[2].upper()
-    exp_norm = sys.argv[3].upper()
-    in_dist = sys.argv[4]
+    which_example = sys.argv[1].lower().strip()  # example to run
+    arc = sys.argv[2].upper().strip()  # architecture to use
+    exp_norm = sys.argv[3].upper().strip()  # loss function for training
+    mode_str = sys.argv[4].lower().strip()  # mode of the training process
+    in_dist = True  # default value
+elif len(sys.argv) == 6:
+    which_example = sys.argv[1].lower().strip()  # example to run
+    arc = sys.argv[2].upper().strip()  # architecture to use
+    exp_norm = sys.argv[3].upper().strip()  # loss function for training
+    mode_str = sys.argv[4].lower().strip()  # mode of the training process
+    in_dist = sys.argv[5]  # True or False (IN/OUT of distribution)
 else:
     raise ValueError("The user must choose the example to run")
 
