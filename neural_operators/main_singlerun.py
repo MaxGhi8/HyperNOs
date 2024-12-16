@@ -34,7 +34,7 @@ from tensorboardX import SummaryWriter
 import os
 import json
 from tqdm import tqdm
-import sys
+import argparse
 
 from Loss_fun import LprelLoss, H1relLoss_1D, H1relLoss
 from train_fun import train_fun, test_fun
@@ -55,30 +55,79 @@ from CNO.CNO_utilities import CNO_load_data_model, CNO_initialize_hyperparameter
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Device: ", device)
 # torch.set_default_dtype(torch.float32) # default tensor dtype
-mode_str = "best"  # test base hyperparameters, can be "default" or "best"
+
 
 #########################################
 # Choose the example to run
 #########################################
-if len(sys.argv) < 3:
-    raise ValueError("The user must choose the example and the model to run")
-elif len(sys.argv) == 3:
-    which_example = sys.argv[1]
-    arc = sys.argv[2].upper()
-    exp_norm = "L1"  # default value
-    in_dist = True  # default value
-elif len(sys.argv) == 4:
-    which_example = sys.argv[1]
-    arc = sys.argv[2].upper()
-    exp_norm = sys.argv[3].upper()
-    in_dist = True  # default value
-elif len(sys.argv) == 5:
-    which_example = sys.argv[1]
-    arc = sys.argv[2].upper()
-    exp_norm = sys.argv[3].upper()
-    in_dist = sys.argv[4]
-else:
-    raise ValueError("The user must choose the example to run")
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description="Run a specific example with the desired model and training configuration."
+    )
+
+    parser.add_argument(
+        "example",
+        type=str,
+        choices=[
+            "poisson",
+            "wave_0_5",
+            "cont_tran",
+            "disc_tran",
+            "allen",
+            "shear_layer",
+            "airfoil",
+            "darcy",
+            "burgers_zongyi",
+            "darcy_zongyi",
+            "fhn",
+            "fhn_long",
+            "hh",
+            "crosstruss",
+        ],
+        help="Select the example to run.",
+    )
+    parser.add_argument(
+        "architecture",
+        type=str,
+        choices=["fno", "cno"],
+        help="Select the architecture to use.",
+    )
+    parser.add_argument(
+        "loss_function",
+        type=str,
+        choices=["l1", "l2", "h1", "l1_smooth"],
+        help="Select the relative loss function to use during the training process.",
+    )
+    parser.add_argument(
+        "mode",
+        type=str,
+        choices=["best", "default"],
+        help="Select the hyper-params to use for define the architecture and the training, we have implemented the 'best' and 'default' options.",
+    )
+    parser.add_argument(
+        "--in_dist",
+        type=bool,
+        default=True,
+        help="For the datasets that are supported you can select if the test set is in-distribution or out-of-distribution.",
+    )
+
+    args = parser.parse_args()
+
+    return {
+        "example": args.example.lower(),
+        "architecture": args.architecture.upper(),
+        "loss_function": args.loss_function.upper(),
+        "mode": args.mode.lower(),
+        "in_dist": args.in_dist,
+    }
+
+
+config = parse_arguments()
+which_example = config["example"]
+arc = config["architecture"]
+exp_norm = config["loss_function"]
+mode_str = config["mode"]
+in_dist = config["in_dist"]
 
 #########################################
 # parameters for save the model
