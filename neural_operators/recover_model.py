@@ -43,6 +43,7 @@ from Loss_fun import LprelLoss, H1relLoss_1D, H1relLoss
 from train_fun import test_fun, test_fun_tensors
 from utilities import count_params
 from FNO.FNO_utilities import FNO_load_data_model
+from CNO.CNO_utilities import CNO_load_data_model
 
 #########################################
 # default values
@@ -56,36 +57,37 @@ mode_str = "best"  # test base hyperparameters, can be "default" or "best"
 #########################################
 # Choose the example to run
 #########################################
-# choose example from CLI
-if len(sys.argv) == 1:
-    raise ValueError("The user must choose the example to run")
-elif len(sys.argv) == 2:
-    which_example = sys.argv[
-        1
-    ]  # the example can be chosen by the user as second argument
-    exp_norm = "L1"
-    in_dist = True
+if len(sys.argv) < 3:
+    raise ValueError("The user must choose the example and the model to run")
 elif len(sys.argv) == 3:
     which_example = sys.argv[1]
-    exp_norm = sys.argv[2].upper()
-    in_dist = True
+    arc = sys.argv[2].upper()
+    exp_norm = "L1"  # default value
+    in_dist = True  # default value
 elif len(sys.argv) == 4:
     which_example = sys.argv[1]
-    exp_norm = sys.argv[2].upper()
-    in_dist = sys.argv[3]
+    arc = sys.argv[2].upper()
+    exp_norm = sys.argv[3].upper()
+    in_dist = True  # default value
+elif len(sys.argv) == 5:
+    which_example = sys.argv[1]
+    arc = sys.argv[2].upper()
+    exp_norm = sys.argv[3].upper()
+    in_dist = sys.argv[4]
 else:
     raise ValueError("The user must choose the example to run")
 
 Norm_dict = {"L1": 0, "L2": 1, "H1": 2, "L1_SMOOTH": 3, "MSE": 4}
 
 # upload the model and the hyperparameters
-arc = "FNO"
 model_folder = f"./{arc}/TrainedModels/"
 description_test = "test_" + exp_norm
 folder = (
     model_folder
     + which_example
-    + "/exp_FNO_"
+    + "/exp_"
+    + arc
+    + "_"
     + description_test
     + "_"
     + mode_str
@@ -94,7 +96,9 @@ folder = (
 name_model = (
     model_folder
     + which_example
-    + "/model_FNO_"
+    + "/model_"
+    + arc
+    + "_"
     + description_test
     + "_"
     + mode_str
@@ -103,7 +107,7 @@ name_model = (
 
 try:
     model = torch.load(name_model, weights_only=False)
-except:
+except Exception:
     raise ValueError(
         "The model is not found, please check the hyperparameters passed trhow the CLI."
     )
@@ -111,47 +115,66 @@ except:
 #########################################
 # Hyperparameters
 #########################################
-# Load `training_properties` from JSON
+# Load `hyper-params_train` from JSON
 with open(folder + "/hyperparams_train.json", "r") as f:
-    training_properties = json.load(f)
+    hyperparams_train = json.load(f)
 
-# Load `fno_architecture` from JSON
+# Load `hyper-params_arc` from JSON
 with open(folder + "/hyperparams_arc.json", "r") as f:
-    fno_architecture = json.load(f)
+    hyperparams_arc = json.load(f)
 
 # Choose the Loss function
-training_properties["exp"] = Norm_dict[
+hyperparams_train["exp"] = Norm_dict[
     exp_norm
 ]  # 0 for L^1 relative norm, 1 for L^2 relative norm, 2 for H^1 relative norm
 
 # Training hyperparameters
-learning_rate = training_properties["learning_rate"]
-weight_decay = training_properties["weight_decay"]
-scheduler_step = training_properties["scheduler_step"]
-scheduler_gamma = training_properties["scheduler_gamma"]
-epochs = training_properties["epochs"]
-batch_size = training_properties["batch_size"]
-p = training_properties["exp"]
-beta = training_properties["beta"]
-training_samples = training_properties["training_samples"]
-test_samples = training_properties["test_samples"]
-val_samples = training_properties["val_samples"]
+learning_rate = hyperparams_train["learning_rate"]
+weight_decay = hyperparams_train["weight_decay"]
+scheduler_step = hyperparams_train["scheduler_step"]
+scheduler_gamma = hyperparams_train["scheduler_gamma"]
+epochs = hyperparams_train["epochs"]
+batch_size = hyperparams_train["batch_size"]
+p = hyperparams_train["exp"]
+beta = hyperparams_train["beta"]
+training_samples = hyperparams_train["training_samples"]
+test_samples = hyperparams_train["test_samples"]
+val_samples = hyperparams_train["val_samples"]
 
-# FNO architecture hyperparameters
-d_a = fno_architecture["d_a"]
-d_v = fno_architecture["width"]
-d_u = fno_architecture["d_u"]
-L = fno_architecture["n_layers"]
-modes = fno_architecture["modes"]
-fun_act = fno_architecture["fun_act"]
-weights_norm = fno_architecture["weights_norm"]
-arc = fno_architecture["arc"]
-RNN = fno_architecture["RNN"]
-FFTnorm = fno_architecture["fft_norm"]
-padding = fno_architecture["padding"]
-retrain_fno = fno_architecture["retrain"]
-FourierF = fno_architecture["FourierF"]
-problem_dim = fno_architecture["problem_dim"]
+match arc:
+    case "FNO":
+        # fno architecture hyperparameters
+        d_a = hyperparams_arc["d_a"]
+        d_v = hyperparams_arc["width"]
+        d_u = hyperparams_arc["d_u"]
+        L = hyperparams_arc["n_layers"]
+        modes = hyperparams_arc["modes"]
+        fun_act = hyperparams_arc["fun_act"]
+        weights_norm = hyperparams_arc["weights_norm"]
+        arc = hyperparams_arc["arc"]
+        RNN = hyperparams_arc["RNN"]
+        FFTnorm = hyperparams_arc["fft_norm"]
+        padding = hyperparams_arc["padding"]
+        retrain = hyperparams_arc["retrain"]
+        FourierF = hyperparams_arc["FourierF"]
+        problem_dim = hyperparams_arc["problem_dim"]
+
+    case "CNO":
+        # cno architecture hyperparameters
+        in_dim = hyperparams_arc["in_dim"]
+        out_dim = hyperparams_arc["out_dim"]
+        size = hyperparams_arc["in_size"]
+        n_layers = hyperparams_arc["N_layers"]
+        chan_mul = hyperparams_arc["channel_multiplier"]
+        n_res_neck = hyperparams_arc["N_res_neck"]
+        n_res = hyperparams_arc["N_res"]
+        kernel_size = hyperparams_arc["kernel_size"]
+        bn = hyperparams_arc["bn"]
+        retrain = hyperparams_arc["retrain"]
+        problem_dim = hyperparams_arc["problem_dim"]
+
+    case _:
+        raise ValueError("This architecture is not allowed")
 
 # Loss function
 match p:
@@ -174,9 +197,26 @@ match p:
 #########################################
 # Data loader
 #########################################
-example = FNO_load_data_model(
-    which_example, fno_architecture, device, batch_size, training_samples, in_dist
-)
+match arc:
+    case "FNO":
+        example = FNO_load_data_model(
+            which_example,
+            hyperparams_arc,
+            device,
+            batch_size,
+            training_samples,
+            in_dist,
+        )
+    case "CNO":
+        example = CNO_load_data_model(
+            which_example,
+            hyperparams_arc,
+            device,
+            batch_size,
+            training_samples,
+            in_dist,
+        )
+
 train_loader = example.train_loader
 val_loader = example.val_loader
 test_loader = example.test_loader  # for final testing
@@ -192,7 +232,7 @@ par_tot = count_params(model)
 print("Total number of parameters is: ", par_tot)
 
 #########################################
-# Compute error and print error
+# Compute mean error and print it
 #########################################
 (
     val_relative_l1,
@@ -212,11 +252,12 @@ print("Total number of parameters is: ", par_tot)
     which_example,
     statistic=True,
 )
+
 print("Train loss: ", train_loss)
-print("Validation relative l1 norm: ", val_relative_l1)
-print("Validation relative l2 norm: ", val_relative_l2)
-print("Validation relative semi h1 norm: ", val_relative_semih1)
-print("Validation relative h1 norm: ", val_relative_h1)
+print("Validation mean relative l1 norm: ", val_relative_l1)
+print("Validation mean relative l2 norm: ", val_relative_l2)
+print("Validation mean relative semi h1 norm: ", val_relative_semih1)
+print("Validation mean relative h1 norm: ", val_relative_h1)
 
 (
     test_relative_l1,
@@ -237,12 +278,14 @@ print("Validation relative h1 norm: ", val_relative_h1)
     statistic=True,
 )
 
-print("Test relative l1 norm: ", test_relative_l1)
-print("Test relative l2 norm: ", test_relative_l2)
-print("Test relative semi h1 norm: ", test_relative_semih1)
-print("Test relative h1 norm: ", test_relative_h1)
+print("Test mean relative l1 norm: ", test_relative_l1)
+print("Test mean relative l2 norm: ", test_relative_l2)
+print("Test mean relative semi h1 norm: ", test_relative_semih1)
+print("Test mean relative h1 norm: ", test_relative_h1)
 
-# Compute all the relative errors and outputs
+#########################################
+# Compute median error and print it
+#########################################
 (
     input_tensor,
     output_tensor,
@@ -253,7 +296,21 @@ print("Test relative h1 norm: ", test_relative_h1)
     test_rel_h1_tensor,
 ) = test_fun_tensors(model, test_loader, loss, device, which_example)
 
-# evaluate the model and compute time
+# compute median error
+test_median_rel_l1 = torch.median(test_rel_l1_tensor).item()
+test_median_rel_l2 = torch.median(test_rel_l2_tensor).item()
+test_median_rel_semih1 = torch.median(test_rel_semih1_tensor).item()
+test_median_rel_h1 = torch.median(test_rel_h1_tensor).item()
+
+print("Test median relative l1 norm: ", test_median_rel_l1)
+print("Test median relative l2 norm: ", test_median_rel_l2)
+print("Test median relative semi h1 norm: ", test_median_rel_semih1)
+print("Test median relative h1 norm: ", test_median_rel_h1)
+
+#########################################
+# Time for evaluation
+#########################################
+# evaluation of all the test set
 model.eval()
 t_1 = time.time()
 with torch.no_grad():
@@ -261,7 +318,7 @@ with torch.no_grad():
 t_2 = time.time()
 print(f"Time for evaluation of {input_tensor.shape[0]} solutions is: ", t_2 - t_1)
 
-
+# evaluation of one solution
 ex = input_tensor[[0], ...]
 t_1 = time.time()
 with torch.no_grad():
@@ -269,6 +326,10 @@ with torch.no_grad():
 t_2 = time.time()
 print(f"Time for evaluation of one solution is: ", t_2 - t_1)
 
+
+#########################################
+# Prepare data for plotting
+#########################################
 # move tensors to cpu for plotting
 input_tensor = input_tensor.to("cpu")
 output_tensor = output_tensor.to("cpu")
