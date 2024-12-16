@@ -55,7 +55,7 @@ from CNO.CNO_utilities import CNO_load_data_model, CNO_initialize_hyperparameter
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Device: ", device)
 # torch.set_default_dtype(torch.float32) # default tensor dtype
-mode_str = "default"  # test base hyperparameters, can be "default" or "best"
+mode_str = "best"  # test base hyperparameters, can be "default" or "best"
 
 #########################################
 # Choose the example to run
