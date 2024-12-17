@@ -1,0 +1,2 @@
+Norm used during the training:
+L2
