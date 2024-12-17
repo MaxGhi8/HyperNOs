@@ -1,0 +1,17 @@
+{
+    "width": 256,
+    "modes": 8,
+    "n_layers": 5,
+    "padding": 7,
+    "arc": "Zongyi",
+    "fun_act": "leaky_relu",
+    "d_a": 1,
+    "d_u": 4,
+    "fft_norm": null,
+    "FourierF": 0,
+    "RNN": false,
+    "include_grid": 1,
+    "weights_norm": "Kaiming",
+    "retrain": 4,
+    "problem_dim": 1
+}
