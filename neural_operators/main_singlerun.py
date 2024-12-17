@@ -413,7 +413,7 @@ for epoch in range(epochs):
 
         # save the results on tensorboard
         writer.add_scalars(
-            f"FNO_{problem_dim}D_" + which_example,
+            f"{arc}_{problem_dim}D_" + which_example,
             {
                 "Train loss " + exp_norm: train_loss,
                 "Test rel. L^1 error": test_relative_l1,
