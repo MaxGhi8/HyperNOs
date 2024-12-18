@@ -1,0 +1,7 @@
+Training loss L1: 0.005423953582067043
+Test relative L^1 error: 0.006827164092101157
+Test relative L^2 error: 0.010191799839958549
+Test relative semi-H^1 error: 0.43013446778059006
+Test relative H^1 error: 0.12705855444073677
+Current Epoch: 999
+Params: (5271609, 21086436)
