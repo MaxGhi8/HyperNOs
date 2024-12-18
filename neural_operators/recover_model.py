@@ -1,5 +1,5 @@
 """
-This is the main file for makes test and plot the Neural Operator with the trained FNO
+This is the main file for makes test and plot the Neural Operator model.
 
 "which_example" can be one of the following options:
     poisson             : Poisson equation 
@@ -31,7 +31,6 @@ import torch
 from torch import Tensor
 from jaxtyping import Float, jaxtyped
 from beartype import beartype
-import numpy as np
 import time
 import argparse
 import json
@@ -42,6 +41,7 @@ from scipy.io import savemat
 from Loss_fun import LprelLoss, H1relLoss_1D, H1relLoss
 from train_fun import test_fun, test_fun_tensors
 from utilities import count_params
+from utilities_plot import test_plot_samples
 from FNO.FNO_utilities import FNO_load_data_model
 from CNO.CNO_utilities import CNO_load_data_model
 
@@ -51,8 +51,6 @@ from CNO.CNO_utilities import CNO_load_data_model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Device: ", device)
 # torch.set_default_dtype(torch.float32) # default tensor dtype
-
-mode_str = "default"  # test base hyperparameters, can be "default" or "best"
 
 
 #########################################
@@ -201,7 +199,7 @@ match arc:
         modes = hyperparams_arc["modes"]
         fun_act = hyperparams_arc["fun_act"]
         weights_norm = hyperparams_arc["weights_norm"]
-        arc = hyperparams_arc["arc"]
+        arc_fno = hyperparams_arc["arc"]
         RNN = hyperparams_arc["RNN"]
         FFTnorm = hyperparams_arc["fft_norm"]
         padding = hyperparams_arc["padding"]
@@ -249,6 +247,7 @@ match p:
 #########################################
 match arc:
     case "FNO":
+        print("Loading data for FNO")
         example = FNO_load_data_model(
             which_example,
             hyperparams_arc,
@@ -460,279 +459,27 @@ def plot_histogram(error: Float[Tensor, "n_samples"], str_norm: str):
     plt.show()
 
 
+# call the functions to plot histograms for errors
+plot_histogram(test_rel_l1_tensor, "L1")
+plot_histogram(test_rel_l2_tensor, "L2")
+plot_histogram(test_rel_semih1_tensor, "semi H1")
+plot_histogram(test_rel_h1_tensor, "H1")
+
 #########################################
 # Example 2: Plot the worst and best samples
 #########################################
-# @jaxtyped(typechecker=beartype)
-def test_plot_samples(
-    input_tensor: Float[Tensor, "n_samples *n d_a"],
-    output_tensor: Float[Tensor, "n_samples *n d_v"],
-    prediction_tensor: Float[Tensor, "n_samples *n d_v"],
-    error: Float[Tensor, "n_samples"],
-    mode: str,
-    which_example: str,
-    ntest: int,
-    str_norm: str,
-    n_idx: int = 5,
-):
-    """
-    Function to plot the worst and best samples in the test set.
-    mode: str
-        can be "best", "worst" or "random", to plot the best, worst or random samples respectively.
-    """
-    error, indices = torch.sort(
-        error, descending=True
-    )  # Sort the error in descending order
-    if mode == "worst":
-        idx = indices[:n_idx].to("cpu")
-        error = error[:n_idx].to("cpu")
-    elif mode == "best":
-        idx = indices[-n_idx:].to("cpu")
-        error = error[-n_idx:].to("cpu")
-    elif mode == "random":
-        idx = torch.tensor(np.random.randint(0, ntest, size=(n_idx,)))
-        error = error[idx].to("cpu")
-    else:
-        raise ValueError("The mode must be 'best', 'worst' or 'random'")
-
-    print(f"The {mode} samples are: {idx} with error {error} in norms {str_norm}")
-
-    if which_example == "fhn" or which_example == "fhn_long":
-        n_points = input_tensor.shape[1]
-        x_grid = torch.linspace(0, 100, n_points).to("cpu")
-
-        fig, axs = plt.subplots(3, len(idx), figsize=(12, 4))
-
-        for i in range(3):
-            for j in range(idx.shape[0]):
-                if i == 0:  # input
-                    axs[i, j].plot(
-                        x_grid,
-                        input_tensor[idx[j], :, :].squeeze(),
-                        label="Input (I_app)",
-                    )
-                    if j == 0:
-                        axs[i, j].set_ylabel("$I_app$(t)")
-                elif i == 1:  # v approximation
-                    axs[i, j].plot(
-                        x_grid, output_tensor[idx[j], :, 0].squeeze(), label="sol"
-                    )
-                    axs[i, j].plot(
-                        x_grid,
-                        prediction_tensor[idx[j], :, 0].squeeze(),
-                        "r",
-                        label="FNO",
-                    )
-                    if j == 0:
-                        axs[i, j].set_ylabel("$v$(t)")
-                else:  # w approximation
-                    axs[i, j].plot(
-                        x_grid, output_tensor[idx[j], :, 1].squeeze(), label="sol"
-                    )
-                    axs[i, j].plot(
-                        x_grid,
-                        prediction_tensor[idx[j], :, 1].squeeze(),
-                        "r",
-                        label="FNO",
-                    )
-                    if j == 0:
-                        axs[i, j].set_ylabel("$w$(t)")
-
-                axs[i, j].set_xlabel("t")
-                axs[0, j].set_ylim([0, 2])
-                axs[1, j].set_ylim([-0.5, 1.5])
-                axs[2, j].set_ylim([0, 2.5])
-                axs[i, j].grid()
-                axs[i, j].legend(loc="upper right")
-
-        plt.tight_layout()
-        plt.show()
-
-        fig, axs = plt.subplots(2, len(idx), figsize=(12, 4))
-
-        for i in range(2):
-            for j in range(idx.shape[0]):
-                if i == 0:  # input
-                    axs[i, j].plot(
-                        x_grid,
-                        input_tensor[idx[j], :, :].squeeze(),
-                        label="Input (I_app)",
-                    )
-                    if j == 0:
-                        axs[i, j].set_ylabel("$I_app$(t)")
-                    axs[i, j].set_xlabel("t")
-                else:  # phase space
-                    axs[i, j].plot(
-                        output_tensor[idx[j], :, 0].squeeze(),
-                        output_tensor[idx[j], :, 1].squeeze(),
-                        label="sol",
-                    )
-                    axs[i, j].plot(
-                        prediction_tensor[idx[j], :, 0].squeeze(),
-                        prediction_tensor[idx[j], :, 1].squeeze(),
-                        "r",
-                        label="FNO",
-                    )
-                    if j == 0:
-                        axs[i, j].set_ylabel("$w$(t)")
-                    axs[i, j].set_xlabel("$v$(t)")
-
-                axs[i, j].grid()
-                axs[i, j].legend(loc="upper right")
-                axs[0, j].set_ylim([0, 2])
-                axs[1, j].set_xlim([-0.5, 1.5])
-                axs[1, j].set_ylim([0, 2.5])
-
-        plt.tight_layout()
-        plt.show()
-
-    if which_example == "hh":
-        n_points = input_tensor.shape[1]
-        x_grid = torch.linspace(0, 100, n_points).to("cpu")
-
-        fig, axs = plt.subplots(5, len(idx), figsize=(12, 8))
-
-        for i in range(5):
-            for j in range(idx.shape[0]):
-
-                if i == 0:  # input
-                    axs[i, j].plot(
-                        x_grid,
-                        input_tensor[idx[j], :, :].squeeze(),
-                        label="Input (I_app)",
-                    )
-                    if j == 0:
-                        axs[i, j].set_ylabel("$I_app$(t)")
-
-                elif i == 1:  # v approximation
-                    axs[i, j].plot(
-                        x_grid, output_tensor[idx[j], :, 0].squeeze(), label="sol"
-                    )
-                    axs[i, j].plot(
-                        x_grid,
-                        prediction_tensor[idx[j], :, 0].squeeze(),
-                        "r",
-                        label="FNO",
-                    )
-                    if j == 0:
-                        axs[i, j].set_ylabel("$v$(t)")
-
-                elif i == 2:  # m approximation
-                    axs[i, j].plot(
-                        x_grid, output_tensor[idx[j], :, 1].squeeze(), label="sol"
-                    )
-                    axs[i, j].plot(
-                        x_grid,
-                        prediction_tensor[idx[j], :, 1].squeeze(),
-                        "r",
-                        label="FNO",
-                    )
-                    if j == 0:
-                        axs[i, j].set_ylabel("$m$(t)")
-
-                elif i == 3:  # h approximation
-                    axs[i, j].plot(
-                        x_grid, output_tensor[idx[j], :, 2].squeeze(), label="sol"
-                    )
-                    axs[i, j].plot(
-                        x_grid,
-                        prediction_tensor[idx[j], :, 2].squeeze(),
-                        "r",
-                        label="FNO",
-                    )
-                    if j == 0:
-                        axs[i, j].set_ylabel("$h$(t)")
-
-                elif i == 4:  # n approximation
-                    axs[i, j].plot(
-                        x_grid, output_tensor[idx[j], :, 3].squeeze(), label="sol"
-                    )
-                    axs[i, j].plot(
-                        x_grid,
-                        prediction_tensor[idx[j], :, 3].squeeze(),
-                        "r",
-                        label="FNO",
-                    )
-                    if j == 0:
-                        axs[i, j].set_ylabel("$n$(t)")
-
-                axs[i, j].set_xlabel("t")
-                # axs[0, j].set_ylim([0, 2])
-                # axs[1, j].set_ylim([-0.5, 1.5])
-                # axs[2, j].set_ylim([0, 2.5])
-                axs[i, j].grid()
-                axs[i, j].legend(loc="upper right")
-
-        plt.tight_layout()
-        plt.show()
-
-    if which_example == "crosstruss":
-
-        fig, axs = plt.subplots(7, len(idx), figsize=(16, 16))
-        for i in range(7):
-            for j in range(idx.shape[0]):
-                if i == 0:  # input
-                    im = axs[i, j].imshow(input_tensor[idx[j], :, :].squeeze())
-                    colorbar = fig.colorbar(im, ax=axs[i, j])
-                    colorbar.set_ticks([0, 1])
-                    if j == 0:
-                        axs[i, j].set_ylabel("domain input")
-
-                elif i == 1:  # output x
-                    im = axs[i, j].imshow(output_tensor[idx[j], :, :, 0].squeeze())
-                    colorbar = fig.colorbar(im, ax=axs[i, j])
-                    colorbar.set_ticks([-0.005, 0.005])
-                    if j == 0:
-                        axs[i, j].set_ylabel("displacement x")
-
-                elif i == 2:  # predicted x
-                    im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
-                    colorbar = fig.colorbar(im, ax=axs[i, j])
-                    colorbar.set_ticks([-0.005, 0.005])
-                    if j == 0:
-                        axs[i, j].set_ylabel("pred disp x")
-
-                elif i == 3:  # error x
-                    error = torch.abs(
-                        output_tensor[idx[j], :, :, 0]
-                        - prediction_tensor[idx[j], :, :, 0]
-                    )
-                    im = axs[i, j].imshow(error.squeeze())
-                    colorbar = fig.colorbar(im, ax=axs[i, j])
-                    if j == 0:
-                        axs[i, j].set_ylabel("error x")
-
-                elif i == 4:  # output y
-                    im = axs[i, j].imshow(output_tensor[idx[j], :, :, 1].squeeze())
-                    colorbar = fig.colorbar(im, ax=axs[i, j])
-                    colorbar.set_ticks([0.0, 0.1])
-                    if j == 0:
-                        axs[i, j].set_ylabel("displacement y")
-
-                elif i == 5:  # predicted y
-                    im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 1].squeeze())
-                    colorbar = fig.colorbar(im, ax=axs[i, j])
-                    colorbar.set_ticks([0.0, 0.1])
-                    if j == 0:
-                        axs[i, j].set_ylabel("pred disp y")
-
-                elif i == 6:  # error y
-                    error = torch.abs(
-                        output_tensor[idx[j], :, :, 1]
-                        - prediction_tensor[idx[j], :, :, 1]
-                    )
-                    im = axs[i, j].imshow(error.squeeze())
-                    colorbar = fig.colorbar(im, ax=axs[i, j])
-                    if j == 0:
-                        axs[i, j].set_ylabel("error y")
-
-                axs[i, j].set_yticklabels([])
-                axs[i, j].set_xticklabels([])
-                # axs[i, j].set_xlabel('x')
-
-        plt.tight_layout()
-        plt.show()
-        plt.savefig("figure.png")
+# call the function to plot data
+test_plot_samples(
+    input_tensor,
+    output_tensor,
+    prediction_tensor,
+    test_rel_l1_tensor,
+    "worst",
+    which_example,
+    ntest=100,
+    str_norm=exp_norm,
+    n_idx=5,
+)
 
 
 def save_tensor(
@@ -777,25 +524,6 @@ def save_tensor(
     else:
         raise ValueError("The example chosen is not allowed")
 
-
-# call the functions to plot histograms for errors
-plot_histogram(test_rel_l1_tensor, "L1")
-plot_histogram(test_rel_l2_tensor, "L2")
-plot_histogram(test_rel_semih1_tensor, "semi H1")
-plot_histogram(test_rel_h1_tensor, "H1")
-
-# call the function to plot data
-test_plot_samples(
-    input_tensor,
-    output_tensor,
-    prediction_tensor,
-    test_rel_l1_tensor,
-    "worst",
-    which_example,
-    ntest=100,
-    str_norm=exp_norm,
-    n_idx=5,
-)
 
 # call the function to save tensors
 save_tensor(input_tensor, output_tensor, prediction_tensor, which_example, exp_norm)
