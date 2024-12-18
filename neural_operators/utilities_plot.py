@@ -32,28 +32,26 @@ import matplotlib.pyplot as plt
 # Plotting poisson example
 #########################################
 def plot_poisson(input_tensor, output_tensor, prediction_tensor, idx):
-    fig, axs = plt.subplots(4, len(idx), figsize=(16, 10))
+
+    fig, axs = plt.subplots(4, len(idx), figsize=(16, 12))
 
     for i in range(4):
         for j in range(idx.shape[0]):
             if i == 0:  # input
                 im = axs[i, j].imshow(input_tensor[idx[j], :, :].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([0, 1])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Source term f")
 
             elif i == 1:  # output x
                 im = axs[i, j].imshow(output_tensor[idx[j], :, :, 0].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([-0.005, 0.005])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Exact solution u")
 
             elif i == 2:  # predicted x
                 im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([-0.005, 0.005])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Approximated solution u")
 
@@ -62,7 +60,7 @@ def plot_poisson(input_tensor, output_tensor, prediction_tensor, idx):
                     output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
                 )
                 im = axs[i, j].imshow(error.squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Error")
 
@@ -70,6 +68,7 @@ def plot_poisson(input_tensor, output_tensor, prediction_tensor, idx):
             axs[i, j].set_xticklabels([])
             # axs[i, j].set_xlabel('x')
 
+    plt.suptitle("Poisson equation: $-\Delta u = f$ with Dirichlet BCs")  # title
     plt.tight_layout()
     plt.show()
     # plt.savefig("figure.png")
@@ -85,22 +84,19 @@ def plot_wave_0_5(input_tensor, output_tensor, prediction_tensor, idx):
         for j in range(idx.shape[0]):
             if i == 0:  # input
                 im = axs[i, j].imshow(input_tensor[idx[j], :, :].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([0, 1])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Initial condition f")
 
             elif i == 1:  # output x
                 im = axs[i, j].imshow(output_tensor[idx[j], :, :, 0].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([-0.005, 0.005])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Exact solution u at final time T")
 
             elif i == 2:  # predicted x
                 im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([-0.005, 0.005])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Approximated solution u at final time T")
 
@@ -109,7 +105,7 @@ def plot_wave_0_5(input_tensor, output_tensor, prediction_tensor, idx):
                     output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
                 )
                 im = axs[i, j].imshow(error.squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Error")
 
@@ -117,6 +113,7 @@ def plot_wave_0_5(input_tensor, output_tensor, prediction_tensor, idx):
             axs[i, j].set_xticklabels([])
             # axs[i, j].set_xlabel('x')
 
+    plt.suptitle("Wave equation")  # title
     plt.tight_layout()
     plt.show()
     # plt.savefig("figure.png")
@@ -132,22 +129,19 @@ def plot_cont_tran(input_tensor, output_tensor, prediction_tensor, idx):
         for j in range(idx.shape[0]):
             if i == 0:  # input
                 im = axs[i, j].imshow(input_tensor[idx[j], :, :].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([0, 1])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Continuous initial data f")
 
             elif i == 1:  # output x
                 im = axs[i, j].imshow(output_tensor[idx[j], :, :, 0].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([-0.005, 0.005])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Exact solution u at final time T")
 
             elif i == 2:  # predicted x
                 im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([-0.005, 0.005])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Approximated solution u at final time T")
 
@@ -156,7 +150,7 @@ def plot_cont_tran(input_tensor, output_tensor, prediction_tensor, idx):
                     output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
                 )
                 im = axs[i, j].imshow(error.squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Error")
 
@@ -164,6 +158,7 @@ def plot_cont_tran(input_tensor, output_tensor, prediction_tensor, idx):
             axs[i, j].set_xticklabels([])
             # axs[i, j].set_xlabel('x')
 
+    plt.suptitle("Transport equation with continuous quantities")  # title
     plt.tight_layout()
     plt.show()
     # plt.savefig("figure.png")
@@ -179,22 +174,19 @@ def plot_disc_tran(input_tensor, output_tensor, prediction_tensor, idx):
         for j in range(idx.shape[0]):
             if i == 0:  # input
                 im = axs[i, j].imshow(input_tensor[idx[j], :, :].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([0, 1])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Discontinuous initial data f")
 
             elif i == 1:  # output x
                 im = axs[i, j].imshow(output_tensor[idx[j], :, :, 0].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([-0.005, 0.005])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Exact solution u at final time T")
 
             elif i == 2:  # predicted x
                 im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([-0.005, 0.005])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Approximated solution u at final time T")
 
@@ -203,7 +195,7 @@ def plot_disc_tran(input_tensor, output_tensor, prediction_tensor, idx):
                     output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
                 )
                 im = axs[i, j].imshow(error.squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Error")
 
@@ -211,6 +203,7 @@ def plot_disc_tran(input_tensor, output_tensor, prediction_tensor, idx):
             axs[i, j].set_xticklabels([])
             # axs[i, j].set_xlabel('x')
 
+    plt.suptitle("Transport equation with discontinuous quantities")  # title
     plt.tight_layout()
     plt.show()
     # plt.savefig("figure.png")
@@ -226,22 +219,19 @@ def plot_allen(input_tensor, output_tensor, prediction_tensor, idx):
         for j in range(idx.shape[0]):
             if i == 0:  # input
                 im = axs[i, j].imshow(input_tensor[idx[j], :, :].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([0, 1])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Discontinuous initial data f")
 
             elif i == 1:  # output x
                 im = axs[i, j].imshow(output_tensor[idx[j], :, :, 0].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([-0.005, 0.005])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Exact solution u at final time T")
 
             elif i == 2:  # predicted x
                 im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([-0.005, 0.005])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Approximated solution u at final time T")
 
@@ -250,7 +240,7 @@ def plot_allen(input_tensor, output_tensor, prediction_tensor, idx):
                     output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
                 )
                 im = axs[i, j].imshow(error.squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Error")
 
@@ -258,6 +248,7 @@ def plot_allen(input_tensor, output_tensor, prediction_tensor, idx):
             axs[i, j].set_xticklabels([])
             # axs[i, j].set_xlabel('x')
 
+    plt.suptitle("Allen-Cahn equation")  # title
     plt.tight_layout()
     plt.show()
     # plt.savefig("figure.png")
@@ -273,22 +264,19 @@ def plot_shear_layer(input_tensor, output_tensor, prediction_tensor, idx):
         for j in range(idx.shape[0]):
             if i == 0:  # input
                 im = axs[i, j].imshow(input_tensor[idx[j], :, :].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([0, 1])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Discontinuous initial data f")
 
             elif i == 1:  # output x
                 im = axs[i, j].imshow(output_tensor[idx[j], :, :, 0].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([-0.005, 0.005])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Exact solution u at final time T")
 
             elif i == 2:  # predicted x
                 im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([-0.005, 0.005])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Approximated solution u at final time T")
 
@@ -297,7 +285,7 @@ def plot_shear_layer(input_tensor, output_tensor, prediction_tensor, idx):
                     output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
                 )
                 im = axs[i, j].imshow(error.squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Error")
 
@@ -305,6 +293,7 @@ def plot_shear_layer(input_tensor, output_tensor, prediction_tensor, idx):
             axs[i, j].set_xticklabels([])
             # axs[i, j].set_xlabel('x')
 
+    plt.suptitle("Navier-Stokes equations")  # title
     plt.tight_layout()
     plt.show()
     # plt.savefig("figure.png")
@@ -320,22 +309,19 @@ def plot_darcy(input_tensor, output_tensor, prediction_tensor, idx):
         for j in range(idx.shape[0]):
             if i == 0:  # input
                 im = axs[i, j].imshow(input_tensor[idx[j], :, :].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([0, 1])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Diffusion coefficient a")
 
             elif i == 1:  # output x
                 im = axs[i, j].imshow(output_tensor[idx[j], :, :, 0].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([-0.005, 0.005])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Exact solution u")
 
             elif i == 2:  # predicted x
                 im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([-0.005, 0.005])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Approximated solution u")
 
@@ -344,7 +330,7 @@ def plot_darcy(input_tensor, output_tensor, prediction_tensor, idx):
                     output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
                 )
                 im = axs[i, j].imshow(error.squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Error")
 
@@ -352,6 +338,7 @@ def plot_darcy(input_tensor, output_tensor, prediction_tensor, idx):
             axs[i, j].set_xticklabels([])
             # axs[i, j].set_xlabel('x')
 
+    plt.suptitle("Darcy flow equation")  # title
     plt.tight_layout()
     plt.show()
     # plt.savefig("figure.png")
@@ -367,22 +354,19 @@ def plot_airfoil(input_tensor, output_tensor, prediction_tensor, idx):
         for j in range(idx.shape[0]):
             if i == 0:  # input
                 im = axs[i, j].imshow(input_tensor[idx[j], :, :].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([0, 1])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Initial condition")
 
             elif i == 1:  # output x
                 im = axs[i, j].imshow(output_tensor[idx[j], :, :, 0].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([-0.005, 0.005])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Exact solution u")
 
             elif i == 2:  # predicted x
                 im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
-                colorbar.set_ticks([-0.005, 0.005])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Approximated solution u")
 
@@ -391,7 +375,7 @@ def plot_airfoil(input_tensor, output_tensor, prediction_tensor, idx):
                     output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
                 )
                 im = axs[i, j].imshow(error.squeeze())
-                colorbar = fig.colorbar(im, ax=axs[i, j])
+                fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Error")
 
@@ -399,6 +383,7 @@ def plot_airfoil(input_tensor, output_tensor, prediction_tensor, idx):
             axs[i, j].set_xticklabels([])
             # axs[i, j].set_xlabel('x')
 
+    plt.suptitle("Compressible Euler flow past airfoils")  # title
     plt.tight_layout()
     plt.show()
     # plt.savefig("figure.png")
@@ -455,6 +440,7 @@ def plot_fhn(input_tensor, output_tensor, prediction_tensor, idx):
             axs[i, j].grid()
             axs[i, j].legend(loc="upper right")
 
+    plt.suptitle("FitzHugh-Nagumo equations")  # title
     plt.tight_layout()
     plt.show()
 
@@ -493,6 +479,7 @@ def plot_fhn(input_tensor, output_tensor, prediction_tensor, idx):
             axs[1, j].set_xlim([-0.5, 1.5])
             axs[1, j].set_ylim([0, 2.5])
 
+    plt.suptitle("Phase space of the FitzHugh-Nagumo equations")  # title
     plt.tight_layout()
     plt.show()
 
@@ -577,6 +564,7 @@ def plot_hh(input_tensor, output_tensor, prediction_tensor, idx):
             axs[i, j].grid()
             axs[i, j].legend(loc="upper right")
 
+    plt.suptitle("Hodgkin-Huxley equations")  # title
     plt.tight_layout()
     plt.show()
 
@@ -646,12 +634,13 @@ def plot_crosstruss(input_tensor, output_tensor, prediction_tensor, idx):
             axs[i, j].set_xticklabels([])
             # axs[i, j].set_xlabel('x')
 
+    plt.suptitle("Cross-truss structure")  # title
     plt.tight_layout()
     plt.show()
     plt.savefig("figure.png")
 
 
-# @jaxtyped(typechecker=beartype)
+@jaxtyped(typechecker=beartype)
 def test_plot_samples(
     input_tensor: Float[Tensor, "n_samples *n d_a"],
     output_tensor: Float[Tensor, "n_samples *n d_v"],
