@@ -203,6 +203,7 @@ The script recovers the trained model and uses it to make predictions or statist
 - **Test Error**: Compute the mean error in $L^1$, $L^2$ and $H^1$ relative error on the test set and print it, this is useful to check with ```./{architecture}/TrainedModels/{example}/{experiment_name}/errors.txt``` file if the model is upload correctly and all is fine.
 - **Validation Error** Compute the mean and median error in $L^1$, $L^2$ and $H^1$ relative error on the validation set and print it, the validation error was not used before in the scripts so this is the final result of the accuracy of the model. For the dataset supported the validation set can be in distribution or out of distribution, this is specified with the flag `--in_dist`.
 - **Predictions**: Make predictions on the test set and save the results in the folder  TODO
+- **Execution time**: print the time needed for evaluate the model on the entire validation set and the time needed for a single prediction.
 - **Plots**: Make the plots of the frequency of the error in the validation set and of some random examples.
 
 **Arguments**
