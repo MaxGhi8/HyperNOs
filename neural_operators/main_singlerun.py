@@ -443,14 +443,14 @@ for epoch in range(epochs):
             # plot the exact solution
             plot_data(soluzione_test, [], "Exact solution", epoch, writer, plotting)
                 
-        # Approximate solution with FNO
+        # Approximate solution with NO
         if epoch % ep_step == 0:
             with torch.no_grad(): # no grad for efficiency
                 out_test = model(esempio_test.to(device))
                 out_test = out_test.cpu()
             
             # plot the approximate solution 
-            plot_data(out_test, [], "Approximate solution with FNO", epoch, writer, plotting)
+            plot_data(out_test, [], f"Approximate solution with {arc}", epoch, writer, plotting)
 
             # Module of the difference
             diff = torch.abs(out_test - soluzione_test)
