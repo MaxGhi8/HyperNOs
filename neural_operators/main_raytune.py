@@ -31,7 +31,7 @@ This is the main file for hyperparameter search of the Neural Operator with the 
 
 import torch
 import os
-import sys
+import argparse
 
 import tempfile
 from ray import train, tune, init
@@ -60,25 +60,96 @@ checkpoint_frequency = 500  # frequency to save the model
 grace_period = 250  # minimum number of epochs to run before early stopping
 reduce_factor = 2  # the factor to reduce the number of trials
 
+
 #########################################
 # Choose the example to run from CLI
 #########################################
-if len(sys.argv) < 5:
-    raise ValueError("The user must choose the example and the model to run")
-elif len(sys.argv) == 5:
-    which_example = sys.argv[1].lower().strip()  # example to run
-    arc = sys.argv[2].upper().strip()  # architecture to use
-    exp_norm = sys.argv[3].upper().strip()  # loss function for training
-    mode_str = sys.argv[4].lower().strip()  # mode of the training process
-    in_dist = True  # default value
-elif len(sys.argv) == 6:
-    which_example = sys.argv[1].lower().strip()  # example to run
-    arc = sys.argv[2].upper().strip()  # architecture to use
-    exp_norm = sys.argv[3].upper().strip()  # loss function for training
-    mode_str = sys.argv[4].lower().strip()  # mode of the training process
-    in_dist = sys.argv[5]  # True or False (IN/OUT of distribution)
-else:
-    raise ValueError("The user must choose the example to run")
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description="Run a specific example with the desired model and training configuration."
+    )
+
+    parser.add_argument(
+        "example",
+        type=str,
+        choices=[
+            "poisson",
+            "wave_0_5",
+            "cont_tran",
+            "disc_tran",
+            "allen",
+            "shear_layer",
+            "airfoil",
+            "darcy",
+            "burgers_zongyi",
+            "darcy_zongyi",
+            "fhn",
+            "fhn_long",
+            "hh",
+            "crosstruss",
+        ],
+        help="Select the example to run.",
+    )
+    parser.add_argument(
+        "architecture",
+        type=str,
+        choices=["FNO", "CNO"],
+        help="Select the architecture to use.",
+    )
+    parser.add_argument(
+        "loss_function",
+        type=str,
+        choices=["L1", "L2", "H1", "L1_SMOOTH"],
+        help="Select the loss function to use during the training process.",
+    )
+    parser.add_argument(
+        "mode",
+        type=str,
+        choices=["best", "default"],
+        help="Select the hyper-params to use for define the architecture and the training, we have implemented the 'best' and 'default' options.",
+    )
+    parser.add_argument(
+        "--in_dist",
+        type=bool,
+        default=True,
+        help="For the datasets that are supported you can select if the test set is in-distribution or out-of-distribution.",
+    )
+
+    args = parser.parse_args()
+
+    return {
+        "example": args.example.lower().strip(),
+        "architecture": args.architecture.upper().strip(),
+        "loss_function": args.loss_function.upper().strip(),
+        "mode": args.mode.lower().strip(),
+        "in_dist": args.in_dist,
+    }
+
+
+config = parse_arguments()
+which_example = config["example"]
+arc = config["architecture"]
+exp_norm = config["loss_function"]
+mode_str = config["mode"]
+in_dist = config["in_dist"]
+
+
+# if len(sys.argv) < 5:
+#     raise ValueError("The user must choose the example and the model to run")
+# elif len(sys.argv) == 5:
+#     which_example = sys.argv[1].lower().strip()  # example to run
+#     arc = sys.argv[2].upper().strip()  # architecture to use
+#     exp_norm = sys.argv[3].upper().strip()  # loss function for training
+#     mode_str = sys.argv[4].lower().strip()  # mode of the training process
+#     in_dist = True  # default value
+# elif len(sys.argv) == 6:
+#     which_example = sys.argv[1].lower().strip()  # example to run
+#     arc = sys.argv[2].upper().strip()  # architecture to use
+#     exp_norm = sys.argv[3].upper().strip()  # loss function for training
+#     mode_str = sys.argv[4].lower().strip()  # mode of the training process
+#     in_dist = sys.argv[5]  # True or False (IN/OUT of distribution)
+# else:
+#     raise ValueError("The user must choose the example to run")
 
 #########################################
 # Hyperparameters
