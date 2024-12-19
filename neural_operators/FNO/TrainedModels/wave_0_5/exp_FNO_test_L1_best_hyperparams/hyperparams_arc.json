@@ -1,0 +1,17 @@
+{
+    "width": 32,
+    "modes": 28,
+    "n_layers": 4,
+    "padding": 1,
+    "arc": "Classic",
+    "fun_act": "gelu",
+    "d_a": 1,
+    "d_u": 1,
+    "fft_norm": null,
+    "FourierF": 0,
+    "RNN": false,
+    "include_grid": 1,
+    "weights_norm": "Xavier",
+    "retrain": 4,
+    "problem_dim": 2
+}

@@ -1,0 +1,17 @@
+{
+    "width": 8,
+    "modes": 28,
+    "n_layers": 2,
+    "padding": 3,
+    "arc": "Classic",
+    "fun_act": "relu",
+    "d_a": 1,
+    "d_u": 1,
+    "fft_norm": null,
+    "FourierF": 0,
+    "RNN": false,
+    "include_grid": 1,
+    "weights_norm": "Kaiming",
+    "retrain": 4,
+    "problem_dim": 2
+}
