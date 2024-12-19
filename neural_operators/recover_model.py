@@ -39,6 +39,11 @@ import os
 from scipy.io import savemat
 
 from Loss_fun import LprelLoss, H1relLoss_1D, H1relLoss
+from Loss_fun import (
+    LprelLoss_multiout,
+    H1relLoss_1D_multiout,
+    H1relLoss_multiout,
+)
 from train_fun import test_fun, test_fun_tensors
 from utilities import count_params
 from utilities_plot import test_plot_samples
@@ -275,6 +280,7 @@ print(
     next(iter(val_loader))[0].shape,
     next(iter(test_loader))[0].shape,
 )
+print("")
 
 # Count and print the total number of parameters
 par_tot = count_params(model)
@@ -307,6 +313,7 @@ print("Validation mean relative l1 norm: ", val_relative_l1)
 print("Validation mean relative l2 norm: ", val_relative_l2)
 print("Validation mean relative semi h1 norm: ", val_relative_semih1)
 print("Validation mean relative h1 norm: ", val_relative_h1)
+print("")
 
 (
     test_relative_l1,
@@ -331,6 +338,8 @@ print("Test mean relative l1 norm: ", test_relative_l1)
 print("Test mean relative l2 norm: ", test_relative_l2)
 print("Test mean relative semi h1 norm: ", test_relative_semih1)
 print("Test mean relative h1 norm: ", test_relative_h1)
+print("")
+
 
 #########################################
 # Compute median error and print it
@@ -355,6 +364,55 @@ print("Test median relative l1 norm: ", test_median_rel_l1)
 print("Test median relative l2 norm: ", test_median_rel_l2)
 print("Test median relative semi h1 norm: ", test_median_rel_semih1)
 print("Test median relative h1 norm: ", test_median_rel_h1)
+print("")
+
+#########################################
+# Compute mean error component per component
+#########################################
+if which_example in ["fhn", "fhn_long", "hh"]:
+    test_rel_l1_componentwise = LprelLoss_multiout(1, True)(
+        output_tensor, prediction_tensor
+    )
+    test_rel_l2_componentwise = LprelLoss_multiout(2, True)(
+        output_tensor, prediction_tensor
+    )
+    test_rel_semih1_componentwise = H1relLoss_1D_multiout(0.0, True)(
+        output_tensor, prediction_tensor
+    )
+    test_rel_h1_componentwise = H1relLoss_1D_multiout(1.0, True)(
+        output_tensor, prediction_tensor
+    )
+    # print the mean error component-wise
+    print("Test mean relative l1 norm componentwise: ", test_rel_l1_componentwise)
+    print("Test mean relative l2 norm componentwise: ", test_rel_l2_componentwise)
+    print(
+        "Test mean relative semi h1 norm componentwise: ", test_rel_semih1_componentwise
+    )
+    print("Test mean relative h1 norm componentwise: ", test_rel_h1_componentwise)
+    print("")
+
+elif arc in ["crosstruss"]:
+    test_rel_l1_componentwise = LprelLoss_multiout(1, True)(
+        output_tensor, prediction_tensor
+    )
+    test_rel_l2_componentwise = LprelLoss_multiout(2, True)(
+        output_tensor, prediction_tensor
+    )
+    test_rel_semih1_componentwise = H1relLoss_multiout(0.0, True)(
+        output_tensor, prediction_tensor
+    )
+    test_rel_h1_componentwise = H1relLoss_multiout(1.0, True)(
+        output_tensor, prediction_tensor
+    )
+    # print the mean error component-wise
+    print("Test mean relative l1 norm componentwise: ", test_rel_l1_componentwise)
+    print("Test mean relative l2 norm componentwise: ", test_rel_l2_componentwise)
+    print(
+        "Test mean relative semi h1 norm componentwise: ", test_rel_semih1_componentwise
+    )
+    print("Test mean relative h1 norm componentwise: ", test_rel_h1_componentwise)
+    print("")
+
 
 #########################################
 # Time for evaluation
@@ -374,6 +432,7 @@ with torch.no_grad():
     _ = model(ex)
 t_2 = time.time()
 print(f"Time for evaluation of one solution is: ", t_2 - t_1)
+print("")
 
 
 #########################################

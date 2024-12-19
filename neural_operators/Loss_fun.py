@@ -56,11 +56,42 @@ class LprelLoss:
 
 
 #########################################
+# L^p relative loss for N-D functions and different output channels
+#########################################
+class LprelLoss_multiout:
+    """
+    I want to compute the relative error for each output channel separately, and return it separately.
+
+    x, y: torch.tensor
+          x and y are tensors of shape (n_samples, *n, d_u), with d_u > 1
+          where *n indicates that the spatial dimensions can be arbitrary
+    """
+
+    def __init__(self, p: int, size_mean=False):
+        self.p = p
+        self.size_mean = size_mean
+
+    @jaxtyped(typechecker=beartype)
+    def __call__(
+        self, x: Float[Tensor, "n_samples *n d_u"], y: Float[Tensor, "n_samples *n d_u"]
+    ) -> Float[Tensor, "*n_samples d_u"]:
+
+        d_u = x.size(-1)
+        return torch.stack(
+            [
+                LprelLoss(p=self.p, size_mean=self.size_mean)(x[..., [i]], y[..., [i]])
+                for i in range(d_u)
+            ],
+            dim=-1,
+        )
+
+
+#########################################
 #  H1 relative loss 1D
 #########################################
 class H1relLoss_1D:
     """
-    Relative H^1 = W^{1,2} norm, approximated with the Fourier transform
+    Relative H^1 = W^{1,2} norm, approximated with the Fourier transform for 1D functions.
     """
 
     def __init__(self, beta: float = 1.0, size_mean: bool = False, alpha: float = 1.0):
@@ -124,6 +155,40 @@ class H1relLoss_1D:
         )  # Hadamard multiplication
 
         return loss
+
+
+#########################################
+# H1 relative loss for 1D functions and different output channels
+#########################################
+class H1relLoss_1D_multiout:
+    """
+    Relative H^1 = W^{1,2} norm, approximated with the Fourier transform, for 1D functions.
+
+    I want to compute the relative error for each output channel separately, and return it separately.
+    """
+
+    def __init__(self, beta: float = 1.0, size_mean: bool = False, alpha: float = 1.0):
+        self.beta = beta
+        self.size_mean = size_mean
+        self.alpha = alpha
+
+    @jaxtyped(typechecker=beartype)
+    def __call__(
+        self,
+        x: Float[Tensor, "n_samples n_x d_u"],
+        y: Float[Tensor, "n_samples n_x d_u"],
+    ) -> Float[Tensor, "*n_samples d_u"]:
+
+        d_u = x.size(-1)
+        return torch.stack(
+            [
+                H1relLoss_1D(self.beta, self.size_mean, self.alpha)(
+                    x[..., [i]], y[..., [i]]
+                )
+                for i in range(d_u)
+            ],
+            dim=-1,
+        )
 
 
 #########################################
@@ -205,3 +270,37 @@ class H1relLoss:
         loss = self.rel(x * torch.sqrt(weight), y * torch.sqrt(weight))
 
         return loss
+
+
+#########################################
+# H1 relative loss for 2D functions and different output channels
+#########################################
+class H1relLoss_multiout:
+    """
+    Relative H^1 = W^{1,2} norm, approximated with the Fourier transform, for 2D functions.
+
+    I want to compute the relative error for each output channel separately, and return it separately.
+    """
+
+    def __init__(self, beta: float = 1.0, size_mean: bool = False, alpha: float = 1.0):
+        self.beta = beta
+        self.size_mean = size_mean
+        self.alpha = alpha
+
+    @jaxtyped(typechecker=beartype)
+    def __call__(
+        self,
+        x: Float[Tensor, "n_samples n_x n_y d_u"],
+        y: Float[Tensor, "n_samples n_x n_y d_u"],
+    ) -> Float[Tensor, "*n_samples d_u"]:
+
+        d_u = x.size(-1)
+        return torch.stack(
+            [
+                H1relLoss(self.beta, self.size_mean, self.alpha)(
+                    x[..., [i]], y[..., [i]]
+                )
+                for i in range(d_u)
+            ],
+            dim=-1,
+        )
