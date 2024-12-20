@@ -13,6 +13,7 @@ __pycache__/
 *.fdb_latexmk
 *.fls
 *.tdo
+neural_operators/CNO/TrainedModels/shear_layer/model_CNO_test_L1_best_hyperparams
 
 
 cli.py
