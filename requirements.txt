@@ -108,6 +108,7 @@ tensorboard-data-server==0.7.2
 tensorboardX==2.6.2.2
 textual==0.85.2
 torch==2.5.1
+torch-tb-profiler==0.4.3
 torchaudio==2.5.1
 torchvision==0.20.1
 tqdm==4.66.6
