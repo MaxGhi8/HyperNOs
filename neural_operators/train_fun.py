@@ -296,6 +296,13 @@ def test_fun_tensors(
                 (test_relative_l1_tensor, loss_f), dim=0
             )
 
+            # compute the relative L^1 smooth error
+            # for i in range(output_pred_batch.shape[0]):
+            #     loss_f = torch.nn.SmoothL1Loss()(output_pred_batch[i], output_batch[i])
+            #     test_relative_l1_tensor = torch.cat(
+            #         (test_relative_l1_tensor, loss_f.unsqueeze(0)), dim=0
+            #     )
+
             # compute the relative L^2 error
             loss_f = LprelLoss(2, None)(output_pred_batch, output_batch)
             test_relative_l2_tensor = torch.cat(
