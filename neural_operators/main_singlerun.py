@@ -435,26 +435,62 @@ for epoch in range(epochs):
             file.write("Current Epoch: " + str(epoch) + "\n")
             file.write("Params: " + str(par_tot) + "\n")
 
-        """# plot data during the training and save on tensorboard
+        # plot data during the training and save on tensorboard
         if epoch == 0:
             # plot the input data
-            plot_data(esempio_test, [], "Coefficients a(x)", epoch, writer, plotting)
+            plot_data(
+                esempio_test,
+                [],
+                "Input function",
+                epoch,
+                writer,
+                which_example,
+                problem_dim,
+                plotting,
+            )
 
             # plot the exact solution
-            plot_data(soluzione_test, [], "Exact solution", epoch, writer, plotting)
-                
+            plot_data(
+                soluzione_test,
+                [],
+                "Exact solution",
+                epoch,
+                writer,
+                which_example,
+                problem_dim,
+                plotting,
+            )
+
         # Approximate solution with NO
         if epoch % ep_step == 0:
-            with torch.no_grad(): # no grad for efficiency
+            with torch.no_grad():  # no grad for efficiency
                 out_test = model(esempio_test.to(device))
                 out_test = out_test.cpu()
-            
-            # plot the approximate solution 
-            plot_data(out_test, [], f"Approximate solution with {arc}", epoch, writer, plotting)
+
+            # plot the approximate solution
+            plot_data(
+                out_test,
+                [],
+                f"Approximate solution with {arc}",
+                epoch,
+                writer,
+                which_example,
+                problem_dim,
+                plotting,
+            )
 
             # Module of the difference
             diff = torch.abs(out_test - soluzione_test)
-            plot_data(diff, [], "Module of the difference", epoch, writer, plotting)"""
+            plot_data(
+                diff,
+                [],
+                "Module of the difference",
+                epoch,
+                writer,
+                which_example,
+                problem_dim,
+                plotting,
+            )
 
 writer.flush()  # for saving final data
 writer.close()  # close the tensorboard writer
