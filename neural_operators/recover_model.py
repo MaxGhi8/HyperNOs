@@ -283,8 +283,10 @@ print(
 print("")
 
 # Count and print the total number of parameters
-par_tot = count_params(model)
-print("Total number of parameters is: ", par_tot)
+total_params, total_bytes = count_params(model)
+total_mb = total_bytes / (1024**2)
+print(f"Total Parameters: {total_params:,}")
+print(f"Total Model Size: {total_bytes:,} bytes ({total_mb:.2f} MB)")
 
 #########################################
 # Compute mean error and print it

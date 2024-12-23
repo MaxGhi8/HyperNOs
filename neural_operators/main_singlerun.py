@@ -322,9 +322,14 @@ match arc:
             )
 
 # count and print the total number of parameters
-par_tot = count_params(model)
-print("Total number of parameters is: ", par_tot)
-writer.add_text("Parameters", "total number of parameters is" + str(par_tot), 0)
+total_params, total_bytes = count_params(model)
+total_mb = total_bytes / (1024**2)
+print(f"Total Parameters: {total_params:,}")
+print(f"Total Model Size: {total_bytes:,} bytes ({total_mb:.2f} MB)")
+writer.add_text("Parameters", f"Total Parameters: {total_params:,}", 0)
+writer.add_text(
+    "Model Size", f"Total Model Size: {total_bytes:,} bytes ({total_mb:.2f} MB)", 0
+)
 
 #########################################
 # Training
@@ -455,7 +460,8 @@ for epoch in range(epochs):
             )
             file.write("Test relative H^1 error: " + str(test_relative_h1) + "\n")
             file.write("Current Epoch: " + str(epoch) + "\n")
-            file.write("Params: " + str(par_tot) + "\n")
+            file.write(f"Total Parameters: {total_params:,}\n")
+            file.write(f"Total Model Size: {total_bytes:,} bytes ({total_mb:.2f} MB)\n")
 
         # plot data during the training and save on tensorboard
         if epoch == 0:
