@@ -2,7 +2,7 @@ data/
 # TrainedModels/
 plots/*.png
 *.jpeg
-*.jpg
+data/*.jpg
 .python-version
 __pycache__/
 *.aux

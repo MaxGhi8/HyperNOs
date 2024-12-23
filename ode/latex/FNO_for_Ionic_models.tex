@@ -30,10 +30,20 @@
 \usepackage{multicol}
 \usepackage{subcaption}
 \usepackage{todonotes}
-
+\setlength {\marginparwidth }{2cm}
 \newcommand{\mg}[1]{\todo[inline, color=green!20]{\textbf{MG:} #1}}
 \newcommand{\lp}[1]{\todo[inline, color=orange!20]{\textbf{LP:} #1}}
 
+% commands
+\newcommand{\learningRate}{\eta}
+\newcommand{\schedulerStep}{n_{step}}
+\newcommand{\schedulerGamma}{\gamma}
+\newcommand{\weightDecay}{\omega}
+\newcommand{\width}{d_v}
+\newcommand{\hiddenLayer}{L}
+\newcommand{\fourierModes}{k_{max}}
+\newcommand{\activation}{\sigma}
+\newcommand{\paddingPoints}{n_{pad}}
 
 \newtheorem{Definition}{Definition}
 \newtheorem{Obs}{Observation}
@@ -48,6 +58,34 @@
 \maketitle
 \listoftodos
 
+\section{Automated hyper-parameters tuning}
+We have created the dataset as described in Section \ref{subsec:dataset} and then we have split it into three parts with the rule $80/10/10$, in particular:
+\begin{itemize}
+    \item Training set ($80\%$ of the total dataset): we use this set to train our model.
+    \item Validation set ($10\%$ of the total dataset): we use this set to compare different hyperparameter configurations and choose the best.
+    \item Test set ($10\%$ of the total dataset): the model with the lower validation error is finally trained on this benchmark and the test errors are reported in this paper.
+\end{itemize}
+All the datasets are batched with mini-batches of $32$ examples each.
+
+We have automated hyper-parameter tuning using the Ray library to ensure that our neural operator model is as good as possible. We optimize the hyperparameters with HyperOptSearch, which uses the Tree-structured Parzen Estimators algorithm for $200$ trials. This optimization process is completely distributed and parallel and can find an optimal configuration for a given model.
+\\
+The training of the models is performed with ADAMW optimizer, with a learning rate equal to $\learningRate$ and weight decay regularizer $\weightDecay$ for a total of $1000$ epochs and minimizing the $L^2$ relative error. We also use a step learning rate scheduler, reducing $\learningRate$ of a factor to $\schedulerGamma$ every $\schedulerStep=10$ epochs. We take $\learningRate$ and $\schedulerGamma$ as hyper-parameters of the training process that have to be tuned.
+\noindent
+The objective of hyper-parameters tuning of the Fourier Neural Operator is the hidden dimension ($\width$), the number of hidden layers ($\hiddenLayer$), the number of Fourier modes considered ($\fourierModes$), the activation function ($\activation$), the number of padding points ($\paddingPoints$) and the Fourier architecture modification. The best configurations of the hyper-parameters for each benchmark are listed in Table \ref{table:hyper-FNO}.
+\begin{center}
+    \begin{tabular}{cccccccccc}
+        \hline
+        problem & $\learningRate$ & $\weightDecay$ & $\schedulerGamma$ & $\width$ & $\hiddenLayer$ & $\fourierModes$ & $\activation$ & $\paddingPoints$ & FNO\_mod \\
+        \hline\hline
+        FHN     & $7.1e^{-4}$     & $3.4e^{-4}$    & $0.91$            & $256$    & $5$            & $8$             & leaky\_relu   & $0$              & Residual \\
+        HH      & $7.5e^{-4}$     & $3e^{-6}$      & $0.92$            & $256$    & $5$            & $8$             & leaky\_relu   & $7$              & Zongyi   \\
+        \hline
+    \end{tabular}
+    \label{table:hyper-FNO}
+\end{center}
+\captionof{table}{Your caption here}
+
+\newpage
 \section{FitzHugh-Nagumo}
 \begin{center}
     $\begin{cases}
@@ -75,9 +113,10 @@ Our objective is to learn the operator \lp{Regolarita' di HH,FHN}
     \Op : & \IR        &  & \rightarrow  H^1([0,T];\IR)\times H^1([0,T];\IR) \\
           & I_{app}(t) &  & \mapsto (V(t),w(t))
 \end{alignat*}
-\subsection{Dataset}
 
-The data set is created using Matlab ode15s with $T=1$. We randomly choose the intensity of the current and the duration of the stimulus $T_{stim}$. In order to get all the important dynamics of the system, the generation of the dataset for training is divided into three parts formed in according to the following table \mg{Finire il traning con meno esempi per nap 20}
+\subsection{Dataset}\label{subsec:dataset}
+
+The data set is created using Matlab ode15s with $T=1$. We randomly choose the intensity of the current and the duration of the stimulus $T_{stim}$. In order to get all the important dynamics of the system, the generation of the dataset for training is divided into three parts formed in according to the following table:
 \begin{center}
     \begin{tabular}{cccc}
         \hline
@@ -104,11 +143,21 @@ For testing, we generate 375 examples where the dataset is split into four.
     \end{tabular}
 \end{center}
 
-In figure \ref{Grafici FHN } we present the results obtained by taking five randomly selected examples for each part of the dataset (General, nap, and $t_{fin}$). \textcolor{red}{(non messi i $t_0$ perchè è semplicemente la soluzione nulla, qui abbiamo riportato gli esempi con gli errori ma si possono avere li stessi esempi con invece che l'errore lo spazio delle fasi)}
-\lp{Cambiare il titolo con index of the examples}
-\lp{Grafici usando python }
+
+
+
+Here we report the values of the loss function over the epochs
 \begin{center}
-    \begin{figure}[h]
+    \begin{figure}[ht]
+        \centering
+        \includegraphics[width=0.5\linewidth]{images/loss_function_FHN.jpg}
+        \caption{Value of the loss function over the epochs}
+        \label{fig:loss_FHN_FNO}
+    \end{figure}
+\end{center}
+In figure \ref{Grafici FHN } we present the results obtained by taking five randomly selected examples for each part of the dataset (General, nap, and $t_{fin}$). \textcolor{red}{(non messi i $t_0$ perchè è semplicemente la soluzione nulla, qui abbiamo riportato gli esempi con gli errori ma si possono avere li stessi esempi con invece che l'errore lo spazio delle fasi)}
+\begin{center}
+    \begin{figure}[ht]
         \begin{subfigure}{.5\textwidth}
             \centering
             \includegraphics[width=1.8\linewidth]{images/general_error_FHN.jpg}
@@ -133,12 +182,9 @@ In figure \ref{Grafici FHN } we present the results obtained by taking five rand
         \label{Grafici FHN }
     \end{figure}
 \end{center}
+\clearpage
 
-
-
-\subsection{Architecture}
-\mg{Finire ray}
-
+\newpage
 \section{Hodgkin-Huxley}
 \begin{center}
     $\begin{cases}
@@ -172,14 +218,12 @@ Where
      & \alpha_n(V)=0.01(10-V)\Big[\exp\Big(\frac{10-V}{10}\Big)-1\Big]^{-1} &  & \beta_n(V)=0.125\exp\Big(-\frac{V}{80}\Big)             \\
 \end{align*}
 
-Our objective is to learn the operator
-
 \begin{alignat*}{2}
     \Op : & \IR        &  & \rightarrow  H^1([0,T];\IR)\times H^1([0,T];\IR)\times H^1([0,T];\IR)\times H^1([0,T];\IR) \\
           & I_{app}(t) &  & \mapsto (V(t),m(t),h(t),n(t))
 \end{alignat*}
 \subsection{Dataset}
-The dataset is formed using odes15s of matlab with $T=1$. Where we radomly pick the intenstiy of the current and the duration of the stimolus $T_{stim}$. In order to get all the imporant dynamics of the system the generation of the dataset for the training is splitted in three formed in the following way (i nomi sono quelli usati su matlab) \mg{training con il nuovo dataset con nap =  20 }\lp{Ridurre il numero di esempi per il caso del $t_0$ e metterre aggiungere i casi del $t_{fin}$}
+The dataset is formed using odes15s of Matlab with $T=1$. Where we randomly pick the intensity of the current and the duration of the stimulus $T_{stim}$. In order to get all the important dynamics of the system the generation of the dataset for the training is split in three formed in the following way (i nomi sono quelli usati su matlab)
 \begin{center}
     \begin{tabular}{cccc}
         \hline
@@ -207,6 +251,18 @@ For the testing we genera 375 example where the dataset is splitted in four.
         \hline
     \end{tabular}
 \end{center}
+
+Here we report the values of the loss function over the epochs
+\begin{center}
+    \begin{figure}[ht]
+        \centering
+        \includegraphics[width=0.5\linewidth]{images/loss_function_HH.jpg}
+        \caption{Value of the loss function over the epochs}
+        \label{fig:enter-label}
+    \end{figure}
+\end{center}
+
+
 As before we take five examples for each part of the test dataset (General,$i_{high}$,nap,$t_fin$) and visualize the results in figure \ref{Grafici HH}.
 
 \begin{center}
@@ -229,7 +285,7 @@ As before we take five examples for each part of the test dataset (General,$i_{h
             \centering
             \includegraphics[width=1.8\linewidth]{images/high_i_error_HH.jpg}
             \caption{Five examples for the $i_{high}$ dataset}
-            \label{HH_err_t_f}
+            \label{HH_err_i_high}
         \end{subfigure}
     \end{figure*}
 \end{center}
@@ -245,4 +301,14 @@ As before we take five examples for each part of the test dataset (General,$i_{h
     \caption{Results obtained each of the figures has the following graph in order from the top row: current applied, Voltage, point-wise error for the Voltage,gating variable m, point-wise error for m,gating variable n,point-wise error for n,gating variable h, error for the gating variable h}
     \label{Grafici HH}
 \end{figure}
+
+\clearpage
+\section{Luo Rudy}
+
+\begin{center}
+    $\begin{cases}
+            \frac{dV}{dt} & =\bar{g}_{Na}m^3hj(V-V_{Na}) + \bar{g}_{si}df(V-V{si}) + \bar{g}XX_i(V-V_K) + \bar{g}_{K1}K1_{\infty}(V-V_{K1})+ \\[10pt] &+ \bar{g}_{Kp}K_p(V-V_{K_p}) + \bar{g}_b(V-V_b)\\[10pt]
+            \frac{dm}{dt} & = \alpha_m (1-m) + \beta_m m
+        \end{cases}$
+\end{center}
 \end{document}
