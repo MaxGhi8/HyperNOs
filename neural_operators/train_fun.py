@@ -6,6 +6,7 @@ it is also needed for the RayTune implementation.
 
 import torch
 from Loss_fun import LprelLoss, H1relLoss_1D, H1relLoss
+from Loss_fun import LprelLoss_multiout, H1relLoss_1D_multiout, H1relLoss_multiout
 
 
 #########################################
@@ -114,7 +115,7 @@ def test_fun(
     statistic=False,
 ):
     """
-    function to test the model, this function is called at each epoch.
+    Function to test the model, this function is called at each epoch.
     In particular, it computes the relative L^1, L^2, semi-H^1 and H^1 errors on the test set; and
     the loss on the training set with the updated parameters.
 
@@ -247,6 +248,86 @@ def test_fun(
                 return test_relative_h1
             case _:
                 raise ValueError("The norm is not implemented")
+
+
+#########################################
+# Test function with separate loss
+#########################################
+def test_fun_multiout(
+    model,
+    test_loader,
+    test_samples: int,
+    device: torch.device,
+    which_example: str,
+    dim_output: int,
+):
+    """
+    As test_fun, but it returns the losses separately (one for each component of the output)
+    """
+    with torch.no_grad():
+        model.eval()
+        test_relative_l1_multiout = torch.zeros(dim_output).to(device)
+        test_relative_l2_multiout = torch.zeros(dim_output).to(device)
+        test_relative_semih1_multiout = torch.zeros(dim_output).to(device)
+        test_relative_h1_multiout = torch.zeros(dim_output).to(device)
+
+        ## Compute loss on the test set
+        for input_batch, output_batch in test_loader:
+            input_batch = input_batch.to(device)
+            output_batch = output_batch.to(device)
+
+            # compute the output
+            output_pred_batch = model.forward(input_batch)
+
+            # post-process the output
+            if which_example == "airfoil":
+                output_pred_batch[input_batch == 1] = 1
+                output_batch[input_batch == 1] = 1
+            elif which_example == "crosstruss":
+                for i in range(input_batch.shape[-1]):
+                    output_pred_batch[:, :, :, [i]] = (
+                        output_pred_batch[:, :, :, [i]] * input_batch
+                    )
+                    output_batch[:, :, :, [i]] = (
+                        output_batch[:, :, :, [i]] * input_batch
+                    )
+
+            # compute the relative L^1 error
+            loss_f = LprelLoss_multiout(1, False)(output_pred_batch, output_batch)
+            test_relative_l1_multiout += loss_f
+
+            # compute the relative L^2 error
+            test_relative_l2_multiout += LprelLoss_multiout(2, False)(
+                output_pred_batch, output_batch
+            )
+
+            # compute the relative semi-H^1 error and H^1 error
+            if model.problem_dim == 1:
+                test_relative_semih1_multiout += H1relLoss_1D_multiout(1.0, False, 0.0)(
+                    output_pred_batch, output_batch
+                )
+                test_relative_h1_multiout += H1relLoss_1D_multiout(1.0, False)(
+                    output_pred_batch, output_batch
+                )  # beta = 1.0 in test loss
+            elif model.problem_dim == 2:
+                test_relative_semih1_multiout += H1relLoss_multiout(1.0, False, 0.0)(
+                    output_pred_batch, output_batch
+                )
+                test_relative_h1_multiout += H1relLoss_multiout(1.0, False)(
+                    output_pred_batch, output_batch
+                )  # beta = 1.0 in test loss
+
+        test_relative_l1_multiout /= test_samples
+        test_relative_l2_multiout /= test_samples
+        test_relative_semih1_multiout /= test_samples
+        test_relative_h1_multiout /= test_samples
+
+    return (
+        test_relative_l1_multiout,
+        test_relative_l2_multiout,
+        test_relative_semih1_multiout,
+        test_relative_h1_multiout,
+    )
 
 
 def test_fun_tensors(

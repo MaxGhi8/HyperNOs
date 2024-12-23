@@ -37,7 +37,7 @@ from tqdm import tqdm
 import argparse
 
 from Loss_fun import LprelLoss, H1relLoss_1D, H1relLoss
-from train_fun import train_fun, test_fun
+from train_fun import train_fun, test_fun, test_fun_multiout
 from utilities import count_params, plot_data
 
 # FNO imports
@@ -145,7 +145,7 @@ if not os.path.isdir(folder):
 #########################################
 # Parameters for plots and tensorboard
 #########################################
-ep_step = 1  #! default is 50
+ep_step = 50
 n_idx = 4  # number of random test that we plot
 plotting = False
 
@@ -186,7 +186,7 @@ match arc:
         # fno architecture hyperparameters
         d_a = hyperparams_arc["d_a"]
         d_v = hyperparams_arc["width"]
-        d_u = hyperparams_arc["d_u"]
+        out_dim = hyperparams_arc["d_u"]
         L = hyperparams_arc["n_layers"]
         modes = hyperparams_arc["modes"]
         fun_act = hyperparams_arc["fun_act"]
@@ -264,7 +264,7 @@ match arc:
             model = FNO_1D(
                 d_a,
                 d_v,
-                d_u,
+                out_dim,
                 L,
                 modes,
                 fun_act,
@@ -280,7 +280,7 @@ match arc:
             model = FNO_2D(
                 d_a,
                 d_v,
-                d_u,
+                out_dim,
                 L,
                 modes,
                 modes,
@@ -411,9 +411,9 @@ for epoch in range(epochs):
             statistic=True,
         )
 
-        # save the results on tensorboard
+        # save the results of train and test on tensorboard
         writer.add_scalars(
-            f"{arc}_{problem_dim}D_" + which_example,
+            f"{arc}_{problem_dim}D_{which_example}",
             {
                 "Train loss " + exp_norm: train_loss,
                 "Test rel. L^1 error": test_relative_l1,
@@ -423,6 +423,28 @@ for epoch in range(epochs):
             },
             epoch,
         )
+
+        # make plots with loss separated for every component of the output
+        if out_dim > 1:
+            (
+                test_relative_l1_multiout,
+                test_relative_l2_multiout,
+                test_relative_semih1_multiout,
+                test_relative_h1_multiout,
+            ) = test_fun_multiout(
+                model, val_loader, val_samples, device, which_example, out_dim
+            )
+            for i in range(out_dim):
+                writer.add_scalars(
+                    f"{arc}_{problem_dim}D_{which_example}_output_{i}",
+                    {
+                        "Test rel. L^1 error": test_relative_l1_multiout[i],
+                        "Test rel. L^2 error": test_relative_l2_multiout[i],
+                        "Test rel. semi-H^1 error": test_relative_semih1_multiout[i],
+                        "Test rel. H^1 error": test_relative_h1_multiout[i],
+                    },
+                    epoch,
+                )
 
         with open(folder + "/errors.txt", "w") as file:
             file.write("Training loss " + exp_norm + ": " + str(train_loss) + "\n")
