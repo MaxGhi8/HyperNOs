@@ -145,7 +145,7 @@ if not os.path.isdir(folder):
 #########################################
 # Parameters for plots and tensorboard
 #########################################
-ep_step = 50
+ep_step = 1  #! default is 50
 n_idx = 4  # number of random test that we plot
 plotting = False
 
@@ -439,6 +439,7 @@ for epoch in range(epochs):
         if epoch == 0:
             # plot the input data
             plot_data(
+                example,
                 esempio_test,
                 [],
                 "Input function",
@@ -451,6 +452,7 @@ for epoch in range(epochs):
 
             # plot the exact solution
             plot_data(
+                example,
                 soluzione_test,
                 [],
                 "Exact solution",
@@ -467,8 +469,16 @@ for epoch in range(epochs):
                 out_test = model(esempio_test.to(device))
                 out_test = out_test.cpu()
 
+                # post-processing for the output
+                if which_example == "airfoil":
+                    out_test[esempio_test == 1] = 1
+                elif which_example == "crosstruss":
+                    for i in range(out_test.shape[-1]):
+                        out_test[:, :, :, [i]] = out_test[:, :, :, [i]] * esempio_test
+
             # plot the approximate solution
             plot_data(
+                example,
                 out_test,
                 [],
                 f"Approximate solution with {arc}",
@@ -482,9 +492,10 @@ for epoch in range(epochs):
             # Module of the difference
             diff = torch.abs(out_test - soluzione_test)
             plot_data(
+                example,
                 diff,
                 [],
-                "Module of the difference",
+                "Module of the error",
                 epoch,
                 writer,
                 which_example,

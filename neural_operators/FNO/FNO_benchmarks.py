@@ -190,7 +190,8 @@ class ShearLayer:
 
         # Change number of workers according to your preference
         num_workers = 0
-        self.train_loader = DataLoader(
+
+        self.train_set = (
             ShearLayerDataset(
                 "training",
                 self.N_Fourier_F,
@@ -198,6 +199,10 @@ class ShearLayer:
                 s,
                 search_path=search_path,
             ),
+        )
+
+        self.train_loader = DataLoader(
+            self.train_set,
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
@@ -230,6 +235,22 @@ class ShearLayer:
             num_workers=num_workers,
             pin_memory=True,
         )
+
+    @property
+    def min_data(self):
+        return self.train_set.min_data
+
+    @property
+    def max_data(self):
+        return self.train_set.max_data
+
+    @property
+    def min_model(self):
+        return self.train_set.min_model
+
+    @property
+    def max_model(self):
+        return self.train_set.max_model
 
 
 # ------------------------------------------------------------------------------
@@ -351,7 +372,8 @@ class SinFrequency:
 
         # Change number of workers according to your preference
         num_workers = 0
-        self.train_loader = DataLoader(
+
+        self.train_set = (
             SinFrequencyDataset(
                 "training",
                 self.N_Fourier_F,
@@ -359,6 +381,10 @@ class SinFrequency:
                 s,
                 search_path=search_path,
             ),
+        )
+
+        self.train_loader = DataLoader(
+            self.train_set,
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
@@ -391,6 +417,22 @@ class SinFrequency:
             num_workers=num_workers,
             pin_memory=True,
         )
+
+    @property
+    def min_data(self):
+        return self.train_set.min_data
+
+    @property
+    def max_data(self):
+        return self.train_set.max_data
+
+    @property
+    def min_model(self):
+        return self.train_set.min_model
+
+    @property
+    def max_model(self):
+        return self.train_set.max_model
 
 
 # ------------------------------------------------------------------------------
@@ -523,7 +565,7 @@ class WaveEquation:
         # Change number of workers according to your preference
         num_workers = 8
 
-        self.train_loader = DataLoader(
+        self.train_set = (
             WaveEquationDataset(
                 "training",
                 self.N_Fourier_F,
@@ -532,6 +574,10 @@ class WaveEquation:
                 s,
                 search_path=search_path,
             ),
+        )
+
+        self.train_loader = DataLoader(
+            self.train_set,
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
@@ -566,6 +612,22 @@ class WaveEquation:
             num_workers=num_workers,
             pin_memory=True,
         )
+
+    @property
+    def min_data(self):
+        return self.train_set.min_data
+
+    @property
+    def max_data(self):
+        return self.train_set.max_data
+
+    @property
+    def min_model(self):
+        return self.train_set.min_model
+
+    @property
+    def max_model(self):
+        return self.train_set.max_model
 
 
 # ------------------------------------------------------------------------------
@@ -681,7 +743,7 @@ class AllenCahn:
         # Change number of workers according to your preference
         num_workers = 0
 
-        self.train_loader = DataLoader(
+        self.train_set = (
             AllenCahnDataset(
                 "training",
                 self.N_Fourier_F,
@@ -689,6 +751,10 @@ class AllenCahn:
                 s,
                 search_path=search_path,
             ),
+        )
+
+        self.train_loader = DataLoader(
+            self.train_set,
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
@@ -721,6 +787,22 @@ class AllenCahn:
             num_workers=num_workers,
             pin_memory=True,
         )
+
+    @property
+    def min_data(self):
+        return self.train_set.min_data
+
+    @property
+    def max_data(self):
+        return self.train_set.max_data
+
+    @property
+    def min_model(self):
+        return self.train_set.min_model
+
+    @property
+    def max_model(self):
+        return self.train_set.max_model
 
 
 # ------------------------------------------------------------------------------
@@ -827,7 +909,7 @@ class ContTranslation:
         # Change number of workers according to your preference
         num_workers = 0
 
-        self.train_loader = DataLoader(
+        self.train_set = (
             ContTranslationDataset(
                 "training",
                 self.N_Fourier_F,
@@ -835,6 +917,10 @@ class ContTranslation:
                 s,
                 search_path=search_path,
             ),
+        )
+
+        self.train_loader = DataLoader(
+            self.train_set,
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
@@ -867,6 +953,22 @@ class ContTranslation:
             num_workers=num_workers,
             pin_memory=True,
         )
+
+    @property
+    def min_data(self):
+        return self.train_set.min_data
+
+    @property
+    def max_data(self):
+        return self.train_set.max_data
+
+    @property
+    def min_model(self):
+        return self.train_set.min_model
+
+    @property
+    def max_model(self):
+        return self.train_set.max_model
 
 
 # ------------------------------------------------------------------------------
@@ -974,7 +1076,7 @@ class DiscContTranslation:
         # Change number of workers according to your preference
         num_workers = 0
 
-        self.train_loader = DataLoader(
+        self.train_set = (
             DiscContTranslationDataset(
                 "training",
                 self.N_Fourier_F,
@@ -982,6 +1084,10 @@ class DiscContTranslation:
                 s,
                 search_path=search_path,
             ),
+        )
+
+        self.train_loader = DataLoader(
+            self.train_set,
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
@@ -1014,6 +1120,22 @@ class DiscContTranslation:
             num_workers=num_workers,
             pin_memory=True,
         )
+
+    @property
+    def min_data(self):
+        return self.train_set.min_data
+
+    @property
+    def max_data(self):
+        return self.train_set.max_data
+
+    @property
+    def min_model(self):
+        return self.train_set.min_model
+
+    @property
+    def max_model(self):
+        return self.train_set.max_model
 
 
 # ------------------------------------------------------------------------------
@@ -1121,7 +1243,7 @@ class Airfoil:
         # Change number of workers according to your preference
         num_workers = 0
 
-        self.train_loader = DataLoader(
+        self.train_set = (
             AirfoilDataset(
                 "training",
                 self.N_Fourier_F,
@@ -1129,6 +1251,10 @@ class Airfoil:
                 s,
                 search_path=search_path,
             ),
+        )
+
+        self.train_loader = DataLoader(
+            self.train_set,
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
@@ -1161,6 +1287,22 @@ class Airfoil:
             num_workers=num_workers,
             pin_memory=True,
         )
+
+    @property
+    def min_data(self):
+        return self.train_set.min_data
+
+    @property
+    def max_data(self):
+        return self.train_set.max_data
+
+    @property
+    def min_model(self):
+        return self.train_set.min_model
+
+    @property
+    def max_model(self):
+        return self.train_set.max_model
 
 
 # ------------------------------------------------------------------------------
@@ -1272,10 +1414,12 @@ class Darcy:
         # Change number of workers according to your preference
         num_workers = 0
 
+        self.train_set = DarcyDataset(
+            "training", self.N_Fourier_F, training_samples, search_path=search_path
+        )
+
         self.train_loader = DataLoader(
-            DarcyDataset(
-                "training", self.N_Fourier_F, training_samples, search_path=search_path
-            ),
+            self.train_set,
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
@@ -1306,6 +1450,22 @@ class Darcy:
             num_workers=num_workers,
             pin_memory=True,
         )
+
+    @property
+    def min_data(self):
+        return self.train_set.min_data
+
+    @property
+    def max_data(self):
+        return self.train_set.max_data
+
+    @property
+    def min_model(self):
+        return self.train_set.min_model
+
+    @property
+    def max_model(self):
+        return self.train_set.max_model
 
 
 # ------------------------------------------------------------------------------

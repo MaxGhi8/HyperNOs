@@ -502,6 +502,28 @@ match which_example:
         prediction_tensor[:, :, :, [1]] = (
             prediction_tensor[:, :, :, [1]] * input_tensor[:, :, :]
         )
+    case (
+        "poisson"
+        | "wave_0_5"
+        | "cont_tran"
+        | "disc_tran"
+        | "allen"
+        | "shear_layer"
+        | "airfoil"
+        | "darcy"
+    ):
+        output_tensor = (
+            example.max_model - example.min_model
+        ) * output_tensor + example.min_model
+        prediction_tensor = (
+            example.max_model - example.min_model
+        ) * prediction_tensor + example.min_model
+
+    case "burgers_zongyi" | "darcy_zongyi" | "navier_stokes_zongyi":
+        pass  # todo
+
+    case _:
+        raise ValueError("The example chosen is not allowed")
 
 
 #########################################

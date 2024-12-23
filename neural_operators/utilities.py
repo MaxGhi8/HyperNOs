@@ -111,6 +111,35 @@ def plot_data_crosstruss(
     writer.add_figure(title, fig, ep)
 
 
+def plot_data_crosstruss_input(
+    data_plot: Tensor,
+    idx: list,
+    title: str,
+    ep: int,
+    writer: SummaryWriter,
+    plotting: bool = False,
+):
+    if idx != []:
+        data_plot = data_plot[idx]
+        n_idx = len(idx)
+    else:
+        n_idx = data_plot.size(0)
+
+    fig, ax = plt.subplots(1, n_idx, figsize=(18, 5))
+    fig.suptitle(title)
+    ax[0].set(ylabel="Geometry domain")
+    for i in range(n_idx):
+        ax[i].set_yticklabels([])
+        ax[i].set_xticklabels([])
+        ax[i].set(xlabel="x")
+        im = ax[i].imshow(data_plot[i].squeeze())
+        fig.colorbar(im, ax=ax[i])
+
+    if plotting:
+        plt.show()
+    writer.add_figure(title, fig, ep)
+
+
 def plot_data_generic_2d(
     data_plot: Tensor,
     idx: list,
@@ -146,6 +175,7 @@ def plot_data_generic_1d(
     idx: list,
     t_final: float,
     title: str,
+    y_label: str,
     ep: int,
     writer: SummaryWriter,
     plotting: bool = False,
@@ -161,12 +191,20 @@ def plot_data_generic_1d(
 
     fig, ax = plt.subplots(1, n_idx, figsize=(18, 4))
     fig.suptitle(title)
+    ax[0].set(ylabel=y_label)
     for i in range(n_idx):
         ax[i].set(xlabel="x")
-        ax[i].plot(
-            x_grid,
-            data_plot[i, :, 0].squeeze(),
-        )
+        if "error" in title.lower():
+            ax[i].semilogy(
+                x_grid,
+                data_plot[i, :].squeeze(),
+            )
+        else:
+            ax[i].plot(
+                x_grid,
+                data_plot[i, :].squeeze(),
+            )
+        ax[i].grid()
 
     if plotting:
         plt.show()
@@ -191,11 +229,12 @@ def plot_data_phield_space(
     fig, ax = plt.subplots(1, n_idx, figsize=(18, 4))
     fig.suptitle(title)
     for i in range(n_idx):
-        ax[i].set(xlabel="x")
+        ax[i].set(xlabel="V(t)", ylabel="w(t)")
         ax[i].plot(
             data_plot[i, :, 0].squeeze(),
             data_plot[i, :, 1].squeeze(),
         )
+        ax[i].grid()
 
     if plotting:
         plt.show()
@@ -204,6 +243,7 @@ def plot_data_phield_space(
 
 
 def plot_data(
+    example,
     data_plot: Tensor,
     idx: list,
     title: str,
@@ -244,16 +284,34 @@ def plot_data(
     if problem_dim == 1:
         match which_example:
             case "fhn" | "fhn_long":
-                if "input" in title:
+                if "input" in title.lower():
+                    # Denormalize the data
+                    data_plot = example.a_normalizer.decode(data_plot)
+                    # Plot the data
                     plot_data_generic_1d(
-                        data_plot, idx, 100, title, ep, writer, plotting
+                        data_plot, idx, 100, title, "I(t)", ep, writer, plotting
                     )
                 else:
+                    # Denormalize the data
+                    if "error" not in title.lower():
+                        data_plot[:, :, [0]] = example.v_normalizer.decode(
+                            data_plot[:, :, [0]]
+                        )
+                        data_plot[:, :, [1]] = example.w_normalizer.decode(
+                            data_plot[:, :, [1]]
+                        )
+                        # Plot the phase space (not for the error)
+                        plot_data_phield_space(
+                            data_plot, idx, title + " phase space", ep, writer, plotting
+                        )
+
+                    # Plot the data
                     plot_data_generic_1d(
                         data_plot[..., 0],
                         idx,
                         100,
                         title + " V(t)",
+                        "V(t)",
                         ep,
                         writer,
                         plotting,
@@ -263,25 +321,43 @@ def plot_data(
                         idx,
                         100,
                         title + " w(t)",
+                        "w(t)",
                         ep,
                         writer,
                         plotting,
                     )
-                    plot_data_phield_space(
-                        data_plot, idx, title + " phase space", ep, writer, plotting
-                    )
 
             case "hh":
-                if "input" in title:
+                if "input" in title.lower():
+                    # Denormalize the data
+                    data_plot = example.a_normalizer.decode(data_plot)
+                    # Plot the data
                     plot_data_generic_1d(
-                        data_plot, idx, 100, title, ep, writer, plotting
+                        data_plot, idx, 100, title, "I(t)", ep, writer, plotting
                     )
                 else:
+                    # Denormalize the data
+                    if "error" not in title.lower():
+                        data_plot[:, :, [0]] = example.v_normalizer.decode(
+                            data_plot[:, :, [0]]
+                        )
+                        data_plot[:, :, [1]] = example.m_normalizer.decode(
+                            data_plot[:, :, [1]]
+                        )
+                        data_plot[:, :, [2]] = example.h_normalizer.decode(
+                            data_plot[:, :, [2]]
+                        )
+                        data_plot[:, :, [3]] = example.n_normalizer.decode(
+                            data_plot[:, :, [3]]
+                        )
+
+                    # Plot the data
                     plot_data_generic_1d(
                         data_plot[..., 0],
                         idx,
                         100,
                         title + " V(t)",
+                        "V(t)",
                         ep,
                         writer,
                         plotting,
@@ -291,6 +367,7 @@ def plot_data(
                         idx,
                         100,
                         title + " m(t)",
+                        "m(t)",
                         ep,
                         writer,
                         plotting,
@@ -300,6 +377,7 @@ def plot_data(
                         idx,
                         100,
                         title + " h(t)",
+                        "h(t)",
                         ep,
                         writer,
                         plotting,
@@ -309,6 +387,7 @@ def plot_data(
                         idx,
                         100,
                         title + " n(t)",
+                        "n(t)",
                         ep,
                         writer,
                         plotting,
@@ -317,10 +396,48 @@ def plot_data(
     ## 2D problem
     elif problem_dim == 2:
         if which_example == "crosstruss":
-            plot_data_crosstruss(data_plot, idx, title, ep, writer, plotting)
+            if "input" in title.lower():
+                plot_data_crosstruss_input(data_plot, idx, title, ep, writer, plotting)
+            else:
+                if "error" not in title.lower():
+                    data_plot[:, :, :, 0] = (example.max_x - example.min_x) * data_plot[
+                        :, :, :, 0
+                    ] + example.min_x
+                    data_plot[:, :, :, 1] = (example.max_y - example.min_y) * data_plot[
+                        :, :, :, 1
+                    ] + example.min_y
+                plot_data_crosstruss(data_plot, idx, title, ep, writer, plotting)
 
-        else:
+        elif which_example in [
+            "poisson",
+            "wave_0_5",
+            "cont_tran",
+            "disc_tran",
+            "allen",
+            "shear_layer",
+            "airfoil",
+            "darcy",
+        ]:
+            # Denormalize the data
+            if "input" in title.lower():
+                data_plot = (
+                    example.max_data - example.min_data
+                ) * data_plot + example.min_data
+            elif "error" not in title.lower():
+                data_plot = (
+                    example.max_model - example.min_model
+                ) * data_plot + example.min_model
+
+            # Plot the data
             plot_data_generic_2d(data_plot, idx, title, ep, writer, plotting)
+
+        elif which_example in [
+            "burgers_zongyi",
+            "darcy_zongyi",
+            "navier_stokes_zongyi",
+        ]:
+            pass
+            # TODO
 
 
 #########################################

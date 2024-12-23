@@ -45,10 +45,6 @@ def train_fun(
 
         optimizer.zero_grad()  # annealing the gradient
 
-        if (step == 0) and (n_idx > 0):  # Take the first batch only
-            esempio_test = input_batch[:n_idx, ...].cpu()
-            soluzione_test = output_batch[:n_idx, ...].cpu()
-
         # compute the output
         output_pred_batch = model.forward(input_batch)
 
@@ -61,6 +57,11 @@ def train_fun(
                     output_pred_batch[:, :, :, [i]] * input_batch
                 )
                 output_batch[:, :, :, [i]] = output_batch[:, :, :, [i]] * input_batch
+
+        # extract the first batch for the plot on tensorboard
+        if (step == 0) and (n_idx > 0):
+            esempio_test = input_batch[:n_idx].cpu()
+            soluzione_test = output_batch[:n_idx].cpu()
 
         # compute the loss on the current batch
         if (p == 3) or (p == 4):
