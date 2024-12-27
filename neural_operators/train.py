@@ -44,7 +44,7 @@ def train_model(config, model, train_loader, val_loader, loss_fn, max_epochs, de
         # Validate the model for one epoch
         acc = validate_epoch(model, val_loader, loss_fn, device)
 
-        if ep % config["checkpoint_frequency"] == 0 or ep == max_epochs - 1:
+        if ep % 500 == 0 or ep == max_epochs - 1:
             with tempfile.TemporaryDirectory() as temp_checkpoint_dir:
                 path = os.path.join(temp_checkpoint_dir, "checkpoint.pt")
                 torch.save((model.state_dict(), optimizer.state_dict()), path)
