@@ -1380,7 +1380,7 @@ class Darcy:
         network_properties,
         device,
         batch_size,
-        training_samples=512,
+        training_samples=256,
         s=64,
         in_dist=True,
         search_path="/",

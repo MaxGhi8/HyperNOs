@@ -1,6 +1,6 @@
 import torch
 from FNO.FNO_arc import FNO_2D
-from FNO.FNO_benchmarks import SinFrequency
+from FNO.FNO_benchmarks import Darcy
 from Loss_fun import LprelLoss
 from ray import tune
 from tune import tune_hyperparameters
@@ -25,7 +25,7 @@ def main():
         "problem_dim": tune.choice([2]),
         "retrain": tune.choice([4]),
         "scheduler_gamma": tune.quniform(0.75, 0.99, 0.01),
-        "training_samples": tune.choice([1024]),
+        "scheduler_step": tune.choice([10]),
         "weight_decay": tune.quniform(1e-6, 1e-3, 1e-6),
         "weights_norm": tune.choice(["Kaiming"]),
         "width": tune.choice([4, 8, 16, 32, 64, 128, 256]),
@@ -46,18 +46,24 @@ def main():
         device,
         config["retrain"],
     )
-    dataset_builder = lambda config: SinFrequency(
+    dataset_builder = lambda config: Darcy(
         {
             "FourierF": config["FourierF"],
             "retrain": config["retrain"],
         },
         device,
         config["batch_size"],
-        config["training_samples"],
         search_path="/",
     )
     loss_fn = LprelLoss(2, False)
-    tune_hyperparameters(config_space, model_builder, dataset_builder, loss_fn)
+    tune_hyperparameters(
+        config_space,
+        model_builder,
+        dataset_builder,
+        loss_fn,
+        runs_per_cpu=8,
+        runs_per_gpu=0,
+    )
 
 
 if __name__ == "__main__":
