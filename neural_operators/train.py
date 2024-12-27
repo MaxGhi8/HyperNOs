@@ -77,29 +77,18 @@ def train_model_without_ray(config, model, dataset, loss_fn, device, experiment_
         with tqdm(
             desc=f"Epoch {epoch}", bar_format="{desc}: [{elapsed_s:.2f}{postfix}]"
         ) as tepoch:
-            # train the model for one epoch
-            if epoch == 0:  # extract the test data
-                esempio_test, soluzione_test = train_epoch(
-                    model,
-                    dataset.train_loader,
-                    optimizer,
-                    scheduler,
-                    loss_fn,
-                    device,
-                    tepoch,
-                    4,
-                )
-            else:
-                train_epoch(
-                    model,
-                    dataset.train_loader,
-                    optimizer,
-                    scheduler,
-                    loss_fn,
-                    device,
-                    tepoch,
-                    4,
-                )
+            train_epoch_result = train_epoch(
+                model,
+                dataset.train_loader,
+                optimizer,
+                scheduler,
+                loss_fn,
+                device,
+                tepoch,
+                4,
+            )
+            if epoch == 0 and train_epoch_result is not None:
+                esempio_test, soluzione_test = train_epoch_result
 
             # test the model for one epoch
             (
@@ -110,16 +99,11 @@ def train_model_without_ray(config, model, dataset, loss_fn, device, experiment_
                 train_loss,
             ) = validate_epoch2(
                 model,
-                val_loader,
-                train_loader,
-                loss,
-                exp_norm,
-                val_samples,
-                training_samples,
+                dataset.test_loader,
+                dataset.train_loader,
+                loss_fn,
                 device,
-                dataset_str,
                 tepoch,
-                statistic=True,
             )
 
             # save the results of train and test on tensorboard
@@ -143,7 +127,10 @@ def train_model_without_ray(config, model, dataset, loss_fn, device, experiment_
                     test_relative_semih1_multiout,
                     test_relative_h1_multiout,
                 ) = test_fun_multiout(
-                    model, val_loader, val_samples, device, dataset_str, config["d_u"]
+                    model,
+                    dataset.test_loader,
+                    device,
+                    config["d_u"],
                 )
                 for i in range(config["d_u"]):
                     writer.add_scalars(
@@ -329,13 +316,13 @@ def validate_epoch(
     return loss / examples_count
 
 
-# TODO: implement
 def validate_epoch2(
     model,
     test_loader,
     train_loader,
     loss,
     device: torch.device,
+    tepoch,
 ):
     """
     Function to test the model, this function is called at each epoch.
@@ -360,10 +347,13 @@ def validate_epoch2(
         test_relative_semih1 = 0.0
         test_relative_h1 = 0.0
         train_loss = 0.0  # recompute the train loss with updated parameters
+        training_samples_count = 0
+        test_samples_count = 0
 
         ## Compute loss on the test set
         for input_batch, output_batch in test_loader:
             input_batch = input_batch.to(device)
+            test_samples_count += input_batch.size(0)
             output_batch = output_batch.to(device)
 
             # compute the output
@@ -398,6 +388,7 @@ def validate_epoch2(
         ## Compute loss on the training set
         for input_batch, output_batch in train_loader:
             input_batch = input_batch.to(device)
+            training_samples_count += input_batch.size(0)
             output_batch = output_batch.to(device)
             output_pred_batch = model(input_batch)
 
@@ -405,51 +396,38 @@ def validate_epoch2(
             # loss_f = torch.mean(abs(output_pred_batch - output_batch)) / torch.mean(abs(output_batch)) #!! Mishra implementation of L1 rel loss
             train_loss += loss_f.item()
 
-        test_relative_l1 /= test_samples
+        test_relative_l1 /= test_samples_count
         # test_relative_l1 /= len(test_loader) #!! For Mishra implementation
-        test_relative_l2 /= test_samples
-        test_relative_semih1 /= test_samples
-        test_relative_h1 /= test_samples
-        train_loss /= training_samples
+        test_relative_l2 /= test_samples_count
+        test_relative_semih1 /= test_samples_count
+        test_relative_h1 /= test_samples_count
+        train_loss /= training_samples_count
         # train_loss /= len(train_loader) #!! For Mishra implementation
 
     # set the postfix for print
-    if tepoch is not None:
-        tepoch.set_postfix(
-            {
-                "Train loss " + exp_norm: train_loss,
-                "Test rel. L^1 error": test_relative_l1,
-                "Test rel. L^2 error": test_relative_l2,
-                "Test rel. semi-H^1 error": test_relative_semih1,
-                "Test rel. H^1 error": test_relative_h1,
-            }
-        )
-        tepoch.close()
+    tepoch.set_postfix(
+        {
+            "Train loss": train_loss,
+            "Test rel. L^1 error": test_relative_l1,
+            "Test rel. L^2 error": test_relative_l2,
+            "Test rel. semi-H^1 error": test_relative_semih1,
+            "Test rel. H^1 error": test_relative_h1,
+        }
+    )
+    tepoch.close()
 
-    if statistic:
-        return (
-            test_relative_l1,
-            test_relative_l2,
-            test_relative_semih1,
-            test_relative_h1,
-            train_loss,
-        )
-    else:
-        match exp_norm:
-            case "L1":
-                return test_relative_l1
-            case "L2":
-                return test_relative_l2
-            case "H1":
-                return test_relative_h1
-            case _:
-                raise ValueError("The norm is not implemented")
+    return (
+        test_relative_l1,
+        test_relative_l2,
+        test_relative_semih1,
+        test_relative_h1,
+        train_loss,
+    )
 
 
 def test_fun_multiout(
     model,
     test_loader,
-    test_samples: int,
     device: torch.device,
     dim_output: int,
 ):
@@ -462,10 +440,12 @@ def test_fun_multiout(
         test_relative_l2_multiout = torch.zeros(dim_output).to(device)
         test_relative_semih1_multiout = torch.zeros(dim_output).to(device)
         test_relative_h1_multiout = torch.zeros(dim_output).to(device)
+        test_samples_count = 0
 
         ## Compute loss on the test set
         for input_batch, output_batch in test_loader:
             input_batch = input_batch.to(device)
+            test_samples_count += input_batch.size(0)
             output_batch = output_batch.to(device)
 
             # compute the output
@@ -496,10 +476,10 @@ def test_fun_multiout(
                     output_pred_batch, output_batch
                 )  # beta = 1.0 in test loss
 
-        test_relative_l1_multiout /= test_samples
-        test_relative_l2_multiout /= test_samples
-        test_relative_semih1_multiout /= test_samples
-        test_relative_h1_multiout /= test_samples
+        test_relative_l1_multiout /= test_samples_count
+        test_relative_l2_multiout /= test_samples_count
+        test_relative_semih1_multiout /= test_samples_count
+        test_relative_h1_multiout /= test_samples_count
 
     return (
         test_relative_l1_multiout,
