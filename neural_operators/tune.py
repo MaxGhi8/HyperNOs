@@ -9,13 +9,15 @@ from neural_operators.train import train_model
 def tune_hyperparameters(
     config_space,
     model_builder,
-    dataset,
+    dataset_builder,
     loss_fn,
     num_samples=200,
     grace_period=250,
     reduction_factor=2,
     device=torch.device("cpu"),
 ):
+    dataset = dataset_builder(config_space)
+
     def train_fn(config):
         model = model_builder(config)
         train_model(
