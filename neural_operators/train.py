@@ -1,6 +1,5 @@
 import os
 import tempfile
-from uuid import UUID
 
 import torch
 from Loss_fun import (
@@ -19,7 +18,7 @@ from tqdm import tqdm
 from neural_operators.utilities import count_params, plot_data
 
 
-def train_model(config, model, train_loader, val_loader, loss_fn, device):
+def train_model(config, model, train_loader, val_loader, loss_fn, max_epochs, device):
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=config["learning_rate"],
@@ -38,14 +37,14 @@ def train_model(config, model, train_loader, val_loader, loss_fn, device):
             model.load_state_dict(checkpoint_dict["model_state"])
             optimizer.load_state_dict(checkpoint_dict["optimizer_state"])
 
-    for ep in range(start_epoch, config["epochs"]):
+    for ep in range(start_epoch, max_epochs):
         # Train the model for one epoch
         train_epoch(model, train_loader, optimizer, scheduler, loss_fn, device)
 
         # Validate the model for one epoch
         acc = validate_epoch(model, val_loader, loss_fn, device)
 
-        if ep % config["checkpoint_frequency"] == 0 or ep == config["epochs"] - 1:
+        if ep % config["checkpoint_frequency"] == 0 or ep == max_epochs - 1:
             with tempfile.TemporaryDirectory() as temp_checkpoint_dir:
                 path = os.path.join(temp_checkpoint_dir, "checkpoint.pt")
                 torch.save((model.state_dict(), optimizer.state_dict()), path)
@@ -55,7 +54,9 @@ def train_model(config, model, train_loader, val_loader, loss_fn, device):
             train.report({"relative_loss": acc})
 
 
-def train_model_without_ray(config, model, dataset, loss_fn, device, experiment_name):
+def train_model_without_ray(
+    config, model, dataset, loss_fn, max_epochs, device, experiment_name
+):
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=config["learning_rate"],
@@ -73,7 +74,7 @@ def train_model_without_ray(config, model, dataset, loss_fn, device, experiment_
     ep_step = 50
     plotting = False
 
-    for epoch in range(start_epoch, config["epochs"]):
+    for epoch in range(start_epoch, max_epochs):
         with tqdm(
             desc=f"Epoch {epoch}", bar_format="{desc}: [{elapsed_s:.2f}{postfix}]"
         ) as tepoch:

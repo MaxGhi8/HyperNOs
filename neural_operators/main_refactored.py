@@ -7,6 +7,7 @@ from tune import tune_hyperparameters
 
 
 def main():
+    device = torch.device("cpu")
     config_space = {
         "FourierF": tune.choice([0]),
         "RNN": tune.choice([False]),
@@ -14,7 +15,6 @@ def main():
         "fno_arc": tune.choice(["Classic", "Zongyi", "Residual"]),
         "d_a": tune.choice([1]),
         "d_u": tune.choice([1]),
-        "epochs": tune.choice([1000]),
         "fft_norm": tune.choice([None]),
         "fun_act": tune.choice(["tanh", "relu", "gelu", "leaky_relu"]),
         "include_grid": tune.choice([1]),
@@ -43,7 +43,7 @@ def main():
         config["RNN"],
         config["fft_norm"],
         config["padding"],
-        torch.device("cpu"),
+        device,
         config["retrain"],
     )
     dataset_builder = lambda config: SinFrequency(
@@ -51,7 +51,7 @@ def main():
             "FourierF": config["FourierF"],
             "retrain": config["retrain"],
         },
-        torch.device("cpu"),
+        device,
         config["batch_size"],
         config["training_samples"],
         search_path="/",

@@ -14,6 +14,9 @@ def tune_hyperparameters(
     num_samples=200,
     grace_period=250,
     reduction_factor=2,
+    max_epochs=1000,
+    runs_per_cpu=0,
+    runs_per_gpu=1,
     device=torch.device("cpu"),
 ):
     def train_fn(config):
@@ -25,13 +28,14 @@ def tune_hyperparameters(
             dataset.train_loader,
             dataset.val_loader,
             loss_fn,
+            max_epochs,
             device,
         )
 
     scheduler = ASHAScheduler(
         metric="relative_loss",
         mode="min",
-        max_t=1000,
+        max_t=max_epochs,
         grace_period=grace_period,
         reduction_factor=reduction_factor,
     )
@@ -41,7 +45,7 @@ def tune_hyperparameters(
     tuner = tune.Tuner(
         tune.with_resources(
             tune.with_parameters(train_fn),
-            resources={"cpu": 4, "gpu": 0.0},
+            resources={"cpu": runs_per_cpu, "gpu": runs_per_gpu},
         ),
         tune_config=tune.TuneConfig(
             scheduler=scheduler,
