@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch import Tensor
-from jaxtyping import jaxtyped, Float
 from beartype import beartype
+from jaxtyping import Float, jaxtyped
+from torch import Tensor
 
 # torch.manual_seed(0)  #!
 
@@ -384,13 +384,11 @@ class CNO1d(nn.Module):
     def forward(
         self, x: Float[Tensor, "batch size in_dim"]
     ) -> Float[Tensor, "batch size out_dim"]:
-
         x = self.lift(x.permute(0, 2, 1))
         skip = []
 
         # Execute Encoder
         for i in range(self.N_layers):
-
             # Apply ResNet and save the result
             y = self.res_nets[i](x)
             skip.append(y)
@@ -403,7 +401,6 @@ class CNO1d(nn.Module):
 
         # Execute Decode
         for i in range(self.N_layers):
-
             # Apply (I) block (ED_expansion) and cat if needed
             if i == 0:
                 x = self.ED_expansion[self.N_layers - i](x)  # BottleNeck : no cat

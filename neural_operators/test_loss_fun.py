@@ -2,15 +2,15 @@
 This file contains the tests for the loss functions defined in Loss_fun.py.
 """
 
-import numpy as np
-import torch
-import pytest
 import random
-
 import sys
 
+import numpy as np
+import pytest
+import torch
+
 sys.path.append(".")
-from Loss_fun import LprelLoss, H1relLoss
+from Loss_fun import H1relLoss, LprelLoss
 
 
 def test_L1relLoss():

@@ -2,18 +2,19 @@
 This file contains the necessary functions to load the data for the Fourier Neural Operator benchmarks.
 """
 
+import sys
+
 import h5py
 import numpy as np
 import scipy
 import torch
-import sys
-from torch.utils.data import DataLoader, Dataset, TensorDataset
-from torch import Tensor
-from jaxtyping import jaxtyped, Float
 from beartype import beartype
+from jaxtyping import Float, jaxtyped
+from torch import Tensor
+from torch.utils.data import DataLoader, Dataset, TensorDataset
 
 sys.path.append("../")
-from utilities import find_file, FourierFeatures, UnitGaussianNormalizer
+from utilities import FourierFeatures, UnitGaussianNormalizer, find_file
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -57,7 +58,6 @@ class ShearLayerDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
-
         self.s = s
         self.in_dist = in_dist
 
@@ -102,7 +102,6 @@ class ShearLayerDataset(Dataset):
         return self.length
 
     def __getitem__(self, index):
-
         if self.s == 64 and self.in_dist:
             inputs = (
                 torch.from_numpy(
@@ -120,7 +119,6 @@ class ShearLayerDataset(Dataset):
             )
 
         else:
-
             inputs = self.reader["Sample_" + str(index + self.start)]["input"][
                 :
             ].reshape(1, 1, self.s, self.s)
@@ -171,7 +169,6 @@ class ShearLayer:
         in_dist=True,
         search_path="/",
     ):
-
         if "in_size" in network_properties:
             self.in_size = network_properties["in_size"]
             assert self.in_size <= 128
@@ -269,7 +266,6 @@ class SinFrequencyDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
-
         # Note: Normalization constants for both ID and OOD should be used from the training set!
         # Load normalization constants from the TRAINING set:
         file_data_train = find_file("PoissonData_64x64_IN.h5", search_path)
@@ -358,7 +354,6 @@ class SinFrequency:
         in_dist=True,
         search_path="/",
     ):
-
         if "in_size" in network_properties:
             self.in_size = network_properties["in_size"]
             assert self.in_size <= 128
@@ -452,7 +447,6 @@ class WaveEquationDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
-
         # Note: Normalization constants for both ID and OOD should be used from the training set!
         # Load normalization constants from the TRAINING set:
         file_data_train = find_file("WaveData_64x64_IN.h5", search_path)
@@ -554,7 +548,6 @@ class WaveEquation:
         in_dist=True,
         search_path="/",
     ):
-
         if "in_size" in network_properties:
             self.in_size = network_properties["in_size"]
             assert self.in_size <= 128
@@ -650,7 +643,6 @@ class AllenCahnDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
-
         # Note: Normalization constants for both ID and OOD should be used from the training set!
         # Load normalization constants from the TRAINING set:
         file_data_train = find_file("AllenCahn_64x64_IN.h5", search_path)
@@ -689,7 +681,6 @@ class AllenCahnDataset(Dataset):
         return self.length
 
     def __getitem__(self, index):
-
         inputs = (
             torch.from_numpy(
                 self.reader["Sample_" + str(index + self.start)]["input"][:]
@@ -740,7 +731,6 @@ class AllenCahn:
         in_dist=True,
         search_path="/",
     ):
-
         if "in_size" in network_properties:
             self.in_size = network_properties["in_size"]
             assert self.in_size <= 128
@@ -833,7 +823,6 @@ class ContTranslationDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
-
         # The data is already normalized
         # Default file:
         if in_dist:
@@ -864,7 +853,6 @@ class ContTranslationDataset(Dataset):
         return self.length
 
     def __getitem__(self, index):
-
         inputs = (
             torch.from_numpy(
                 self.reader["Sample_" + str(index + self.start)]["input"][:]
@@ -912,7 +900,6 @@ class ContTranslation:
         in_dist=True,
         search_path="/",
     ):
-
         if "in_size" in network_properties:
             self.in_size = network_properties["in_size"]
             assert self.in_size <= 128
@@ -1005,7 +992,6 @@ class DiscContTranslationDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
-
         # The data is already normalized
 
         if in_dist:
@@ -1037,7 +1023,6 @@ class DiscContTranslationDataset(Dataset):
         return self.length
 
     def __getitem__(self, index):
-
         inputs = (
             torch.from_numpy(
                 self.reader["Sample_" + str(index + self.start)]["input"][:]
@@ -1085,7 +1070,6 @@ class DiscContTranslation:
         in_dist=True,
         search_path="/",
     ):
-
         if "in_size" in network_properties:
             self.in_size = network_properties["in_size"]
             assert self.in_size <= 128
@@ -1178,7 +1162,6 @@ class AirfoilDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
-
         # We DO NOT normalize the data in this case
         if in_dist:
             self.file_data = find_file("Airfoil_128x128_IN.h5", search_path)
@@ -1211,7 +1194,6 @@ class AirfoilDataset(Dataset):
         return self.length
 
     def __getitem__(self, index):
-
         inputs = (
             torch.from_numpy(
                 self.reader["Sample_" + str(index + self.start)]["input"][:]
@@ -1352,7 +1334,6 @@ class DarcyDataset(Dataset):
         insample=True,
         search_path="/",
     ):
-
         # Note: Normalization constants for both ID and OOD should be used from the training set!
         # Load normalization constants from the TRAINING set:
         file_data_train = find_file("Darcy_64x64_IN.h5", search_path)
@@ -1442,7 +1423,6 @@ class Darcy:
         in_dist=True,
         search_path="/",
     ):
-
         # Must have parameters: ------------------------------------------------
 
         if "in_size" in network_properties:

@@ -3,9 +3,9 @@ This module contains the definition of the loss functions that can be used in th
 """
 
 import torch
-from torch import Tensor
-from jaxtyping import Float, Complex, jaxtyped
 from beartype import beartype
+from jaxtyping import Complex, Float, jaxtyped
+from torch import Tensor
 
 
 #########################################
@@ -75,7 +75,6 @@ class LprelLoss_multiout:
     def __call__(
         self, x: Float[Tensor, "n_samples *n d_u"], y: Float[Tensor, "n_samples *n d_u"]
     ) -> Float[Tensor, "*n_samples d_u"]:
-
         d_u = x.size(-1)
         return torch.stack(
             [
@@ -178,7 +177,6 @@ class H1relLoss_1D_multiout:
         x: Float[Tensor, "n_samples n_x d_u"],
         y: Float[Tensor, "n_samples n_x d_u"],
     ) -> Float[Tensor, "*n_samples d_u"]:
-
         d_u = x.size(-1)
         return torch.stack(
             [
@@ -293,7 +291,6 @@ class H1relLoss_multiout:
         x: Float[Tensor, "n_samples n_x n_y d_u"],
         y: Float[Tensor, "n_samples n_x n_y d_u"],
     ) -> Float[Tensor, "*n_samples d_u"]:
-
         d_u = x.size(-1)
         return torch.stack(
             [

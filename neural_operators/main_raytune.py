@@ -29,29 +29,27 @@ This is the main file for hyperparameter search of the Neural Operator with the 
     MSE : L^2 smooth loss (Mishra)
 """
 
-import torch
-import os
 import argparse
-
+import os
 import tempfile
-from ray import train, tune, init
-from ray.train import Checkpoint
 
-from ray.tune.schedulers import ASHAScheduler
-from ray.tune.search.hyperopt import HyperOptSearch
-
-from train_fun import train_fun, test_fun
-from Loss_fun import LprelLoss, H1relLoss_1D, H1relLoss
-from utilities import count_params, plot_data
-
-# FNO imports
-from FNO.FNO_arc import FNO_1D, FNO_2D
-from FNO.FNO_utilities import FNO_initialize_hyperparameters, FNO_load_data_model
+import torch
 
 # CNO imports
 from CNO.CNO_1d import CNO1d
 from CNO.CNO_2d import CNO2d
-from CNO.CNO_utilities import CNO_load_data_model, CNO_initialize_hyperparameters
+from CNO.CNO_utilities import CNO_initialize_hyperparameters, CNO_load_data_model
+
+# FNO imports
+from FNO.FNO_arc import FNO_1D, FNO_2D
+from FNO.FNO_utilities import FNO_initialize_hyperparameters, FNO_load_data_model
+from Loss_fun import H1relLoss, H1relLoss_1D, LprelLoss
+from ray import init, train, tune
+from ray.train import Checkpoint
+from ray.tune.schedulers import ASHAScheduler
+from ray.tune.search.hyperopt import HyperOptSearch
+from train_fun import test_fun, train_fun
+from utilities import count_params, plot_data
 
 #########################################
 # ray-tune parameters

@@ -20,19 +20,18 @@ Plotting of input/output and prediction for the trained model.
     hh                   : Hodgkin-Huxley equations
 """
 
-import torch
-from torch import Tensor
-from jaxtyping import Float, jaxtyped
-from beartype import beartype
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from beartype import beartype
+from jaxtyping import Float, jaxtyped
+from torch import Tensor
 
 
 #########################################
 # Plotting poisson example
 #########################################
 def plot_poisson(input_tensor, output_tensor, prediction_tensor, idx):
-
     fig, axs = plt.subplots(4, len(idx), figsize=(16, 12))
 
     for i in range(4):
@@ -495,7 +494,6 @@ def plot_hh(input_tensor, output_tensor, prediction_tensor, idx):
     fig, axs = plt.subplots(5, len(idx), figsize=(12, 8))
     for i in range(5):
         for j in range(idx.shape[0]):
-
             if i == 0:  # input
                 axs[i, j].plot(
                     x_grid,

@@ -3,21 +3,24 @@ In this file there are some utilities functions that are used in the main file.
 """
 
 import json
+
 import torch
-from utilities import find_file
 from FNO.FNO_benchmarks import (
     Airfoil,
-    DiscContTranslation,
-    ContTranslation,
     AllenCahn,
+    Burgers_Zongyi,
+    ContTranslation,
+    CrossTruss,
+    Darcy,
+    Darcy_Zongyi,
+    DiscContTranslation,
+    FitzHughNagumo,
+    HodgkinHuxley,
+    ShearLayer,
     SinFrequency,
     WaveEquation,
-    ShearLayer,
-    Darcy,
 )
-from FNO.FNO_benchmarks import Darcy_Zongyi, Burgers_Zongyi
-from FNO.FNO_benchmarks import FitzHughNagumo, HodgkinHuxley
-from FNO.FNO_benchmarks import CrossTruss
+from utilities import find_file
 
 
 #########################################

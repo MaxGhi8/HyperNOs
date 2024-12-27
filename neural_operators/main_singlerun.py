@@ -29,25 +29,25 @@ This is the main file for training the Neural Operator with the FNO architecture
     MSE : L^2 smooth loss (Mishra)
 """
 
-import torch
-from tensorboardX import SummaryWriter
-import os
-import json
-from tqdm import tqdm
 import argparse
+import json
+import os
 
-from Loss_fun import LprelLoss, H1relLoss_1D, H1relLoss
-from train_fun import train_fun, test_fun, test_fun_multiout
-from utilities import count_params, plot_data
-
-# FNO imports
-from FNO.FNO_arc import FNO_1D, FNO_2D
-from FNO.FNO_utilities import FNO_initialize_hyperparameters, FNO_load_data_model
+import torch
 
 # CNO imports
 from CNO.CNO_1d import CNO1d
 from CNO.CNO_2d import CNO2d
-from CNO.CNO_utilities import CNO_load_data_model, CNO_initialize_hyperparameters
+from CNO.CNO_utilities import CNO_initialize_hyperparameters, CNO_load_data_model
+
+# FNO imports
+from FNO.FNO_arc import FNO_1D, FNO_2D
+from FNO.FNO_utilities import FNO_initialize_hyperparameters, FNO_load_data_model
+from Loss_fun import H1relLoss, H1relLoss_1D, LprelLoss
+from tensorboardX import SummaryWriter
+from tqdm import tqdm
+from train_fun import test_fun, test_fun_multiout, train_fun
+from utilities import count_params, plot_data
 
 #########################################
 # default values
@@ -367,7 +367,6 @@ for epoch in range(epochs):
     with tqdm(
         desc=f"Epoch {epoch}", bar_format="{desc}: [{elapsed_s:.2f}{postfix}]"
     ) as tepoch:
-
         # train the model for one epoch
         if epoch == 0:  # extract the test data
             esempio_test, soluzione_test = train_fun(

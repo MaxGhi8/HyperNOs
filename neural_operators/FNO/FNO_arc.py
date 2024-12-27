@@ -3,13 +3,12 @@ This file contains all the core architectures and modules of the Fourier Neural 
 """
 
 import numpy as np
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch import Tensor
-from jaxtyping import Float, Complex, jaxtyped
 from beartype import beartype
+from jaxtyping import Complex, Float, jaxtyped
+from torch import Tensor
 
 #########################################
 # default values
@@ -535,7 +534,6 @@ class FNO_1D(nn.Module):
     def forward(
         self, x: Float[Tensor, "n_batch n_x d_a"]
     ) -> Float[Tensor, "n_batch n_x d_u"]:
-
         ## Grid and initialization
         grid = self.get_grid(x.shape).to(self.device)
         x = torch.cat(
@@ -820,7 +818,6 @@ class FNO_2D(nn.Module):
     def forward(
         self, x: Float[Tensor, "n_batch n_x n_y d_a"]
     ) -> Float[Tensor, "n_batch n_x n_y d_u"]:
-
         ## Grid and initialization
         grid = self.get_grid(x.shape).to(self.device)
         x = torch.cat(

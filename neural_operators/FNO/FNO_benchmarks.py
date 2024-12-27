@@ -2,19 +2,20 @@
 This file contains the necessary functions to load the data for the Fourier Neural Operator benchmarks.
 """
 
+import sys
+
 import h5py
 import numpy as np
-import scipy.io
 import scipy.fft as fft
+import scipy.io
 import torch
-import sys
-from torch.utils.data import DataLoader, TensorDataset, Dataset
-from torch import Tensor
-from jaxtyping import jaxtyped, Float
 from beartype import beartype
+from jaxtyping import Float, jaxtyped
+from torch import Tensor
+from torch.utils.data import DataLoader, Dataset, TensorDataset
 
 sys.path.append("../")
-from utilities import find_file, FourierFeatures, UnitGaussianNormalizer
+from utilities import FourierFeatures, UnitGaussianNormalizer, find_file
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -58,7 +59,6 @@ class ShearLayerDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
-
         self.s = s
         self.in_dist = in_dist
 
@@ -103,7 +103,6 @@ class ShearLayerDataset(Dataset):
         return self.length
 
     def __getitem__(self, index):
-
         if self.s == 64 and self.in_dist:
             inputs = (
                 torch.from_numpy(
@@ -173,7 +172,6 @@ class ShearLayer:
         padding=4,
         search_path="/",
     ):
-
         if "in_size" in network_properties:
             self.in_size = network_properties["in_size"]
             s = self.in_size
@@ -271,7 +269,6 @@ class SinFrequencyDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
-
         if in_dist:
             self.file_data = find_file("PoissonData_64x64_IN.h5", search_path)
         else:
@@ -363,7 +360,6 @@ class SinFrequency:
         in_dist=True,
         search_path="/",
     ):
-
         self.N_Fourier_F = network_properties["FourierF"]
 
         retrain = network_properties["retrain"]
@@ -454,7 +450,6 @@ class WaveEquationDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
-
         if in_dist:
             self.file_data = find_file("WaveData_64x64_IN.h5", search_path)
         else:
@@ -555,7 +550,6 @@ class WaveEquation:
         in_dist=True,
         search_path="/",
     ):
-
         self.N_Fourier_F = network_properties["FourierF"]
 
         retrain = network_properties["retrain"]
@@ -648,7 +642,6 @@ class AllenCahnDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
-
         if in_dist:
             self.file_data = find_file("AllenCahn_64x64_IN.h5", search_path)
         else:
@@ -682,7 +675,6 @@ class AllenCahnDataset(Dataset):
         return self.length
 
     def __getitem__(self, index):
-
         inputs = (
             torch.from_numpy(
                 self.reader["Sample_" + str(index + self.start)]["input"][:]
@@ -733,7 +725,6 @@ class AllenCahn:
         in_dist=True,
         search_path="/",
     ):
-
         self.N_Fourier_F = network_properties["FourierF"]
 
         retrain = network_properties["retrain"]
@@ -823,7 +814,6 @@ class ContTranslationDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
-
         # The data is already normalized
         if in_dist:
             self.file_data = find_file("ContTranslation_64x64_IN.h5", search_path)
@@ -853,7 +843,6 @@ class ContTranslationDataset(Dataset):
         return self.length
 
     def __getitem__(self, index):
-
         inputs = (
             torch.from_numpy(
                 self.reader["Sample_" + str(index + self.start)]["input"][:]
@@ -899,7 +888,6 @@ class ContTranslation:
         in_dist=True,
         search_path="/",
     ):
-
         self.N_Fourier_F = network_properties["FourierF"]
 
         retrain = network_properties["retrain"]
@@ -989,7 +977,6 @@ class DiscContTranslationDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
-
         # The data is already normalized
         if in_dist:
             self.file_data = find_file("DiscTranslation_64x64_IN.h5", search_path)
@@ -1020,7 +1007,6 @@ class DiscContTranslationDataset(Dataset):
         return self.length
 
     def __getitem__(self, index):
-
         inputs = (
             torch.from_numpy(
                 self.reader["Sample_" + str(index + self.start)]["input"][:]
@@ -1066,7 +1052,6 @@ class DiscContTranslation:
         in_dist=True,
         search_path="/",
     ):
-
         self.N_Fourier_F = network_properties["FourierF"]
 
         retrain = network_properties["retrain"]
@@ -1156,7 +1141,6 @@ class AirfoilDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
-
         # We DO NOT normalize the data in this case
         if in_dist:
             self.file_data = find_file("Airfoil_128x128_IN.h5", search_path)
@@ -1187,7 +1171,6 @@ class AirfoilDataset(Dataset):
         return self.length
 
     def __getitem__(self, index):
-
         inputs = (
             torch.from_numpy(
                 self.reader["Sample_" + str(index + self.start)]["input"][:]
@@ -1233,7 +1216,6 @@ class Airfoil:
         in_dist=True,
         search_path="/",
     ):
-
         self.N_Fourier_F = network_properties["FourierF"]
 
         retrain = network_properties["retrain"]
@@ -1322,7 +1304,6 @@ class DarcyDataset(Dataset):
         insample=True,
         search_path="/",
     ):
-
         if insample:
             self.file_data = find_file("Darcy_64x64_IN.h5", search_path)
         else:
@@ -1404,7 +1385,6 @@ class Darcy:
         in_dist=True,
         search_path="/",
     ):
-
         self.N_Fourier_F = network_properties["FourierF"]
 
         retrain = network_properties["retrain"]

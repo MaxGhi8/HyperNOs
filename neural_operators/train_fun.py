@@ -5,8 +5,14 @@ it is also needed for the RayTune implementation.
 """
 
 import torch
-from Loss_fun import LprelLoss, H1relLoss_1D, H1relLoss
-from Loss_fun import LprelLoss_multiout, H1relLoss_1D_multiout, H1relLoss_multiout
+from Loss_fun import (
+    H1relLoss,
+    H1relLoss_1D,
+    H1relLoss_1D_multiout,
+    H1relLoss_multiout,
+    LprelLoss,
+    LprelLoss_multiout,
+)
 
 
 #########################################
@@ -348,7 +354,6 @@ def test_fun_tensors(
 
         ## Compute loss on the test set
         for input_batch, output_batch in test_loader:
-
             input_batch = input_batch.to(device)
             input_tensor = torch.cat((input_tensor, input_batch), dim=0)
 

@@ -2,17 +2,18 @@
 In this file there are some utilities functions that are used in the main file.
 """
 
+import operator
 import os
 from functools import reduce
-import operator
+
 import matplotlib.pyplot as plt
 import numpy as np
-from torch import Tensor
 import torch
 import torch.nn as nn
-from tensorboardX import SummaryWriter
-from jaxtyping import jaxtyped, Float
 from beartype import beartype
+from jaxtyping import Float, jaxtyped
+from tensorboardX import SummaryWriter
+from torch import Tensor
 
 
 #########################################

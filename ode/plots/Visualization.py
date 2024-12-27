@@ -1,12 +1,12 @@
-import scipy.io 
-import numpy as np
-from plots_FHN import plot_phase,plot_fhn,plot_error_fhn
-from plots_HH import plot_hh, plot_error_hh
-import matplotlib.pyplot as plt
-import sys
 import os
+import sys
 
- 
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.io
+from plots_FHN import plot_error_fhn, plot_fhn, plot_phase
+from plots_HH import plot_error_hh, plot_hh
+
 model = sys.argv[1].lower()
 type_of_plot = sys.argv[2].lower()
 n_exmaples = int(sys.argv[3])

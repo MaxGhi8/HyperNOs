@@ -27,28 +27,30 @@ This is the main file for makes test and plot the Neural Operator model.
     MSE : L^2 smooth loss (Mishra)
 """
 
-import torch
-from torch import Tensor
-from jaxtyping import Float, jaxtyped
-from beartype import beartype
-import time
 import argparse
 import json
-import matplotlib.pyplot as plt
 import os
-from scipy.io import savemat
+import time
 
-from Loss_fun import LprelLoss, H1relLoss_1D, H1relLoss
+import matplotlib.pyplot as plt
+import torch
+from beartype import beartype
+from CNO.CNO_utilities import CNO_load_data_model
+from FNO.FNO_utilities import FNO_load_data_model
+from jaxtyping import Float, jaxtyped
 from Loss_fun import (
-    LprelLoss_multiout,
+    H1relLoss,
+    H1relLoss_1D,
     H1relLoss_1D_multiout,
     H1relLoss_multiout,
+    LprelLoss,
+    LprelLoss_multiout,
 )
+from scipy.io import savemat
+from torch import Tensor
 from train_fun import test_fun, test_fun_tensors
 from utilities import count_params
 from utilities_plot import test_plot_samples
-from FNO.FNO_utilities import FNO_load_data_model
-from CNO.CNO_utilities import CNO_load_data_model
 
 #########################################
 # default values
