@@ -260,7 +260,6 @@ def train_epoch(
         optimizer.zero_grad()  # annealing the gradient
 
         # compute the output
-        # TODO: adjust models for airfoil and crosstruss
         output_pred_batch = model.forward(input_batch)
 
         # extract the first batch for the plot on tensorboard
