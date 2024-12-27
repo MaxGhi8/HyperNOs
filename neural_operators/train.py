@@ -1,10 +1,22 @@
 import os
 import tempfile
+from uuid import UUID
 
 import torch
-from Loss_fun import H1relLoss, H1relLoss_1D, LprelLoss
+from Loss_fun import (
+    H1relLoss,
+    H1relLoss_1D,
+    H1relLoss_1D_multiout,
+    H1relLoss_multiout,
+    LprelLoss,
+    LprelLoss_multiout,
+)
 from ray import train
 from ray.train import Checkpoint
+from tensorboardX import SummaryWriter
+from tqdm import tqdm
+
+from neural_operators.utilities import count_params, plot_data
 
 
 def train_model(config, model, train_loader, val_loader, loss_fn, device):
@@ -41,6 +53,193 @@ def train_model(config, model, train_loader, val_loader, loss_fn, device):
                 train.report({"relative_loss": acc}, checkpoint=checkpoint)
         else:
             train.report({"relative_loss": acc})
+
+
+def train_model_without_ray(config, model, dataset, loss_fn, device, experiment_name):
+    optimizer = torch.optim.AdamW(
+        model.parameters(),
+        lr=config["learning_rate"],
+        weight_decay=config["weight_decay"],
+    )
+    scheduler = torch.optim.lr_scheduler.StepLR(
+        optimizer, step_size=config["scheduler_step"], gamma=config["scheduler_gamma"]
+    )
+
+    folder = f"./experiments/{experiment_name}"
+    name_model = f"./experiments/model_{experiment_name}"
+
+    writer = SummaryWriter(log_dir=folder)  # tensorboard
+    start_epoch = 0
+    ep_step = 50
+    plotting = False
+
+    for epoch in range(start_epoch, config["epochs"]):
+        with tqdm(
+            desc=f"Epoch {epoch}", bar_format="{desc}: [{elapsed_s:.2f}{postfix}]"
+        ) as tepoch:
+            # train the model for one epoch
+            if epoch == 0:  # extract the test data
+                esempio_test, soluzione_test = train_epoch(
+                    model,
+                    dataset.train_loader,
+                    optimizer,
+                    scheduler,
+                    loss_fn,
+                    device,
+                    tepoch,
+                    4,
+                )
+            else:
+                train_epoch(
+                    model,
+                    dataset.train_loader,
+                    optimizer,
+                    scheduler,
+                    loss_fn,
+                    device,
+                    tepoch,
+                    4,
+                )
+
+            # test the model for one epoch
+            (
+                test_relative_l1,
+                test_relative_l2,
+                test_relative_semih1,
+                test_relative_h1,
+                train_loss,
+            ) = validate_epoch2(
+                model,
+                val_loader,
+                train_loader,
+                loss,
+                exp_norm,
+                val_samples,
+                training_samples,
+                device,
+                dataset_str,
+                tepoch,
+                statistic=True,
+            )
+
+            # save the results of train and test on tensorboard
+            writer.add_scalars(
+                experiment_name,
+                {
+                    "Train loss": train_loss,
+                    "Test rel. L^1 error": test_relative_l1,
+                    "Test rel. L^2 error": test_relative_l2,
+                    "Test rel. semi-H^1 error": test_relative_semih1,
+                    "Test rel. H^1 error": test_relative_h1,
+                },
+                epoch,
+            )
+
+            # make plots with loss separated for every component of the output
+            if config["d_u"] > 1:
+                (
+                    test_relative_l1_multiout,
+                    test_relative_l2_multiout,
+                    test_relative_semih1_multiout,
+                    test_relative_h1_multiout,
+                ) = test_fun_multiout(
+                    model, val_loader, val_samples, device, dataset_str, config["d_u"]
+                )
+                for i in range(config["d_u"]):
+                    writer.add_scalars(
+                        f"{experiment_name}_output_{i}",
+                        {
+                            "Test rel. L^1 error": test_relative_l1_multiout[i],
+                            "Test rel. L^2 error": test_relative_l2_multiout[i],
+                            "Test rel. semi-H^1 error": test_relative_semih1_multiout[
+                                i
+                            ],
+                            "Test rel. H^1 error": test_relative_h1_multiout[i],
+                        },
+                        epoch,
+                    )
+
+            total_params, total_bytes = count_params(model)
+            total_mb = total_bytes / (1024**2)
+            with open(folder + "/errors.txt", "w") as file:
+                file.write("Training loss: " + str(train_loss) + "\n")
+                file.write("Test relative L^1 error: " + str(test_relative_l1) + "\n")
+                file.write("Test relative L^2 error: " + str(test_relative_l2) + "\n")
+                file.write(
+                    "Test relative semi-H^1 error: " + str(test_relative_semih1) + "\n"
+                )
+                file.write("Test relative H^1 error: " + str(test_relative_h1) + "\n")
+                file.write("Current Epoch: " + str(epoch) + "\n")
+                file.write(f"Total Parameters: {total_params:,}\n")
+                file.write(
+                    f"Total Model Size: {total_bytes:,} bytes ({total_mb:.2f} MB)\n"
+                )
+
+            # plot data during the training and save on tensorboard
+            if epoch == 0:
+                # plot the input data
+                plot_data(
+                    example,
+                    esempio_test,
+                    [],
+                    "Input function",
+                    epoch,
+                    writer,
+                    dataset_str,
+                    problem_dim,
+                    plotting,
+                )
+
+                # plot the exact solution
+                plot_data(
+                    example,
+                    soluzione_test,
+                    [],
+                    "Exact solution",
+                    epoch,
+                    writer,
+                    dataset_str,
+                    problem_dim,
+                    plotting,
+                )
+
+            # Approximate solution with NO
+            if epoch % ep_step == 0:
+                with torch.no_grad():  # no grad for efficiency
+                    out_test = model(esempio_test.to(device))
+                    out_test = out_test.cpu()
+
+                # plot the approximate solution
+                plot_data(
+                    example,
+                    out_test,
+                    [],
+                    f"Approximate solution with {arc}",
+                    epoch,
+                    writer,
+                    dataset_str,
+                    problem_dim,
+                    plotting,
+                )
+
+                # Module of the difference
+                diff = torch.abs(out_test - soluzione_test)
+                plot_data(
+                    example,
+                    diff,
+                    [],
+                    "Module of the error",
+                    epoch,
+                    writer,
+                    dataset_str,
+                    problem_dim,
+                    plotting,
+                )
+
+        writer.flush()  # for saving final data
+        writer.close()  # close the tensorboard writer
+
+        torch.save(model, name_model)
 
 
 def train_epoch(
@@ -151,7 +350,6 @@ def validate_epoch2(
     test_samples: number of data in the test set
     training_samples: number of data in the training set
     device: the device where we have to store all the things
-    which_example: the example of the PDEs that we are considering
     tepoch: the tqdm object to print the progress
     statistic: if True, return all the loss functions, otherwise return only the same L^2 error
     """
@@ -203,18 +401,6 @@ def validate_epoch2(
             output_batch = output_batch.to(device)
             output_pred_batch = model(input_batch)
 
-            if which_example == "airfoil":
-                output_pred_batch[input_batch == 1] = 1
-                output_batch[input_batch == 1] = 1
-            elif which_example == "crosstruss":
-                for i in range(input_batch.shape[-1]):
-                    output_pred_batch[:, :, :, [i]] = (
-                        output_pred_batch[:, :, :, [i]] * input_batch
-                    )
-                    output_batch[:, :, :, [i]] = (
-                        output_batch[:, :, :, [i]] * input_batch
-                    )
-
             loss_f = loss(output_pred_batch, output_batch)
             # loss_f = torch.mean(abs(output_pred_batch - output_batch)) / torch.mean(abs(output_batch)) #!! Mishra implementation of L1 rel loss
             train_loss += loss_f.item()
@@ -258,3 +444,66 @@ def validate_epoch2(
                 return test_relative_h1
             case _:
                 raise ValueError("The norm is not implemented")
+
+
+def test_fun_multiout(
+    model,
+    test_loader,
+    test_samples: int,
+    device: torch.device,
+    dim_output: int,
+):
+    """
+    As test_fun, but it returns the losses separately (one for each component of the output)
+    """
+    with torch.no_grad():
+        model.eval()
+        test_relative_l1_multiout = torch.zeros(dim_output).to(device)
+        test_relative_l2_multiout = torch.zeros(dim_output).to(device)
+        test_relative_semih1_multiout = torch.zeros(dim_output).to(device)
+        test_relative_h1_multiout = torch.zeros(dim_output).to(device)
+
+        ## Compute loss on the test set
+        for input_batch, output_batch in test_loader:
+            input_batch = input_batch.to(device)
+            output_batch = output_batch.to(device)
+
+            # compute the output
+            output_pred_batch = model.forward(input_batch)
+
+            # compute the relative L^1 error
+            loss_f = LprelLoss_multiout(1, False)(output_pred_batch, output_batch)
+            test_relative_l1_multiout += loss_f
+
+            # compute the relative L^2 error
+            test_relative_l2_multiout += LprelLoss_multiout(2, False)(
+                output_pred_batch, output_batch
+            )
+
+            # compute the relative semi-H^1 error and H^1 error
+            if model.problem_dim == 1:
+                test_relative_semih1_multiout += H1relLoss_1D_multiout(1.0, False, 0.0)(
+                    output_pred_batch, output_batch
+                )
+                test_relative_h1_multiout += H1relLoss_1D_multiout(1.0, False)(
+                    output_pred_batch, output_batch
+                )  # beta = 1.0 in test loss
+            elif model.problem_dim == 2:
+                test_relative_semih1_multiout += H1relLoss_multiout(1.0, False, 0.0)(
+                    output_pred_batch, output_batch
+                )
+                test_relative_h1_multiout += H1relLoss_multiout(1.0, False)(
+                    output_pred_batch, output_batch
+                )  # beta = 1.0 in test loss
+
+        test_relative_l1_multiout /= test_samples
+        test_relative_l2_multiout /= test_samples
+        test_relative_semih1_multiout /= test_samples
+        test_relative_h1_multiout /= test_samples
+
+    return (
+        test_relative_l1_multiout,
+        test_relative_l2_multiout,
+        test_relative_semih1_multiout,
+        test_relative_h1_multiout,
+    )
