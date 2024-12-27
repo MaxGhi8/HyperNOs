@@ -496,7 +496,7 @@ def main(num_samples, max_num_epochs=epochs):
     tuner = tune.Tuner(
         tune.with_resources(
             tune.with_parameters(train_hyperparameter),
-            resources={"cpu": 0, "gpu": 0.5},  # allocate resources for each trials
+            resources={"cpu": 1, "gpu": 0.0},  # allocate resources for each trials
         ),
         param_space=config,  # config is the hyperparameter space
         tune_config=tune.TuneConfig(

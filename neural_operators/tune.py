@@ -16,9 +16,8 @@ def tune_hyperparameters(
     reduction_factor=2,
     device=torch.device("cpu"),
 ):
-    dataset = dataset_builder(config_space)
-
     def train_fn(config):
+        dataset = dataset_builder(config)
         model = model_builder(config)
         train_model(
             config,
@@ -32,7 +31,7 @@ def tune_hyperparameters(
     scheduler = ASHAScheduler(
         metric="relative_loss",
         mode="min",
-        max_t=config_space["epochs"],
+        max_t=1000,
         grace_period=grace_period,
         reduction_factor=reduction_factor,
     )
@@ -42,7 +41,7 @@ def tune_hyperparameters(
     tuner = tune.Tuner(
         tune.with_resources(
             tune.with_parameters(train_fn),
-            resources={"cpu": 0, "gpu": 0.5},
+            resources={"cpu": 4, "gpu": 0.0},
         ),
         tune_config=tune.TuneConfig(
             scheduler=scheduler,

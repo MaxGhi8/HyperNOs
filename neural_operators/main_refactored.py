@@ -1,19 +1,20 @@
 import torch
+from FNO.FNO_arc import FNO_2D
+from FNO.FNO_benchmarks import SinFrequency
+from Loss_fun import LprelLoss
 from ray import tune
-
-from neural_operators.FNO.FNO_arc import FNO_2D
-from neural_operators.FNO.FNO_benchmarks import SinFrequency
-from neural_operators.Loss_fun import LprelLoss
-from neural_operators.tune import tune_hyperparameters
+from tune import tune_hyperparameters
 
 
 def main():
     config_space = {
         "FourierF": tune.choice([0]),
         "RNN": tune.choice([False]),
+        "batch_size": tune.choice([32]),
         "fno_arc": tune.choice(["Classic", "Zongyi", "Residual"]),
         "d_a": tune.choice([1]),
         "d_u": tune.choice([1]),
+        "epochs": tune.choice([1000]),
         "fft_norm": tune.choice([None]),
         "fun_act": tune.choice(["tanh", "relu", "gelu", "leaky_relu"]),
         "include_grid": tune.choice([1]),
@@ -43,7 +44,7 @@ def main():
         config["fft_norm"],
         config["padding"],
         torch.device("cpu"),
-        -1,
+        config["retrain"],
     )
     dataset_builder = lambda config: SinFrequency(
         {
@@ -57,3 +58,7 @@ def main():
     )
     loss_fn = LprelLoss(2, False)
     tune_hyperparameters(config_space, model_builder, dataset_builder, loss_fn)
+
+
+if __name__ == "__main__":
+    main()
