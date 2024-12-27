@@ -31,7 +31,7 @@ def train_model(config, model, train_loader, val_loader, loss_fn, device):
         train_epoch(model, train_loader, optimizer, scheduler, loss_fn, device)
 
         # Validate the model for one epoch
-        acc = validate_epoch(model, val_loader, train_loader, loss_fn, device)
+        acc = validate_epoch(model, val_loader, loss_fn, device)
 
         if ep % config["checkpoint_frequency"] == 0 or ep == config["epochs"] - 1:
             with tempfile.TemporaryDirectory() as temp_checkpoint_dir:
@@ -109,8 +109,29 @@ def train_epoch(
         return None
 
 
-# TODO: implement
 def validate_epoch(
+    model,
+    val_loader,
+    loss_fn,
+    device: torch.device,
+):
+    with torch.no_grad():
+        model.eval()
+        loss = 0.0
+        examples_count = 0
+
+        for input_batch, output_batch in val_loader:
+            input_batch = input_batch.to(device)
+            examples_count += input_batch.size(0)
+            output_batch = output_batch.to(device)
+            output_pred_batch = model.forward(input_batch)
+            loss += loss_fn(output_pred_batch, output_batch).item()
+
+    return loss / examples_count
+
+
+# TODO: implement
+def validate_epoch2(
     model,
     test_loader,
     train_loader,
@@ -149,18 +170,6 @@ def validate_epoch(
 
             # compute the output
             output_pred_batch = model.forward(input_batch)
-
-            if which_example == "airfoil":
-                output_pred_batch[input_batch == 1] = 1
-                output_batch[input_batch == 1] = 1
-            elif which_example == "crosstruss":
-                for i in range(input_batch.shape[-1]):
-                    output_pred_batch[:, :, :, [i]] = (
-                        output_pred_batch[:, :, :, [i]] * input_batch
-                    )
-                    output_batch[:, :, :, [i]] = (
-                        output_batch[:, :, :, [i]] * input_batch
-                    )
 
             # compute the relative L^1 error
             loss_f = LprelLoss(1, False)(output_pred_batch, output_batch)
