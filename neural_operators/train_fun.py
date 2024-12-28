@@ -70,13 +70,7 @@ def train_fun(
             esempio_test = input_batch[:n_idx].cpu()
             soluzione_test = output_batch[:n_idx].cpu()
 
-        # compute the loss on the current batch
-        if (p == 3) or (p == 4):
-            loss_f = loss(output_pred_batch, output_batch) / loss(
-                torch.zeros_like(output_batch).to(device), output_batch
-            )
-        else:
-            loss_f = loss(output_pred_batch, output_batch)
+        loss_f = loss(output_pred_batch, output_batch)
 
         # back propagation
         loss_f.backward()

@@ -3,6 +3,7 @@ import torch.nn as nn
 
 class AirfoilWrapper(nn.Module):
     def __init__(self, model):
+        super(AirfoilWrapper, self).__init__()  # Initialize the parent class
         self.model = model
 
     def forward(self, input_batch):

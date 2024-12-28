@@ -9,6 +9,30 @@ from torch import Tensor
 
 
 #########################################
+# Smooth L1 relative loss
+#########################################
+class SmoothL1Loss_rel:
+    def __call__(
+        self, x: Float[Tensor, "n_samples *n d_u"], y: Float[Tensor, "n_samples *n d_u"]
+    ) -> Float[Tensor, "1"]:
+        return torch.nn.SmoothL1Loss(x, y) / torch.nn.SmoothL1Loss(
+            torch.zeros_like(y, device=y.device), y
+        )
+
+
+#########################################
+# MSE relative loss
+#########################################
+class MSELoss_rel:
+    def __call__(
+        self, x: Float[Tensor, "n_samples *n d_u"], y: Float[Tensor, "n_samples *n d_u"]
+    ) -> Float[Tensor, "1"]:
+        return torch.nn.MSELoss(x, y) / torch.nn.MSELoss(
+            torch.zeros_like(y, device=y.device), y
+        )
+
+
+#########################################
 # L^p relative loss for N-D functions
 #########################################
 class LprelLoss:

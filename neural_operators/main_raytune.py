@@ -43,13 +43,12 @@ from CNO.CNO_utilities import CNO_initialize_hyperparameters, CNO_load_data_mode
 # FNO imports
 from FNO.FNO_arc import FNO_1D, FNO_2D
 from FNO.FNO_utilities import FNO_initialize_hyperparameters, FNO_load_data_model
-from Loss_fun import H1relLoss, H1relLoss_1D, LprelLoss
+from Loss_fun import H1relLoss, H1relLoss_1D, LprelLoss, MSELoss_rel, SmoothL1Loss_rel
 from ray import init, train, tune
 from ray.train import Checkpoint
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.search.hyperopt import HyperOptSearch
 from train_fun import test_fun, train_fun
-from utilities import count_params, plot_data
 
 #########################################
 # ray-tune parameters
@@ -91,13 +90,13 @@ def parse_arguments():
     parser.add_argument(
         "architecture",
         type=str,
-        choices=["FNO", "CNO"],
+        choices=["fno", "cno"],
         help="Select the architecture to use.",
     )
     parser.add_argument(
         "loss_function",
         type=str,
-        choices=["L1", "L2", "H1", "L1_SMOOTH"],
+        choices=["l1", "l2", "h1", "l1_smooth"],
         help="Select the loss function to use during the training process.",
     )
     parser.add_argument(
@@ -131,23 +130,6 @@ exp_norm = config["loss_function"]
 mode_str = config["mode"]
 in_dist = config["in_dist"]
 
-
-# if len(sys.argv) < 5:
-#     raise ValueError("The user must choose the example and the model to run")
-# elif len(sys.argv) == 5:
-#     which_example = sys.argv[1].lower().strip()  # example to run
-#     arc = sys.argv[2].upper().strip()  # architecture to use
-#     exp_norm = sys.argv[3].upper().strip()  # loss function for training
-#     mode_str = sys.argv[4].lower().strip()  # mode of the training process
-#     in_dist = True  # default value
-# elif len(sys.argv) == 6:
-#     which_example = sys.argv[1].lower().strip()  # example to run
-#     arc = sys.argv[2].upper().strip()  # architecture to use
-#     exp_norm = sys.argv[3].upper().strip()  # loss function for training
-#     mode_str = sys.argv[4].lower().strip()  # mode of the training process
-#     in_dist = sys.argv[5]  # True or False (IN/OUT of distribution)
-# else:
-#     raise ValueError("The user must choose the example to run")
 
 #########################################
 # Hyperparameters
@@ -216,20 +198,16 @@ match p:
         elif problem_dim == 2:
             loss = H1relLoss(beta, False, 1.0)  # H^1 relative norm
     case 3:
-        loss = torch.nn.SmoothL1Loss()  # L^1 smooth loss (Mishra)
+        loss = SmoothL1Loss_rel()  # L^1 smooth loss (Mishra)
     case 4:
-        loss = torch.nn.MSELoss()  # L^2 smooth loss (Mishra)
+        loss = MSELoss_rel()  # L^2 smooth loss (Mishra)
     case _:
         raise ValueError("This value of p is not allowed")
+
 
 #########################################
 # load the model and data
 #########################################
-# count and print the total number of parameters
-# par_tot = count_params(model)
-# print("Total number of parameters is: ", par_tot)
-
-
 def train_hyperparameter(config):
     # Hyperparameters to optimize for training process
     learning_rate = config["learning_rate"]
