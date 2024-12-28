@@ -17,8 +17,6 @@ from torch.utils.data import DataLoader, Dataset, TensorDataset
 sys.path.append("../")
 from utilities import FourierFeatures, UnitGaussianNormalizer, find_file
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 
 #########################################
 # Some functions needed for loading the Navier-Stokes data

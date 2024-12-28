@@ -13,7 +13,6 @@ from torch import Tensor
 #########################################
 # default values
 #########################################
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.set_default_dtype(torch.float32)  # default tensor dtype
 
 
@@ -362,7 +361,7 @@ class FNO_1D(nn.Module):
         RNN: bool = False,
         FFTnorm=None,
         padding: int = 4,
-        device: torch.device = device,
+        device: torch.device = torch.device("cpu"),
         retrain_fno=-1,
     ):
         """
@@ -636,7 +635,7 @@ class FNO_2D(nn.Module):
         RNN: bool = False,
         FFTnorm=None,
         padding: int = 4,
-        device: torch.device = device,
+        device: torch.device = torch.device("cpu"),
         retrain_fno=-1,
     ):
         """

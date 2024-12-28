@@ -7,7 +7,8 @@ from tune import tune_hyperparameters
 
 
 def main():
-    device = torch.device("cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     config_space = {
         "FourierF": tune.choice([0]),
         "RNN": tune.choice([False]),
@@ -30,6 +31,7 @@ def main():
         "weights_norm": tune.choice(["Kaiming"]),
         "width": tune.choice([4, 8, 16, 32, 64, 128, 256]),
     }
+
     model_builder = lambda config: FNO_2D(
         config["d_a"],
         config["width"],
@@ -46,6 +48,7 @@ def main():
         device,
         config["retrain"],
     )
+
     dataset_builder = lambda config: Darcy(
         {
             "FourierF": config["FourierF"],
@@ -55,14 +58,16 @@ def main():
         config["batch_size"],
         search_path="/",
     )
+
     loss_fn = LprelLoss(2, False)
+
     tune_hyperparameters(
         config_space,
         model_builder,
         dataset_builder,
         loss_fn,
-        runs_per_cpu=8,
-        runs_per_gpu=0,
+        runs_per_cpu=0,
+        runs_per_gpu=1,
     )
 
 

@@ -17,11 +17,11 @@ def tune_hyperparameters(
     max_epochs=1000,
     runs_per_cpu=0,
     runs_per_gpu=1,
-    device=torch.device("cpu"),
 ):
     def train_fn(config):
         dataset = dataset_builder(config)
         model = model_builder(config)
+        print("model device", model.device)
         train_model(
             config,
             model,
@@ -29,7 +29,7 @@ def tune_hyperparameters(
             dataset.val_loader,
             loss_fn,
             max_epochs,
-            device,
+            model.device,
         )
 
     scheduler = ASHAScheduler(
