@@ -187,14 +187,12 @@ class ShearLayer:
         # Change number of workers according to your preference
         num_workers = 0
 
-        self.train_set = (
-            ShearLayerDataset(
-                "training",
-                self.N_Fourier_F,
-                training_samples,
-                s,
-                search_path=search_path,
-            ),
+        self.train_set = ShearLayerDataset(
+            "training",
+            self.N_Fourier_F,
+            training_samples,
+            s,
+            search_path=search_path,
         )
 
         self.train_loader = DataLoader(
@@ -367,14 +365,12 @@ class SinFrequency:
         # Change number of workers according to your preference
         num_workers = 0
 
-        self.train_set = (
-            SinFrequencyDataset(
-                "training",
-                self.N_Fourier_F,
-                training_samples,
-                s,
-                search_path=search_path,
-            ),
+        self.train_set = SinFrequencyDataset(
+            "training",
+            self.N_Fourier_F,
+            training_samples,
+            s,
+            search_path=search_path,
         )
 
         self.train_loader = DataLoader(
@@ -557,15 +553,13 @@ class WaveEquation:
         # Change number of workers according to your preference
         num_workers = 8
 
-        self.train_set = (
-            WaveEquationDataset(
-                "training",
-                self.N_Fourier_F,
-                training_samples,
-                5,
-                s,
-                search_path=search_path,
-            ),
+        self.train_set = WaveEquationDataset(
+            "training",
+            self.N_Fourier_F,
+            training_samples,
+            5,
+            s,
+            search_path=search_path,
         )
 
         self.train_loader = DataLoader(
@@ -732,14 +726,12 @@ class AllenCahn:
         # Change number of workers according to your preference
         num_workers = 0
 
-        self.train_set = (
-            AllenCahnDataset(
-                "training",
-                self.N_Fourier_F,
-                training_samples,
-                s,
-                search_path=search_path,
-            ),
+        self.train_set = AllenCahnDataset(
+            "training",
+            self.N_Fourier_F,
+            training_samples,
+            s,
+            search_path=search_path,
         )
 
         self.train_loader = DataLoader(
@@ -895,14 +887,12 @@ class ContTranslation:
         # Change number of workers according to your preference
         num_workers = 0
 
-        self.train_set = (
-            ContTranslationDataset(
-                "training",
-                self.N_Fourier_F,
-                training_samples,
-                s,
-                search_path=search_path,
-            ),
+        self.train_set = ContTranslationDataset(
+            "training",
+            self.N_Fourier_F,
+            training_samples,
+            s,
+            search_path=search_path,
         )
 
         self.train_loader = DataLoader(
@@ -1059,14 +1049,12 @@ class DiscContTranslation:
         # Change number of workers according to your preference
         num_workers = 0
 
-        self.train_set = (
-            DiscContTranslationDataset(
-                "training",
-                self.N_Fourier_F,
-                training_samples,
-                s,
-                search_path=search_path,
-            ),
+        self.train_set = DiscContTranslationDataset(
+            "training",
+            self.N_Fourier_F,
+            training_samples,
+            s,
+            search_path=search_path,
         )
 
         self.train_loader = DataLoader(
@@ -1223,14 +1211,12 @@ class Airfoil:
         # Change number of workers according to your preference
         num_workers = 0
 
-        self.train_set = (
-            AirfoilDataset(
-                "training",
-                self.N_Fourier_F,
-                training_samples,
-                s,
-                search_path=search_path,
-            ),
+        self.train_set = AirfoilDataset(
+            "training",
+            self.N_Fourier_F,
+            training_samples,
+            s,
+            search_path=search_path,
         )
 
         self.train_loader = DataLoader(

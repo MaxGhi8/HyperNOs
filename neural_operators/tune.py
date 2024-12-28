@@ -21,7 +21,6 @@ def tune_hyperparameters(
     def train_fn(config):
         dataset = dataset_builder(config)
         model = model_builder(config)
-        print("model device", model.device)
         train_model(
             config,
             model,
