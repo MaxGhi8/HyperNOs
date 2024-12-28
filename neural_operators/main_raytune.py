@@ -49,6 +49,8 @@ from ray.train import Checkpoint
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.search.hyperopt import HyperOptSearch
 from train_fun import test_fun, train_fun
+from wrappers.AirfoilWrapper import AirfoilWrapper
+from wrappers.CrossTrussWrapper import CrossTrussWrapper
 
 #########################################
 # ray-tune parameters
@@ -320,6 +322,14 @@ def train_hyperparameter(config):
                     bn,
                     device,
                 )
+    # Wrap the models
+    match which_example:
+        case "airfoil":
+            model = AirfoilWrapper(model)
+        case "crosstruss":
+            model = CrossTrussWrapper(model)
+        case _:
+            pass
 
     # Definition of the optimizer
     optimizer = torch.optim.AdamW(

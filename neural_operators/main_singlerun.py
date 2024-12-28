@@ -48,6 +48,8 @@ from tensorboardX import SummaryWriter
 from tqdm import tqdm
 from train_fun import test_fun, test_fun_multiout, train_fun
 from utilities import count_params, plot_data
+from wrappers.AirfoilWrapper import AirfoilWrapper
+from wrappers.CrossTrussWrapper import CrossTrussWrapper
 
 #########################################
 # default values
@@ -321,6 +323,16 @@ match arc:
                 device,
             )
 
+# Wrap the models
+match which_example:
+    case "airfoil":
+        model = AirfoilWrapper(model)
+    case "crosstruss":
+        model = CrossTrussWrapper(model)
+    case _:
+        pass
+
+
 # count and print the total number of parameters
 total_params, total_bytes = count_params(model)
 total_mb = total_bytes / (1024**2)
@@ -495,13 +507,6 @@ for epoch in range(epochs):
             with torch.no_grad():  # no grad for efficiency
                 out_test = model(esempio_test.to(device))
                 out_test = out_test.cpu()
-
-                # post-processing for the output
-                if which_example == "airfoil":
-                    out_test[esempio_test == 1] = 1
-                elif which_example == "crosstruss":
-                    for i in range(out_test.shape[-1]):
-                        out_test[:, :, :, [i]] = out_test[:, :, :, [i]] * esempio_test
 
             # plot the approximate solution
             plot_data(

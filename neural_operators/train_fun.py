@@ -55,16 +55,6 @@ def train_fun(
         # compute the output
         output_pred_batch = model.forward(input_batch)
 
-        if which_example == "airfoil":
-            output_pred_batch[input_batch == 1] = 1
-            output_batch[input_batch == 1] = 1
-        elif which_example == "crosstruss":
-            for i in range(input_batch.shape[-1]):
-                output_pred_batch[:, :, :, [i]] = (
-                    output_pred_batch[:, :, :, [i]] * input_batch
-                )
-                output_batch[:, :, :, [i]] = output_batch[:, :, :, [i]] * input_batch
-
         # extract the first batch for the plot on tensorboard
         if (step == 0) and (n_idx > 0):
             esempio_test = input_batch[:n_idx].cpu()
@@ -147,18 +137,6 @@ def test_fun(
             # compute the output
             output_pred_batch = model.forward(input_batch)
 
-            if which_example == "airfoil":
-                output_pred_batch[input_batch == 1] = 1
-                output_batch[input_batch == 1] = 1
-            elif which_example == "crosstruss":
-                for i in range(input_batch.shape[-1]):
-                    output_pred_batch[:, :, :, [i]] = (
-                        output_pred_batch[:, :, :, [i]] * input_batch
-                    )
-                    output_batch[:, :, :, [i]] = (
-                        output_batch[:, :, :, [i]] * input_batch
-                    )
-
             # compute the relative L^1 error
             loss_f = LprelLoss(1, False)(output_pred_batch, output_batch)
             # loss_f = torch.mean(abs(output_pred_batch - output_batch)) / torch.mean(abs(output_batch)) #!! Mishra implementation of L1 rel loss
@@ -190,18 +168,6 @@ def test_fun(
             input_batch = input_batch.to(device)
             output_batch = output_batch.to(device)
             output_pred_batch = model(input_batch)
-
-            if which_example == "airfoil":
-                output_pred_batch[input_batch == 1] = 1
-                output_batch[input_batch == 1] = 1
-            elif which_example == "crosstruss":
-                for i in range(input_batch.shape[-1]):
-                    output_pred_batch[:, :, :, [i]] = (
-                        output_pred_batch[:, :, :, [i]] * input_batch
-                    )
-                    output_batch[:, :, :, [i]] = (
-                        output_batch[:, :, :, [i]] * input_batch
-                    )
 
             loss_f = loss(output_pred_batch, output_batch)
             # loss_f = torch.mean(abs(output_pred_batch - output_batch)) / torch.mean(abs(output_batch)) #!! Mishra implementation of L1 rel loss
@@ -279,19 +245,6 @@ def test_fun_multiout(
             # compute the output
             output_pred_batch = model.forward(input_batch)
 
-            # post-process the output
-            if which_example == "airfoil":
-                output_pred_batch[input_batch == 1] = 1
-                output_batch[input_batch == 1] = 1
-            elif which_example == "crosstruss":
-                for i in range(input_batch.shape[-1]):
-                    output_pred_batch[:, :, :, [i]] = (
-                        output_pred_batch[:, :, :, [i]] * input_batch
-                    )
-                    output_batch[:, :, :, [i]] = (
-                        output_batch[:, :, :, [i]] * input_batch
-                    )
-
             # compute the relative L^1 error
             loss_f = LprelLoss_multiout(1, False)(output_pred_batch, output_batch)
             test_relative_l1_multiout += loss_f
@@ -356,18 +309,6 @@ def test_fun_tensors(
 
             # compute the output
             output_pred_batch = model.forward(input_batch)
-
-            if which_example == "airfoil":
-                output_pred_batch[input_batch == 1] = 1
-                output_batch[input_batch == 1] = 1
-            elif which_example == "crosstruss":
-                for i in range(input_batch.shape[-1]):
-                    output_pred_batch[:, :, :, [i]] = (
-                        output_pred_batch[:, :, :, [i]] * input_batch
-                    )
-                    output_batch[:, :, :, [i]] = (
-                        output_batch[:, :, :, [i]] * input_batch
-                    )
 
             prediction_tensor = torch.cat((prediction_tensor, output_pred_batch), dim=0)
 
