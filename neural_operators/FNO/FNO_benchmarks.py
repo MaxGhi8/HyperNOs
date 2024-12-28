@@ -6,8 +6,7 @@ import sys
 
 import h5py
 import numpy as np
-import scipy.fft as fft
-import scipy.io
+import scipy
 import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
@@ -22,16 +21,16 @@ from utilities import FourierFeatures, UnitGaussianNormalizer, find_file
 # Some functions needed for loading the Navier-Stokes data
 #########################################
 def samples_fft(u):
-    return fft.fft2(u, norm="forward", workers=-1)
+    return scipy.fft.fft2(u, norm="forward", workers=-1)
 
 
 def samples_ifft(u_hat):
-    return fft.ifft2(u_hat, norm="forward", workers=-1).real
+    return scipy.fft.ifft2(u_hat, norm="forward", workers=-1).real
 
 
 def downsample(u, N):
     N_old = u.shape[-2]
-    freqs = fft.fftfreq(N_old, d=1 / N_old)
+    freqs = scipy.fft.fftfreq(N_old, d=1 / N_old)
     sel = np.logical_and(freqs >= -N / 2, freqs <= N / 2 - 1)
     u_hat = samples_fft(u)
     u_hat_down = u_hat[:, :, sel, :][:, :, :, sel]
@@ -165,17 +164,14 @@ class ShearLayer:
         batch_size,
         training_samples,
         in_size=64,
-        file="ddsl_N128/",
         in_dist=True,
-        padding=4,
         search_path="/",
     ):
         if "in_size" in network_properties:
             self.in_size = network_properties["in_size"]
-            s = self.in_size
+            assert self.in_size <= 128
         else:
-            self.in_size = 64
-            s = 64
+            self.in_size = 64  # Default value
 
         self.N_Fourier_F = network_properties["FourierF"]
 
@@ -191,7 +187,7 @@ class ShearLayer:
             "training",
             self.N_Fourier_F,
             training_samples,
-            s,
+            self.in_size,
             search_path=search_path,
         )
 
@@ -207,7 +203,7 @@ class ShearLayer:
                 "validation",
                 self.N_Fourier_F,
                 training_samples,
-                s,
+                self.in_size,
                 search_path=search_path,
             ),
             batch_size=batch_size,
@@ -220,7 +216,7 @@ class ShearLayer:
                 "test",
                 self.N_Fourier_F,
                 training_samples,
-                s,
+                self.in_size,
                 in_dist,
                 search_path=search_path,
             ),
@@ -292,15 +288,6 @@ class SinFrequencyDataset(Dataset):
                 self.length = 256
                 self.start = 0
 
-        # Load different resolutions
-        if s != 64:
-            str_dataset = "PoissonData_NEW_s" + str(s) + ".h5"
-            self.file_data = find_file(str_dataset, search_path)
-            self.start = 0
-
-        # If the reader changed.
-        self.reader = h5py.File(self.file_data, "r")
-
         # Fourier modes (Default is 0):
         self.N_Fourier_F = nf
 
@@ -356,6 +343,9 @@ class SinFrequency:
         in_dist=True,
         search_path="/",
     ):
+        self.s = s
+        assert self.s <= 64
+
         self.N_Fourier_F = network_properties["FourierF"]
 
         retrain = network_properties["retrain"]
@@ -438,7 +428,7 @@ class WaveEquationDataset(Dataset):
         self,
         which="training",
         nf=0,
-        training_samples=1024,
+        training_samples=512,
         t=5,
         s=64,
         in_dist=True,
@@ -475,10 +465,7 @@ class WaveEquationDataset(Dataset):
                 self.start = 0
 
         self.s = s
-        if s != 64:
-            str_dataset = "WaveData_24modes_s" + str(s) + ".h5"
-            self.file_data = find_file(str_dataset, search_path)
-            self.start = 0
+        assert self.s <= 64
 
         # If the reader changed:
         self.reader = h5py.File(self.file_data, "r")
@@ -519,8 +506,6 @@ class WaveEquationDataset(Dataset):
             ff_grid = ff_grid.permute(2, 0, 1)
             inputs = torch.cat((inputs, ff_grid), 0)
 
-        # inputs = inputs + 0.05*torch.randn_like(inputs)
-
         return inputs.permute(1, 2, 0), labels.permute(1, 2, 0)
 
     def get_grid(self):
@@ -544,6 +529,9 @@ class WaveEquation:
         in_dist=True,
         search_path="/",
     ):
+        self.s = s
+        assert self.s <= 64
+
         self.N_Fourier_F = network_properties["FourierF"]
 
         retrain = network_properties["retrain"]
@@ -551,7 +539,7 @@ class WaveEquation:
             torch.manual_seed(retrain)
 
         # Change number of workers according to your preference
-        num_workers = 8
+        num_workers = 0
 
         self.train_set = WaveEquationDataset(
             "training",
@@ -629,7 +617,7 @@ class AllenCahnDataset(Dataset):
         self,
         which="training",
         nf=0,
-        training_samples=1024,
+        training_samples=256,
         s=64,
         in_dist=True,
         search_path="/",
@@ -695,11 +683,9 @@ class AllenCahnDataset(Dataset):
         return inputs.permute(1, 2, 0), labels.permute(1, 2, 0)
 
     def get_grid(self):
-        x = torch.linspace(0, 1, 64)
-        y = torch.linspace(0, 1, 64)
-
+        x = torch.linspace(0, 1, self.s)
+        y = torch.linspace(0, 1, self.s)
         x_grid, y_grid = torch.meshgrid(x, y)
-
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
@@ -717,6 +703,9 @@ class AllenCahn:
         in_dist=True,
         search_path="/",
     ):
+        self.s = s
+        assert self.s <= 64
+
         self.N_Fourier_F = network_properties["FourierF"]
 
         retrain = network_properties["retrain"]
@@ -858,8 +847,8 @@ class ContTranslationDataset(Dataset):
         return inputs.permute(1, 2, 0), labels.permute(1, 2, 0)
 
     def get_grid(self):
-        x = torch.linspace(0, 1, 64)
-        y = torch.linspace(0, 1, 64)
+        x = torch.linspace(0, 1, self.s)
+        y = torch.linspace(0, 1, self.s)
         x_grid, y_grid = torch.meshgrid(x, y)
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
@@ -878,6 +867,9 @@ class ContTranslation:
         in_dist=True,
         search_path="/",
     ):
+        self.s = s
+        assert self.s <= 64
+
         self.N_Fourier_F = network_properties["FourierF"]
 
         retrain = network_properties["retrain"]
@@ -1020,8 +1012,8 @@ class DiscContTranslationDataset(Dataset):
         return inputs.permute(1, 2, 0), labels.permute(1, 2, 0)
 
     def get_grid(self):
-        x = torch.linspace(0, 1, 64)
-        y = torch.linspace(0, 1, 64)
+        x = torch.linspace(0, 1, self.s)
+        y = torch.linspace(0, 1, self.s)
         x_grid, y_grid = torch.meshgrid(x, y)
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
@@ -1040,6 +1032,9 @@ class DiscContTranslation:
         in_dist=True,
         search_path="/",
     ):
+        self.s = s
+        assert self.s <= 64
+
         self.N_Fourier_F = network_properties["FourierF"]
 
         retrain = network_properties["retrain"]
@@ -1182,8 +1177,8 @@ class AirfoilDataset(Dataset):
         return inputs.permute(1, 2, 0), labels.permute(1, 2, 0)
 
     def get_grid(self):
-        x = torch.linspace(0, 1, 64)
-        y = torch.linspace(0, 1, 64)
+        x = torch.linspace(0, 1, self.s)
+        y = torch.linspace(0, 1, self.s)
         x_grid, y_grid = torch.meshgrid(x, y)
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
@@ -1202,6 +1197,9 @@ class Airfoil:
         in_dist=True,
         search_path="/",
     ):
+        self.s = s
+        assert self.s <= 128
+
         self.N_Fourier_F = network_properties["FourierF"]
 
         retrain = network_properties["retrain"]
@@ -1346,8 +1344,8 @@ class DarcyDataset(Dataset):
         return inputs.permute(1, 2, 0), labels.permute(1, 2, 0)
 
     def get_grid(self):
-        x = torch.linspace(0, 1, 64)
-        y = torch.linspace(0, 1, 64)
+        x = torch.linspace(0, 1, self.s)
+        y = torch.linspace(0, 1, self.s)
         x_grid, y_grid = torch.meshgrid(x, y)
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
@@ -1369,6 +1367,9 @@ class Darcy:
         in_dist=True,
         search_path="/",
     ):
+        self.s = s
+        assert self.s <= 64
+
         self.N_Fourier_F = network_properties["FourierF"]
 
         retrain = network_properties["retrain"]

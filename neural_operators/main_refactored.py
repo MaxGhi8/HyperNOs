@@ -1,6 +1,6 @@
 import torch
 from FNO.FNO_arc import FNO_2D
-from FNO.FNO_benchmarks import Darcy
+from FNO.FNO_benchmarks import Airfoil
 from Loss_fun import LprelLoss
 from ray import tune
 from tune import tune_hyperparameters
@@ -49,7 +49,7 @@ def main():
         config["retrain"],
     )
 
-    dataset_builder = lambda config: Darcy(
+    dataset_builder = lambda config: Airfoil(
         {
             "FourierF": config["FourierF"],
             "retrain": config["retrain"],

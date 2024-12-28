@@ -818,6 +818,7 @@ class FNO_2D(nn.Module):
         self, x: Float[Tensor, "n_batch n_x n_y d_a"]
     ) -> Float[Tensor, "n_batch n_x n_y d_u"]:
         ## Grid and initialization
+        print(x.shape)
         grid = self.get_grid(x.shape).to(self.device)
         x = torch.cat(
             (grid, x), dim=-1

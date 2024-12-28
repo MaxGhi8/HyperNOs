@@ -16,8 +16,6 @@ from torch.utils.data import DataLoader, Dataset, TensorDataset
 sys.path.append("../")
 from utilities import FourierFeatures, UnitGaussianNormalizer, find_file
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 
 #########################################
 # Some functions needed for loading the Navier-Stokes data
@@ -108,14 +106,14 @@ class ShearLayerDataset(Dataset):
                     self.reader["Sample_" + str(index + self.start)]["input"][:]
                 )
                 .type(torch.float32)
-                .reshape(self.s, self.s, 1)
+                .reshape(1, self.s, self.s)
             )
             labels = (
                 torch.from_numpy(
                     self.reader["Sample_" + str(index + self.start)]["output"][:]
                 )
                 .type(torch.float32)
-                .reshape(self.s, self.s, 1)
+                .reshape(1, self.s, self.s)
             )
 
         else:
@@ -127,8 +125,8 @@ class ShearLayerDataset(Dataset):
             ].reshape(1, 1, self.s, self.s)
 
             if self.s < 128:
-                inputs = downsample(inputs, self.s).reshape(self.s, self.s, 1)
-                labels = downsample(labels, self.s).reshape(self.s, self.s, 1)
+                inputs = downsample(inputs, self.s).reshape(1, self.s, self.s)
+                labels = downsample(labels, self.s).reshape(1, self.s, self.s)
             else:
                 inputs = inputs.reshape(1, 128, 128)
                 labels = labels.reshape(1, 128, 128)
@@ -146,7 +144,7 @@ class ShearLayerDataset(Dataset):
             ff_grid = ff_grid.permute(2, 0, 1)
             inputs = torch.cat((inputs, ff_grid), 0)
 
-        return inputs, labels
+        return inputs.permute(1, 2, 0), labels.permute(1, 2, 0)
 
     def get_grid(self):
         x = torch.linspace(0, 1, self.s)
@@ -165,7 +163,7 @@ class ShearLayer:
         device,
         batch_size,
         training_samples,
-        size=64,
+        in_size=64,
         in_dist=True,
         search_path="/",
     ):
@@ -173,30 +171,24 @@ class ShearLayer:
             self.in_size = network_properties["in_size"]
             assert self.in_size <= 128
         else:
-            raise ValueError("You must specify the computational grid size.")
+            self.in_size = 64  # Default value
 
-        if "s" in network_properties:
-            s = size
-        else:
-            s = 64  # Default value
-
-        # Seed
         self.N_Fourier_F = network_properties["FourierF"]
+
         retrain = network_properties["retrain"]
         if retrain > 0:
             torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
 
         # Change number of workers according to your preference
         num_workers = 0
 
-        self.train_set = (
-            ShearLayerDataset(
-                "training",
-                self.N_Fourier_F,
-                training_samples,
-                s,
-                search_path=search_path,
-            ),
+        self.train_set = ShearLayerDataset(
+            "training",
+            self.N_Fourier_F,
+            training_samples,
+            self.in_size,
+            search_path=search_path,
         )
 
         self.train_loader = DataLoader(
@@ -204,31 +196,34 @@ class ShearLayer:
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
+            pin_memory=True,
         )
         self.val_loader = DataLoader(
             ShearLayerDataset(
                 "validation",
                 self.N_Fourier_F,
                 training_samples,
-                s,
+                self.in_size,
                 search_path=search_path,
             ),
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
+            pin_memory=True,
         )
         self.test_loader = DataLoader(
             ShearLayerDataset(
                 "test",
                 self.N_Fourier_F,
                 training_samples,
-                s,
+                self.in_size,
                 in_dist,
                 search_path=search_path,
             ),
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
+            pin_memory=True,
         )
 
     @property
@@ -266,20 +261,17 @@ class SinFrequencyDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
-        # Note: Normalization constants for both ID and OOD should be used from the training set!
+        if in_dist:
+            self.file_data = find_file("PoissonData_64x64_IN.h5", search_path)
+        else:
+            self.file_data = find_file("PoissonData_64x64_OUT.h5", search_path)
+
         # Load normalization constants from the TRAINING set:
-        file_data_train = find_file("PoissonData_64x64_IN.h5", search_path)
-        self.reader = h5py.File(file_data_train, "r")
+        self.reader = h5py.File(self.file_data, "r")
         self.min_data = self.reader["min_inp"][()]
         self.max_data = self.reader["max_inp"][()]
         self.min_model = self.reader["min_out"][()]
         self.max_model = self.reader["max_out"][()]
-
-        if in_dist:
-            self.file_data = file_data_train
-        else:
-            self.file_data = find_file("PoissonData_64x64_OUT.h5", search_path)
-
         self.s = s  # Sampling rate
 
         if which == "training":
@@ -296,9 +288,6 @@ class SinFrequencyDataset(Dataset):
                 self.length = 256
                 self.start = 0
 
-        # If the reader changed.
-        self.reader = h5py.File(self.file_data, "r")
-
         # Fourier modes (Default is 0):
         self.N_Fourier_F = nf
 
@@ -311,14 +300,14 @@ class SinFrequencyDataset(Dataset):
                 self.reader["Sample_" + str(index + self.start)]["input"][:]
             )
             .type(torch.float32)
-            .reshape(self.s, self.s, 1)
+            .reshape(1, self.s, self.s)
         )
         labels = (
             torch.from_numpy(
                 self.reader["Sample_" + str(index + self.start)]["output"][:]
             )
             .type(torch.float32)
-            .reshape(self.s, self.s, 1)
+            .reshape(1, self.s, self.s)
         )
 
         inputs = (inputs - self.min_data) / (self.max_data - self.min_data)
@@ -331,7 +320,7 @@ class SinFrequencyDataset(Dataset):
             ff_grid = ff_grid.permute(2, 0, 1)
             inputs = torch.cat((inputs, ff_grid), 0)
 
-        return inputs, labels
+        return inputs.permute(1, 2, 0), labels.permute(1, 2, 0)
 
     def get_grid(self):
         x = torch.linspace(0, 1, self.s)
@@ -354,14 +343,11 @@ class SinFrequency:
         in_dist=True,
         search_path="/",
     ):
-        if "in_size" in network_properties:
-            self.in_size = network_properties["in_size"]
-            assert self.in_size <= 128
-        else:
-            raise ValueError("You must specify the computational grid size.")
+        self.s = s
+        assert self.s <= 64
 
-        # Seed
         self.N_Fourier_F = network_properties["FourierF"]
+
         retrain = network_properties["retrain"]
         if retrain > 0:
             torch.manual_seed(retrain)
@@ -369,14 +355,12 @@ class SinFrequency:
         # Change number of workers according to your preference
         num_workers = 0
 
-        self.train_set = (
-            SinFrequencyDataset(
-                "training",
-                self.N_Fourier_F,
-                training_samples,
-                s,
-                search_path=search_path,
-            ),
+        self.train_set = SinFrequencyDataset(
+            "training",
+            self.N_Fourier_F,
+            training_samples,
+            s,
+            search_path=search_path,
         )
 
         self.train_loader = DataLoader(
@@ -384,6 +368,7 @@ class SinFrequency:
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
+            pin_memory=True,
         )
         self.val_loader = DataLoader(
             SinFrequencyDataset(
@@ -396,6 +381,7 @@ class SinFrequency:
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
+            pin_memory=True,
         )
         self.test_loader = DataLoader(
             SinFrequencyDataset(
@@ -409,6 +395,7 @@ class SinFrequency:
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
+            pin_memory=True,
         )
 
     @property
@@ -429,7 +416,7 @@ class SinFrequency:
 
 
 # ------------------------------------------------------------------------------
-# Wave data
+# Wave data (from Mishra CNO article)
 #   From 0 to 512 : training samples (512)
 #   From 1024 to 1024 + 128 : validation samples (128)
 #   From 1024 + 128 to 1024 + 128 + 256 : test samples (256)
@@ -447,21 +434,18 @@ class WaveEquationDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
-        # Note: Normalization constants for both ID and OOD should be used from the training set!
-        # Load normalization constants from the TRAINING set:
-        file_data_train = find_file("WaveData_64x64_IN.h5", search_path)
+        if in_dist:
+            self.file_data = find_file("WaveData_64x64_IN.h5", search_path)
+        else:
+            self.file_data = find_file("WaveData_64x64_OUT.h5", search_path)
 
-        self.reader = h5py.File(file_data_train, "r")
+        self.reader = h5py.File(self.file_data, "r")
+
+        # Load normalization constants:
         self.min_data = self.reader["min_u0"][()]
         self.max_data = self.reader["max_u0"][()]
         self.min_model = self.reader["min_u"][()]
         self.max_model = self.reader["max_u"][()]
-
-        # Default file:
-        if in_dist:
-            self.file_data = file_data_train
-        else:
-            self.file_data = find_file("WaveData_64x64_OUT.h5", search_path)
 
         # What time? DEFAULT : t = 5
         self.t = t
@@ -481,9 +465,7 @@ class WaveEquationDataset(Dataset):
                 self.start = 0
 
         self.s = s
-        if s != 64:
-            self.file_data = "data/WaveData_24modes_s" + str(s) + ".h5"
-            self.start = 0
+        assert self.s <= 64
 
         # If the reader changed:
         self.reader = h5py.File(self.file_data, "r")
@@ -502,7 +484,7 @@ class WaveEquationDataset(Dataset):
                 ][:]
             )
             .type(torch.float32)
-            .reshape(self.s, self.s, 1)
+            .reshape(1, self.s, self.s)
         )
         labels = (
             torch.from_numpy(
@@ -511,7 +493,7 @@ class WaveEquationDataset(Dataset):
                 ][:]
             )
             .type(torch.float32)
-            .reshape(self.s, self.s, 1)
+            .reshape(1, self.s, self.s)
         )
 
         inputs = (inputs - self.min_data) / (self.max_data - self.min_data)
@@ -524,16 +506,15 @@ class WaveEquationDataset(Dataset):
             ff_grid = ff_grid.permute(2, 0, 1)
             inputs = torch.cat((inputs, ff_grid), 0)
 
-        return inputs, labels
+        return inputs.permute(1, 2, 0), labels.permute(1, 2, 0)
 
     def get_grid(self):
-        grid = torch.zeros((self.s, self.s, 2))
-
-        for i in range(self.s):
-            for j in range(self.s):
-                grid[i, j][0] = i / (self.s - 1)
-                grid[i, j][1] = j / (self.s - 1)
-
+        x = torch.linspace(0, 1, self.s)
+        y = torch.linspace(0, 1, self.s)
+        x_grid, y_grid = torch.meshgrid(x, y)
+        x_grid = x_grid.unsqueeze(-1)
+        y_grid = y_grid.unsqueeze(-1)
+        grid = torch.cat((x_grid, y_grid), -1)
         return grid
 
 
@@ -548,30 +529,25 @@ class WaveEquation:
         in_dist=True,
         search_path="/",
     ):
-        if "in_size" in network_properties:
-            self.in_size = network_properties["in_size"]
-            assert self.in_size <= 128
-        else:
-            raise ValueError("You must specify the computational grid size.")
+        self.s = s
+        assert self.s <= 64
 
-        # Seed
         self.N_Fourier_F = network_properties["FourierF"]
+
         retrain = network_properties["retrain"]
         if retrain > 0:
             torch.manual_seed(retrain)
 
-        # Change number of workers accoirding to your preference
+        # Change number of workers according to your preference
         num_workers = 0
 
-        self.train_set = (
-            WaveEquationDataset(
-                "training",
-                self.N_Fourier_F,
-                training_samples,
-                5,
-                s,
-                search_path=search_path,
-            ),
+        self.train_set = WaveEquationDataset(
+            "training",
+            self.N_Fourier_F,
+            training_samples,
+            5,
+            s,
+            search_path=search_path,
         )
 
         self.train_loader = DataLoader(
@@ -579,6 +555,7 @@ class WaveEquation:
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
+            pin_memory=True,
         )
         self.val_loader = DataLoader(
             WaveEquationDataset(
@@ -592,6 +569,7 @@ class WaveEquation:
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
+            pin_memory=True,
         )
         self.test_loader = DataLoader(
             WaveEquationDataset(
@@ -606,6 +584,7 @@ class WaveEquation:
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
+            pin_memory=True,
         )
 
     @property
@@ -626,7 +605,7 @@ class WaveEquation:
 
 
 # ------------------------------------------------------------------------------
-# Allen-Cahn data
+# Allen-Cahn data (from Mishra CNO article)
 #   From 0 to 256 : training samples (256)
 #   From 256 to 256 + 128 : validation samples (128)
 #   From 256 + 128 to 256 + 128 + 128 : test samples (128)
@@ -643,22 +622,17 @@ class AllenCahnDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
-        # Note: Normalization constants for both ID and OOD should be used from the training set!
-        # Load normalization constants from the TRAINING set:
-        file_data_train = find_file("AllenCahn_64x64_IN.h5", search_path)
-        self.reader = h5py.File(file_data_train, "r")
+        if in_dist:
+            self.file_data = find_file("AllenCahn_64x64_IN.h5", search_path)
+        else:
+            self.file_data = find_file("AllenCahn_64x64_OUT.h5", search_path)
+        self.reader = h5py.File(self.file_data, "r")
+
+        # Load normalization constants:
         self.min_data = self.reader["min_u0"][()]
         self.max_data = self.reader["max_u0"][()]
         self.min_model = self.reader["min_u"][()]
         self.max_model = self.reader["max_u"][()]
-
-        # Default file:
-        if in_dist:
-            self.file_data = file_data_train
-        else:
-            self.file_data = find_file("AllenCahn_64x64_OUT.h5", search_path)
-
-        self.reader = h5py.File(self.file_data, "r")
 
         if which == "training":
             self.length = training_samples
@@ -686,14 +660,14 @@ class AllenCahnDataset(Dataset):
                 self.reader["Sample_" + str(index + self.start)]["input"][:]
             )
             .type(torch.float32)
-            .reshape(64, 64, 1)
+            .reshape(1, 64, 64)
         )
         labels = (
             torch.from_numpy(
                 self.reader["Sample_" + str(index + self.start)]["output"][:]
             )
             .type(torch.float32)
-            .reshape(64, 64, 1)
+            .reshape(1, 64, 64)
         )
 
         inputs = (inputs - self.min_data) / (self.max_data - self.min_data)
@@ -705,15 +679,13 @@ class AllenCahnDataset(Dataset):
             ff_grid = FF(grid)
             ff_grid = ff_grid.permute(2, 0, 1)
             inputs = torch.cat((inputs, ff_grid), 0)
-        # print(inputs.shape)
-        return inputs, labels
+
+        return inputs.permute(1, 2, 0), labels.permute(1, 2, 0)
 
     def get_grid(self):
-        x = torch.linspace(0, 1, 64)
-        y = torch.linspace(0, 1, 64)
-
+        x = torch.linspace(0, 1, self.s)
+        y = torch.linspace(0, 1, self.s)
         x_grid, y_grid = torch.meshgrid(x, y)
-
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
@@ -731,14 +703,11 @@ class AllenCahn:
         in_dist=True,
         search_path="/",
     ):
-        if "in_size" in network_properties:
-            self.in_size = network_properties["in_size"]
-            assert self.in_size <= 128
-        else:
-            raise ValueError("You must specify the computational grid size.")
+        self.s = s
+        assert self.s <= 64
 
-        # Seed
         self.N_Fourier_F = network_properties["FourierF"]
+
         retrain = network_properties["retrain"]
         if retrain > 0:
             torch.manual_seed(retrain)
@@ -746,14 +715,12 @@ class AllenCahn:
         # Change number of workers according to your preference
         num_workers = 0
 
-        self.train_set = (
-            AllenCahnDataset(
-                "training",
-                self.N_Fourier_F,
-                training_samples,
-                s,
-                search_path=search_path,
-            ),
+        self.train_set = AllenCahnDataset(
+            "training",
+            self.N_Fourier_F,
+            training_samples,
+            s,
+            search_path=search_path,
         )
 
         self.train_loader = DataLoader(
@@ -761,6 +728,7 @@ class AllenCahn:
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
+            pin_memory=True,
         )
         self.val_loader = DataLoader(
             AllenCahnDataset(
@@ -773,6 +741,7 @@ class AllenCahn:
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
+            pin_memory=True,
         )
         self.test_loader = DataLoader(
             AllenCahnDataset(
@@ -786,6 +755,7 @@ class AllenCahn:
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
+            pin_memory=True,
         )
 
     @property
@@ -806,7 +776,7 @@ class AllenCahn:
 
 
 # ------------------------------------------------------------------------------
-# Smooth Transport data
+# Smooth Transport data (from Mishra CNO article)
 #   From 0 to 512 : training samples (512)
 #   From 512 to 512 + 256 : validation samples (256)
 #   From 512 + 256 to 512 + 256 + 256 : test samples (256)
@@ -824,7 +794,6 @@ class ContTranslationDataset(Dataset):
         search_path="/",
     ):
         # The data is already normalized
-        # Default file:
         if in_dist:
             self.file_data = find_file("ContTranslation_64x64_IN.h5", search_path)
         else:
@@ -858,14 +827,14 @@ class ContTranslationDataset(Dataset):
                 self.reader["Sample_" + str(index + self.start)]["input"][:]
             )
             .type(torch.float32)
-            .reshape(64, 64, 1)
+            .reshape(1, 64, 64)
         )
         labels = (
             torch.from_numpy(
                 self.reader["Sample_" + str(index + self.start)]["output"][:]
             )
             .type(torch.float32)
-            .reshape(64, 64, 1)
+            .reshape(1, 64, 64)
         )
 
         if self.N_Fourier_F > 0:
@@ -875,14 +844,12 @@ class ContTranslationDataset(Dataset):
             ff_grid = ff_grid.permute(2, 0, 1)
             inputs = torch.cat((inputs, ff_grid), 0)
 
-        return inputs, labels
+        return inputs.permute(1, 2, 0), labels.permute(1, 2, 0)
 
     def get_grid(self):
-        x = torch.linspace(0, 1, 64)
-        y = torch.linspace(0, 1, 64)
-
+        x = torch.linspace(0, 1, self.s)
+        y = torch.linspace(0, 1, self.s)
         x_grid, y_grid = torch.meshgrid(x, y)
-
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
@@ -900,14 +867,11 @@ class ContTranslation:
         in_dist=True,
         search_path="/",
     ):
-        if "in_size" in network_properties:
-            self.in_size = network_properties["in_size"]
-            assert self.in_size <= 128
-        else:
-            raise ValueError("You must specify the computational grid size.")
+        self.s = s
+        assert self.s <= 64
 
-        # Seed
         self.N_Fourier_F = network_properties["FourierF"]
+
         retrain = network_properties["retrain"]
         if retrain > 0:
             torch.manual_seed(retrain)
@@ -915,14 +879,12 @@ class ContTranslation:
         # Change number of workers according to your preference
         num_workers = 0
 
-        self.train_set = (
-            ContTranslationDataset(
-                "training",
-                self.N_Fourier_F,
-                training_samples,
-                s,
-                search_path=search_path,
-            ),
+        self.train_set = ContTranslationDataset(
+            "training",
+            self.N_Fourier_F,
+            training_samples,
+            s,
+            search_path=search_path,
         )
 
         self.train_loader = DataLoader(
@@ -930,6 +892,7 @@ class ContTranslation:
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
+            pin_memory=True,
         )
         self.val_loader = DataLoader(
             ContTranslationDataset(
@@ -942,6 +905,7 @@ class ContTranslation:
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
+            pin_memory=True,
         )
         self.test_loader = DataLoader(
             ContTranslationDataset(
@@ -955,6 +919,7 @@ class ContTranslation:
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
+            pin_memory=True,
         )
 
     @property
@@ -975,7 +940,7 @@ class ContTranslation:
 
 
 # ------------------------------------------------------------------------------
-# Discontinuous Transport data
+# Discontinuous Transport data (from Mishra CNO article)
 #   From 0 to 512 : training samples (512)
 #   From 512 to 512 + 256 : validation samples (256)
 #   From 512 + 256 to 512 + 256 + 256 : test samples (256)
@@ -993,7 +958,6 @@ class DiscContTranslationDataset(Dataset):
         search_path="/",
     ):
         # The data is already normalized
-
         if in_dist:
             self.file_data = find_file("DiscTranslation_64x64_IN.h5", search_path)
         else:
@@ -1028,14 +992,14 @@ class DiscContTranslationDataset(Dataset):
                 self.reader["Sample_" + str(index + self.start)]["input"][:]
             )
             .type(torch.float32)
-            .reshape(64, 64, 1)
+            .reshape(1, 64, 64)
         )
         labels = (
             torch.from_numpy(
                 self.reader["Sample_" + str(index + self.start)]["output"][:]
             )
             .type(torch.float32)
-            .reshape(64, 64, 1)
+            .reshape(1, 64, 64)
         )
 
         if self.N_Fourier_F > 0:
@@ -1045,14 +1009,12 @@ class DiscContTranslationDataset(Dataset):
             ff_grid = ff_grid.permute(2, 0, 1)
             inputs = torch.cat((inputs, ff_grid), 0)
 
-        return inputs, labels
+        return inputs.permute(1, 2, 0), labels.permute(1, 2, 0)
 
     def get_grid(self):
-        x = torch.linspace(0, 1, 64)
-        y = torch.linspace(0, 1, 64)
-
+        x = torch.linspace(0, 1, self.s)
+        y = torch.linspace(0, 1, self.s)
         x_grid, y_grid = torch.meshgrid(x, y)
-
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
@@ -1070,29 +1032,24 @@ class DiscContTranslation:
         in_dist=True,
         search_path="/",
     ):
-        if "in_size" in network_properties:
-            self.in_size = network_properties["in_size"]
-            assert self.in_size <= 128
-        else:
-            raise ValueError("You must specify the computational grid size.")
+        self.s = s
+        assert self.s <= 64
 
-        # Seed
         self.N_Fourier_F = network_properties["FourierF"]
+
         retrain = network_properties["retrain"]
         if retrain > 0:
             torch.manual_seed(retrain)
 
-        # Change number of workers accoirding to your preference
+        # Change number of workers according to your preference
         num_workers = 0
 
-        self.train_set = (
-            DiscContTranslationDataset(
-                "training",
-                self.N_Fourier_F,
-                training_samples,
-                s,
-                search_path=search_path,
-            ),
+        self.train_set = DiscContTranslationDataset(
+            "training",
+            self.N_Fourier_F,
+            training_samples,
+            s,
+            search_path=search_path,
         )
 
         self.train_loader = DataLoader(
@@ -1100,6 +1057,7 @@ class DiscContTranslation:
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
+            pin_memory=True,
         )
         self.val_loader = DataLoader(
             DiscContTranslationDataset(
@@ -1112,6 +1070,7 @@ class DiscContTranslation:
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
+            pin_memory=True,
         )
         self.test_loader = DataLoader(
             DiscContTranslationDataset(
@@ -1125,6 +1084,7 @@ class DiscContTranslation:
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
+            pin_memory=True,
         )
 
     @property
@@ -1145,7 +1105,7 @@ class DiscContTranslation:
 
 
 # ------------------------------------------------------------------------------
-# Compressible Euler data
+# Compressible Euler data (from Mishra CNO article)
 #   From 0 to 750 : training samples (750)
 #   From 750 to 750 + 128 : validation samples (128)
 #   From 750 + 128 to 750 + 128 + 128 : test samples (128)
@@ -1167,8 +1127,6 @@ class AirfoilDataset(Dataset):
             self.file_data = find_file("Airfoil_128x128_IN.h5", search_path)
         else:
             self.file_data = find_file("Airfoil_128x128_OUT.h5", search_path)
-
-        # in_dist = False
 
         if which == "training":
             self.length = training_samples
@@ -1199,14 +1157,14 @@ class AirfoilDataset(Dataset):
                 self.reader["Sample_" + str(index + self.start)]["input"][:]
             )
             .type(torch.float32)
-            .reshape(128, 128, 1)
+            .reshape(1, 128, 128)
         )
         labels = (
             torch.from_numpy(
                 self.reader["Sample_" + str(index + self.start)]["output"][:]
             )
             .type(torch.float32)
-            .reshape(128, 128, 1)
+            .reshape(1, 128, 128)
         )
 
         if self.N_Fourier_F > 0:
@@ -1216,14 +1174,12 @@ class AirfoilDataset(Dataset):
             ff_grid = ff_grid.permute(2, 0, 1)
             inputs = torch.cat((inputs, ff_grid), 0)
 
-        return inputs, labels
+        return inputs.permute(1, 2, 0), labels.permute(1, 2, 0)
 
     def get_grid(self):
-        x = torch.linspace(0, 1, 128)
-        y = torch.linspace(0, 1, 128)
-
+        x = torch.linspace(0, 1, self.s)
+        y = torch.linspace(0, 1, self.s)
         x_grid, y_grid = torch.meshgrid(x, y)
-
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
@@ -1241,16 +1197,11 @@ class Airfoil:
         in_dist=True,
         search_path="/",
     ):
-        # Must have parameters: ------------------------------------------------
+        self.s = s
+        assert self.s <= 128
 
-        if "in_size" in network_properties:
-            self.in_size = network_properties["in_size"]
-            assert self.in_size <= 128
-        else:
-            raise ValueError("You must specify the computational grid size.")
-
-        # Seed
         self.N_Fourier_F = network_properties["FourierF"]
+
         retrain = network_properties["retrain"]
         if retrain > 0:
             torch.manual_seed(retrain)
@@ -1258,14 +1209,12 @@ class Airfoil:
         # Change number of workers according to your preference
         num_workers = 0
 
-        self.train_set = (
-            AirfoilDataset(
-                "training",
-                self.N_Fourier_F,
-                training_samples,
-                s,
-                search_path=search_path,
-            ),
+        self.train_set = AirfoilDataset(
+            "training",
+            self.N_Fourier_F,
+            training_samples,
+            s,
+            search_path=search_path,
         )
 
         self.train_loader = DataLoader(
@@ -1273,6 +1222,7 @@ class Airfoil:
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
+            pin_memory=True,
         )
         self.val_loader = DataLoader(
             AirfoilDataset(
@@ -1285,6 +1235,7 @@ class Airfoil:
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
+            pin_memory=True,
         )
         self.test_loader = DataLoader(
             AirfoilDataset(
@@ -1298,6 +1249,7 @@ class Airfoil:
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
+            pin_memory=True,
         )
 
     @property
@@ -1318,7 +1270,7 @@ class Airfoil:
 
 
 # ------------------------------------------------------------------------------
-# Darcy Flow data
+# Darcy Flow data (from Mishra CNO article)
 #   From 0 to 256 : training samples (256)
 #   From 256 to 256 + 128 : validation samples (128)
 #   From 256 + 128 to 256 + 128 + 128 : test samples (128)
@@ -1334,22 +1286,17 @@ class DarcyDataset(Dataset):
         insample=True,
         search_path="/",
     ):
-        # Note: Normalization constants for both ID and OOD should be used from the training set!
-        # Load normalization constants from the TRAINING set:
-        file_data_train = find_file("Darcy_64x64_IN.h5", search_path)
+        if insample:
+            self.file_data = find_file("Darcy_64x64_IN.h5", search_path)
+        else:
+            self.file_data = find_file("Darcy_64x64_OUT.h5", search_path)
 
-        self.reader = h5py.File(file_data_train, "r")
+        self.reader = h5py.File(self.file_data, "r")
+
         self.min_data = self.reader["min_inp"][()]
         self.max_data = self.reader["max_inp"][()]
         self.min_model = self.reader["min_out"][()]
         self.max_model = self.reader["max_out"][()]
-
-        if insample:
-            self.file_data = file_data_train
-        else:
-            self.file_data = find_file("Darcy_64x64_OUT.h5", find_file)
-
-        self.reader = h5py.File(self.file_data, "r")
 
         if which == "training":
             self.length = training_samples
@@ -1376,14 +1323,14 @@ class DarcyDataset(Dataset):
                 self.reader["sample_" + str(index + self.start)]["input"][:]
             )
             .type(torch.float32)
-            .reshape(64, 64, 1)
+            .reshape(1, 64, 64)
         )
         labels = (
             torch.from_numpy(
                 self.reader["sample_" + str(index + self.start)]["output"][:]
             )
             .type(torch.float32)
-            .reshape(64, 64, 1)
+            .reshape(1, 64, 64)
         )
 
         inputs = (inputs - self.min_data) / (self.max_data - self.min_data)
@@ -1394,18 +1341,15 @@ class DarcyDataset(Dataset):
             grid = grid.permute(2, 0, 1)
             inputs = torch.cat((inputs, grid), 0)
 
-        return inputs, labels
+        return inputs.permute(1, 2, 0), labels.permute(1, 2, 0)
 
     def get_grid(self):
-        x = torch.linspace(0, 1, 64)
-        y = torch.linspace(0, 1, 64)
-
+        x = torch.linspace(0, 1, self.s)
+        y = torch.linspace(0, 1, self.s)
         x_grid, y_grid = torch.meshgrid(x, y)
-
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
-
         if self.N_Fourier_F > 0:
             FF = FourierFeatures(1, self.N_Fourier_F, grid.device)
             grid = FF(grid)
@@ -1418,21 +1362,16 @@ class Darcy:
         network_properties,
         device,
         batch_size,
-        training_samples=512,
+        training_samples=256,
         s=64,
         in_dist=True,
         search_path="/",
     ):
-        # Must have parameters: ------------------------------------------------
+        self.s = s
+        assert self.s <= 64
 
-        if "in_size" in network_properties:
-            self.in_size = network_properties["in_size"]
-            assert self.in_size <= 128
-        else:
-            raise ValueError("You must specify the computational grid size.")
-
-        # Seed
         self.N_Fourier_F = network_properties["FourierF"]
+
         retrain = network_properties["retrain"]
         if retrain > 0:
             torch.manual_seed(retrain)
@@ -1440,10 +1379,8 @@ class Darcy:
         # Change number of workers according to your preference
         num_workers = 0
 
-        self.train_set = (
-            DarcyDataset(
-                "training", self.N_Fourier_F, training_samples, search_path=search_path
-            ),
+        self.train_set = DarcyDataset(
+            "training", self.N_Fourier_F, training_samples, search_path=search_path
         )
 
         self.train_loader = DataLoader(
@@ -1451,6 +1388,7 @@ class Darcy:
             batch_size=batch_size,
             shuffle=True,
             num_workers=num_workers,
+            pin_memory=True,
         )
         self.val_loader = DataLoader(
             DarcyDataset(
@@ -1460,8 +1398,9 @@ class Darcy:
                 search_path=search_path,
             ),
             batch_size=batch_size,
-            shuffle=True,
+            shuffle=False,
             num_workers=num_workers,
+            pin_memory=True,
         )
         self.test_loader = DataLoader(
             DarcyDataset(
@@ -1474,6 +1413,7 @@ class Darcy:
             batch_size=batch_size,
             shuffle=False,
             num_workers=num_workers,
+            pin_memory=True,
         )
 
     @property

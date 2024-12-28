@@ -221,7 +221,7 @@ class CNO2d(nn.Module):
         channel_multiplier=16,
         kernel_size=3,
         use_bn=True,
-        device="cpu",
+        device=torch.device("cpu"),
     ):
         """
         CNO2d: Convolutional Neural Operator 2D
@@ -403,6 +403,7 @@ class CNO2d(nn.Module):
 
         # Move to device
         self.to(device)
+        self.device = device
 
     @jaxtyped(typechecker=beartype)
     def forward(
