@@ -5,7 +5,10 @@ In this file there are some utilities functions that are used in the main file.
 import json
 
 import torch
-from FNO.FNO_benchmarks import (
+import sys
+
+sys.path.append("..")
+from data_benchmarks import (
     Airfoil,
     AllenCahn,
     Burgers_Zongyi,

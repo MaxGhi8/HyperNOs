@@ -1,10 +1,10 @@
 import torch
-from FNO.FNO_benchmarks import Darcy
+from data_benchmarks import Darcy
 from Loss_fun import LprelLoss
 from ray import tune
 from tune import tune_hyperparameters
 
-from neural_operators.CNO.CNO_2d import CNO2d
+from CNO.CNO_2d import CNO2d
 
 
 def main():

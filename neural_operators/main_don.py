@@ -1,5 +1,5 @@
 import torch
-from FNO.FNO_benchmarks import Darcy
+from data_benchmarks import Darcy
 from Loss_fun import LprelLoss
 from ray import tune
 from tune import tune_hyperparameters
