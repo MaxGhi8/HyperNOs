@@ -268,7 +268,6 @@ def train_epoch(
             esempio_test = input_batch[:n_idx].cpu()
             soluzione_test = output_batch[:n_idx].cpu()
 
-        # TODO: adjust loss functions for p=3,4
         loss_f = loss(output_pred_batch, output_batch)
 
         # back propagation
