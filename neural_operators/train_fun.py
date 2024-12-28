@@ -5,7 +5,7 @@ it is also needed for the RayTune implementation.
 """
 
 import torch
-from Loss_fun import (
+from loss_fun import (
     H1relLoss,
     H1relLoss_1D,
     H1relLoss_1D_multiout,

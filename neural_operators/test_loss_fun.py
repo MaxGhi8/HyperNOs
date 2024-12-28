@@ -10,7 +10,7 @@ import pytest
 import torch
 
 sys.path.append(".")
-from Loss_fun import H1relLoss, LprelLoss
+from loss_fun import H1relLoss, LprelLoss
 
 
 def test_L1relLoss():

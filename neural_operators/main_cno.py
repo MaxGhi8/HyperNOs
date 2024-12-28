@@ -1,6 +1,6 @@
 import torch
 from data_benchmarks import Darcy
-from Loss_fun import LprelLoss
+from neural_operators.loss_fun import LprelLoss
 from ray import tune
 from tune import tune_hyperparameters
 
@@ -8,7 +8,9 @@ from CNO.CNO_2d import CNO2d
 
 
 def main():
+
     device = torch.device("cpu")
+
     config_space = {
         "FourierF": tune.choice([0]),
         "n_layers": tune.randint(1, 5),
@@ -33,6 +35,7 @@ def main():
         "val_samples": tune.choice([128]),
         "weight_decay": tune.quniform(1e-6, 1e-3, 1e-6),
     }
+
     model_builder = lambda config: CNO2d(
         config["in_dim"],
         config["out_dim"],
@@ -45,6 +48,7 @@ def main():
         config["bn"],
         "cpu",
     )
+
     dataset_builder = lambda config: Darcy(
         {
             "FourierF": config["FourierF"],
@@ -54,7 +58,9 @@ def main():
         config["batch_size"],
         search_path="/",
     )
+
     loss_fn = LprelLoss(2, False)
+
     tune_hyperparameters(
         config_space,
         model_builder,

@@ -1,12 +1,13 @@
 import torch
 from FNO.FNO_arc import FNO_2D
 from data_benchmarks import Airfoil
-from Loss_fun import LprelLoss
+from neural_operators.loss_fun import LprelLoss
 from ray import tune
 from tune import tune_hyperparameters
 
 
 def main():
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     config_space = {

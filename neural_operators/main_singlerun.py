@@ -43,7 +43,7 @@ from CNO.CNO_utilities import CNO_initialize_hyperparameters, CNO_load_data_mode
 # FNO imports
 from FNO.FNO_arc import FNO_1D, FNO_2D
 from FNO.FNO_utilities import FNO_initialize_hyperparameters, FNO_load_data_model
-from Loss_fun import H1relLoss, H1relLoss_1D, LprelLoss
+from loss_fun import H1relLoss, H1relLoss_1D, LprelLoss
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 from train_fun import test_fun, test_fun_multiout, train_fun

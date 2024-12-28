@@ -38,7 +38,7 @@ from beartype import beartype
 from CNO.CNO_utilities import CNO_load_data_model
 from FNO.FNO_utilities import FNO_load_data_model
 from jaxtyping import Float, jaxtyped
-from Loss_fun import (
+from loss_fun import (
     H1relLoss,
     H1relLoss_1D,
     H1relLoss_1D_multiout,

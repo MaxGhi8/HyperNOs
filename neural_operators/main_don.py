@@ -1,6 +1,6 @@
 import torch
 from data_benchmarks import Darcy
-from Loss_fun import LprelLoss
+from neural_operators.loss_fun import LprelLoss
 from ray import tune
 from tune import tune_hyperparameters
 
@@ -9,7 +9,9 @@ from neural_operators.DeepONet.DeepONet import DeepOnetNoBiasOrg, FeedForwardNN
 
 
 def main():
+
     device = torch.device("cpu")
+
     config_space = {
         "FourierF": tune.choice([0]),
         "N_layers": tune.choice([2, 4, 6, 8]),
@@ -55,7 +57,9 @@ def main():
         config["batch_size"],
         search_path="/",
     )
+
     loss_fn = LprelLoss(2, False)
+
     tune_hyperparameters(
         config_space,
         model_builder,

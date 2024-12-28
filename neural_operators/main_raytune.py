@@ -45,7 +45,13 @@ from FNO.FNO_arc import FNO_1D, FNO_2D
 from FNO.FNO_utilities import FNO_initialize_hyperparameters
 
 from data_benchmarks import NO_load_data_model
-from Loss_fun import H1relLoss, H1relLoss_1D, LprelLoss, MSELoss_rel, SmoothL1Loss_rel
+from loss_fun import (
+    H1relLoss,
+    H1relLoss_1D,
+    LprelLoss,
+    MSELoss_rel,
+    SmoothL1Loss_rel,
+)
 from ray import init, train, tune
 from ray.train import Checkpoint
 from ray.tune.schedulers import ASHAScheduler
