@@ -480,12 +480,10 @@ for epoch in range(epochs):
             plot_data(
                 example,
                 esempio_test,
-                [],
                 "Input function",
                 epoch,
                 writer,
                 which_example,
-                problem_dim,
                 plotting,
             )
 
@@ -493,12 +491,10 @@ for epoch in range(epochs):
             plot_data(
                 example,
                 soluzione_test,
-                [],
                 "Exact solution",
                 epoch,
                 writer,
                 which_example,
-                problem_dim,
                 plotting,
             )
 
@@ -512,12 +508,10 @@ for epoch in range(epochs):
             plot_data(
                 example,
                 out_test,
-                [],
                 f"Approximate solution with {arc}",
                 epoch,
                 writer,
                 which_example,
-                problem_dim,
                 plotting,
             )
 
@@ -526,12 +520,10 @@ for epoch in range(epochs):
             plot_data(
                 example,
                 diff,
-                [],
                 "Module of the error",
                 epoch,
                 writer,
                 which_example,
-                problem_dim,
                 plotting,
             )
 

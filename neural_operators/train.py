@@ -15,7 +15,7 @@ from ray.train import Checkpoint
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 
-from neural_operators.utilities import count_params, plot_data
+from neural_operators.utilities import count_params
 
 
 def train_model(config, model, train_loader, val_loader, loss_fn, max_epochs, device):
@@ -55,7 +55,15 @@ def train_model(config, model, train_loader, val_loader, loss_fn, max_epochs, de
 
 
 def train_model_without_ray(
-    config, model, dataset, loss_fn, max_epochs, device, experiment_name
+    config,
+    model,
+    dataset,
+    loss_fn,
+    max_epochs,
+    device,
+    experiment_name,
+    plot_data_input,
+    plot_data_output,
 ):
     optimizer = torch.optim.AdamW(
         model.parameters(),
@@ -166,29 +174,25 @@ def train_model_without_ray(
             # plot data during the training and save on tensorboard
             if epoch == 0:
                 # plot the input data
-                plot_data(
-                    example,
+                plot_data_input(
+                    dataset,
                     esempio_test,
-                    [],
                     "Input function",
                     epoch,
                     writer,
-                    dataset_str,
-                    problem_dim,
-                    plotting,
+                    normalization=True,
+                    plotting=plotting,
                 )
 
                 # plot the exact solution
-                plot_data(
-                    example,
+                plot_data_output(
+                    dataset,
                     soluzione_test,
-                    [],
                     "Exact solution",
                     epoch,
                     writer,
-                    dataset_str,
-                    problem_dim,
-                    plotting,
+                    normalization=True,
+                    plotting=plotting,
                 )
 
             # Approximate solution with NO
@@ -198,30 +202,26 @@ def train_model_without_ray(
                     out_test = out_test.cpu()
 
                 # plot the approximate solution
-                plot_data(
-                    example,
+                plot_data_output(
+                    dataset,
                     out_test,
-                    [],
-                    f"Approximate solution with {arc}",
+                    f"Approximate solution with {model.__class__.__name__}",
                     epoch,
                     writer,
-                    dataset_str,
-                    problem_dim,
-                    plotting,
+                    normalization=True,
+                    plotting=plotting,
                 )
 
                 # Module of the difference
                 diff = torch.abs(out_test - soluzione_test)
-                plot_data(
-                    example,
+                plot_data_output(
+                    dataset,
                     diff,
-                    [],
                     "Module of the error",
                     epoch,
                     writer,
-                    dataset_str,
-                    problem_dim,
-                    plotting,
+                    normalization=False,
+                    plotting=plotting,
                 )
 
         writer.flush()  # for saving final data
