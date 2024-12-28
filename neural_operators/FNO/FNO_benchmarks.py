@@ -922,21 +922,22 @@ class ContTranslation:
             pin_memory=True,
         )
 
+    # When data is already normalized I set the min and max to 0 and 1 (have no effects)
     @property
     def min_data(self):
-        return self.train_set.min_data
+        return 0.0
 
     @property
     def max_data(self):
-        return self.train_set.max_data
+        return 1.0
 
     @property
     def min_model(self):
-        return self.train_set.min_model
+        return 0.0
 
     @property
     def max_model(self):
-        return self.train_set.max_model
+        return 1.0
 
 
 # ------------------------------------------------------------------------------
@@ -1087,21 +1088,22 @@ class DiscContTranslation:
             pin_memory=True,
         )
 
+    # When data is already normalized I set the min and max to 0 and 1 (have no effects)
     @property
     def min_data(self):
-        return self.train_set.min_data
+        return 0.0
 
     @property
     def max_data(self):
-        return self.train_set.max_data
+        return 1.0
 
     @property
     def min_model(self):
-        return self.train_set.min_model
+        return 0.0
 
     @property
     def max_model(self):
-        return self.train_set.max_model
+        return 1.0
 
 
 # ------------------------------------------------------------------------------
@@ -1166,6 +1168,8 @@ class AirfoilDataset(Dataset):
             .type(torch.float32)
             .reshape(1, 128, 128)
         )
+        # post process the output to fit the domain
+        labels[inputs == 1] = 1
 
         if self.N_Fourier_F > 0:
             grid = self.get_grid()
@@ -1252,21 +1256,22 @@ class Airfoil:
             pin_memory=True,
         )
 
+    # When data is already normalized I set the min and max to 0 and 1 (have no effects)
     @property
     def min_data(self):
-        return self.train_set.min_data
+        return 0.0
 
     @property
     def max_data(self):
-        return self.train_set.max_data
+        return 1.0
 
     @property
     def min_model(self):
-        return self.train_set.min_model
+        return 0.0
 
     @property
     def max_model(self):
-        return self.train_set.max_model
+        return 1.0
 
 
 # ------------------------------------------------------------------------------
@@ -1979,6 +1984,16 @@ class CrossTruss(Dataset):
         outputs_test[:, :, :, 1] = (outputs_test[:, :, :, 1] - self.min_y) / (
             self.max_y - self.min_y
         )
+
+        # post processing the outputs to fit to the domain
+        for i in range(outputs_train.shape[-1]):
+            outputs_train[:, :, :, [i]] *= inputs_train
+
+        for i in range(outputs_val.shape[-1]):
+            outputs_val[:, :, :, [i]] *= inputs_val
+
+        for i in range(outputs_test.shape[-1]):
+            outputs_test[:, :, :, [i]] *= inputs_test
 
         retrain = network_properties["retrain"]
         if retrain > 0:
