@@ -2,7 +2,7 @@
 	"training_properties": {
 		"training_samples": 1000,
 		"val_samples": 200,
-		"test_samples": 0,
+		"test_samples": 200,
 		"learning_rate": 0.001,
 		"epochs": 1000,
 		"batch_size": 20,

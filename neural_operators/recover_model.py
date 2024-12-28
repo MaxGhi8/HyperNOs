@@ -523,8 +523,14 @@ match which_example:
             example.max_model - example.min_model
         ) * prediction_tensor + example.min_model
 
-    case "burgers_zongyi" | "darcy_zongyi" | "navier_stokes_zongyi":
-        pass  # todo
+    case "darcy_zongyi":
+        input_tensor = example.a_normalizer.decode(input_tensor)
+        output_tensor = example.u_normalizer.decode(output_tensor)
+        prediction_tensor = example.u_normalizer.decode(prediction_tensor)
+
+    case "burgers_zongyi" | "navier_stokes_zongyi":
+        pass
+        # TODO burgers and navier
 
     case _:
         raise ValueError("The example chosen is not allowed")
