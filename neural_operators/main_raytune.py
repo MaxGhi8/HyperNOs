@@ -38,11 +38,13 @@ import torch
 # CNO imports
 from CNO.CNO_1d import CNO1d
 from CNO.CNO_2d import CNO2d
-from CNO.CNO_utilities import CNO_initialize_hyperparameters, CNO_load_data_model
+from CNO.CNO_utilities import CNO_initialize_hyperparameters
 
 # FNO imports
 from FNO.FNO_arc import FNO_1D, FNO_2D
-from FNO.FNO_utilities import FNO_initialize_hyperparameters, FNO_load_data_model
+from FNO.FNO_utilities import FNO_initialize_hyperparameters
+
+from data_benchmarks import NO_load_data_model
 from Loss_fun import H1relLoss, H1relLoss_1D, LprelLoss, MSELoss_rel, SmoothL1Loss_rel
 from ray import init, train, tune
 from ray.train import Checkpoint
@@ -239,27 +241,15 @@ def train_hyperparameter(config):
     print("Device: ", device)
 
     # Definition of the model
-    match arc:
-        case "FNO":
-            example = FNO_load_data_model(
-                which_example,
-                hyperparams_arc,
-                device,
-                batch_size,
-                training_samples,
-                in_dist,
-            )
-        case "CNO":
-            example = CNO_load_data_model(
-                which_example,
-                hyperparams_arc,
-                device,
-                batch_size,
-                training_samples,
-                in_dist,
-            )
+    example = NO_load_data_model(
+        which_example,
+        hyperparams_arc,
+        device,
+        batch_size,
+        training_samples,
+        in_dist,
+    )
 
-    # model = example.model
     match arc:
         case "FNO":
             if problem_dim == 1:
@@ -484,7 +474,7 @@ def main(num_samples, max_num_epochs=epochs):
     tuner = tune.Tuner(
         tune.with_resources(
             tune.with_parameters(train_hyperparameter),
-            resources={"cpu": 1, "gpu": 0.0},  # allocate resources for each trials
+            resources={"cpu": 4, "gpu": 0.5},  # allocate resources for each trials
         ),
         param_space=config,  # config is the hyperparameter space
         tune_config=tune.TuneConfig(

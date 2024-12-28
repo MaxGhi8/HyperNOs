@@ -18,6 +18,128 @@ from utilities import FourierFeatures, UnitGaussianNormalizer, find_file
 
 
 #########################################
+# function to load the data and model
+#########################################
+def NO_load_data_model(
+    which_example: str,
+    no_architecture,
+    device: torch.device,
+    batch_size: int,
+    training_samples: int,
+    in_dist: bool,
+    search_path: str = "/",
+):
+    """
+    Function to load the data and the model.
+    """
+    match which_example:
+        case "shear_layer":
+            example = ShearLayer(
+                no_architecture,
+                device,
+                batch_size,
+                training_samples,
+                in_dist=in_dist,
+                search_path=search_path,
+            )
+        case "poisson":
+            example = SinFrequency(
+                no_architecture,
+                device,
+                batch_size,
+                training_samples,
+                in_dist=in_dist,
+                search_path=search_path,
+            )
+        case "wave_0_5":
+            example = WaveEquation(
+                no_architecture,
+                device,
+                batch_size,
+                training_samples,
+                in_dist=in_dist,
+                search_path=search_path,
+            )
+        case "allen":
+            example = AllenCahn(
+                no_architecture,
+                device,
+                batch_size,
+                training_samples,
+                in_dist=in_dist,
+                search_path=search_path,
+            )
+        case "cont_tran":
+            example = ContTranslation(
+                no_architecture,
+                device,
+                batch_size,
+                training_samples,
+                in_dist=in_dist,
+                search_path=search_path,
+            )
+        case "disc_tran":
+            example = DiscContTranslation(
+                no_architecture,
+                device,
+                batch_size,
+                training_samples,
+                in_dist=in_dist,
+                search_path=search_path,
+            )
+        case "airfoil":
+            example = Airfoil(
+                no_architecture,
+                device,
+                batch_size,
+                training_samples,
+                in_dist=in_dist,
+                search_path=search_path,
+            )
+        case "darcy":
+            example = Darcy(
+                no_architecture,
+                device,
+                batch_size,
+                training_samples,
+                in_dist=in_dist,
+                search_path=search_path,
+            )
+
+        case "burgers_zongyi":
+            example = Burgers_Zongyi(
+                no_architecture, batch_size, search_path=search_path
+            )
+        case "darcy_zongyi":
+            example = Darcy_Zongyi(no_architecture, batch_size, search_path=search_path)
+        case "navier_stokes_zongyi":
+            pass  # TODO
+
+        case "fhn":
+            time = "_tf_100"
+            example = FitzHughNagumo(
+                time, no_architecture, batch_size, search_path=search_path
+            )
+        case "fhn_long":
+            time = "_tf_200"
+            example = FitzHughNagumo(
+                time, no_architecture, batch_size, search_path=search_path
+            )
+        case "hh":
+            example = HodgkinHuxley(
+                no_architecture, batch_size, search_path=search_path
+            )
+
+        case "crosstruss":
+            example = CrossTruss(no_architecture, batch_size, search_path=search_path)
+
+        case _:
+            raise ValueError("the variable which_example is typed wrong")
+
+    return example
+
+
+#########################################
 # Some functions needed for loading the Navier-Stokes data
 #########################################
 def samples_fft(u):
