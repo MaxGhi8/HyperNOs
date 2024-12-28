@@ -136,7 +136,7 @@ in_dist = config["in_dist"]
 
 
 #########################################
-# Hyperparameters
+# Hyperparameters from json file
 #########################################
 match arc:
     case "FNO":

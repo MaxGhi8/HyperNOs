@@ -1,5 +1,4 @@
-import torch
-from ray import tune
+from ray import tune, init
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.search.hyperopt import HyperOptSearch
 
@@ -31,12 +30,16 @@ def tune_hyperparameters(
             model.device,
         )
 
+    init(address="auto")
+
     scheduler = ASHAScheduler(
         metric="relative_loss",
         mode="min",
+        time_attr="training_iteration",
         max_t=max_epochs,
         grace_period=grace_period,
         reduction_factor=reduction_factor,
+        stop_last_trials=True,
     )
 
     search_alg = HyperOptSearch(metric="relative_loss", mode="min")
