@@ -14,7 +14,10 @@ def tune_hyperparameters(
     model_builder,
     dataset_builder,
     loss_fn,
-    default_hyper_params=[],
+    learning_rate=tune.quniform(1e-4, 1e-2, 1e-5),
+    weight_decay=tune.quniform(1e-6, 1e-3, 1e-6),
+    scheduler_step=tune.choice([10]),
+    scheduler_gamma=tune.quniform(0.75, 0.99, 0.01),
     num_samples=200,
     grace_period=250,
     reduction_factor=2,
@@ -22,17 +25,25 @@ def tune_hyperparameters(
     runs_per_cpu=0,
     runs_per_gpu=1,
 ):
+    config_space["learning_rate"] = learning_rate
+    config_space["weight_decay"] = weight_decay
+    config_space["scheduler_step"] = scheduler_step
+    config_space["scheduler_gamma"] = scheduler_gamma
+
     def train_fn(config):
         dataset = dataset_builder(config)
         model = model_builder(config)
         train_model(
-            config,
             model,
             dataset.train_loader,
             dataset.val_loader,
             loss_fn,
             max_epochs,
             model.device,
+            config["learning_rate"],
+            config["weight_decay"],
+            config["scheduler_step"],
+            config["scheduler_gamma"],
         )
 
     init(address="auto")
