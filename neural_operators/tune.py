@@ -15,6 +15,7 @@ def tune_hyperparameters(
     model_builder,
     dataset_builder,
     loss_fn,
+    default_hyper_params=[],
     num_samples=200,
     grace_period=250,
     reduction_factor=2,
@@ -47,7 +48,11 @@ def tune_hyperparameters(
         stop_last_trials=True,
     )
 
-    search_alg = HyperOptSearch(metric="relative_loss", mode="min")
+    search_alg = HyperOptSearch(
+        metric="relative_loss",
+        mode="min",
+        points_to_evaluate=default_hyper_params,
+    )
 
     tuner = tune.Tuner(
         tune.with_resources(

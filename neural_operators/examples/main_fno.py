@@ -4,6 +4,7 @@ from FNO.FNO_arc import FNO_2D
 from ray import tune
 from tune import tune_hyperparameters
 
+from neural_operators.FNO.FNO_utilities import FNO_initialize_hyperparameters
 from neural_operators.loss_fun import LprelLoss
 
 
@@ -33,6 +34,24 @@ def main():
         "weights_norm": tune.choice(["Kaiming"]),
         "width": tune.choice([4, 8, 16, 32, 64, 128, 256]),
     }
+
+    hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
+        "poisson", mode="default"
+    )
+
+    default_hyper_params = [
+        {
+            "learning_rate": hyperparams_train["learning_rate"],
+            "weight_decay": hyperparams_train["weight_decay"],
+            "scheduler_gamma": hyperparams_train["scheduler_gamma"],
+            "width": hyperparams_arc["width"],
+            "n_layers": hyperparams_arc["n_layers"],
+            "modes": hyperparams_arc["modes"],
+            "fun_act": hyperparams_arc["fun_act"],
+            "arc": hyperparams_arc["arc"],
+            "padding": hyperparams_arc["padding"],
+        }
+    ]
 
     model_builder = lambda config: FNO_2D(
         config["d_a"],
@@ -68,6 +87,7 @@ def main():
         model_builder,
         dataset_builder,
         loss_fn,
+        default_hyper_params,
         runs_per_cpu=0,
         runs_per_gpu=1,
     )
