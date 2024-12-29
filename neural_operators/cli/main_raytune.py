@@ -36,8 +36,7 @@ import tempfile
 import torch
 
 # CNO imports
-from CNO.CNO_1d import CNO1d
-from CNO.CNO_2d import CNO2d
+from CNO.CNO import CNO
 from CNO.CNO_utilities import CNO_initialize_hyperparameters
 from datasets import NO_load_data_model
 
@@ -284,32 +283,20 @@ def train_hyperparameter(config):
                     retrain_fno,
                 )
         case "CNO":
-            if problem_dim == 1:
-                model = CNO1d(
-                    in_dim,
-                    out_dim,
-                    size,
-                    n_layers,
-                    n_res,
-                    n_res_neck,
-                    chan_mul,
-                    kernel_size,
-                    bn,
-                    device,
-                )
-            elif problem_dim == 2:
-                model = CNO2d(
-                    in_dim,
-                    out_dim,
-                    size,
-                    n_layers,
-                    n_res,
-                    n_res_neck,
-                    chan_mul,
-                    kernel_size,
-                    bn,
-                    device,
-                )
+            model = CNO(
+                problem_dim,
+                in_dim,
+                out_dim,
+                size,
+                n_layers,
+                n_res,
+                n_res_neck,
+                chan_mul,
+                kernel_size,
+                bn,
+                device,
+            )
+
     # Wrap the models
     match which_example:
         case "airfoil":

@@ -36,8 +36,7 @@ import os
 import torch
 
 # CNO imports
-from CNO.CNO_1d import CNO1d
-from CNO.CNO_2d import CNO2d
+from CNO.CNO import CNO
 from CNO.CNO_utilities import CNO_initialize_hyperparameters
 
 # FNO imports
@@ -286,32 +285,19 @@ match arc:
                 retrain,
             )
     case "CNO":
-        if problem_dim == 1:
-            model = CNO1d(
-                in_dim,
-                out_dim,
-                size,
-                n_layers,
-                n_res,
-                n_res_neck,
-                chan_mul,
-                kernel_size,
-                bn,
-                device,
-            )
-        elif problem_dim == 2:
-            model = CNO2d(
-                in_dim,
-                out_dim,
-                size,
-                n_layers,
-                n_res,
-                n_res_neck,
-                chan_mul,
-                kernel_size,
-                bn,
-                device,
-            )
+        model = CNO(
+            problem_dim,
+            in_dim,
+            out_dim,
+            size,
+            n_layers,
+            n_res,
+            n_res_neck,
+            chan_mul,
+            kernel_size,
+            bn,
+            device,
+        )
 
 # Wrap the models
 match which_example:
