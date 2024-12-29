@@ -14,6 +14,7 @@ def tune_hyperparameters(
     model_builder,
     dataset_builder,
     loss_fn,
+    default_hyper_params=[],
     learning_rate=tune.quniform(1e-4, 1e-2, 1e-5),
     weight_decay=tune.quniform(1e-6, 1e-3, 1e-6),
     scheduler_step=tune.choice([10]),
@@ -82,14 +83,25 @@ def tune_hyperparameters(
     return results.get_best_result("relative_loss", "min")
 
 
-def train_model(config, model, train_loader, val_loader, loss_fn, max_epochs, device):
+def train_model(
+    model,
+    train_loader,
+    val_loader,
+    loss_fn,
+    max_epochs,
+    device,
+    learning_rate,
+    weight_decay,
+    scheduler_step,
+    scheduler_gamma,
+):
     optimizer = torch.optim.AdamW(
         model.parameters(),
-        lr=config["learning_rate"],
-        weight_decay=config["weight_decay"],
+        lr=learning_rate,
+        weight_decay=weight_decay,
     )
     scheduler = torch.optim.lr_scheduler.StepLR(
-        optimizer, step_size=config["scheduler_step"], gamma=config["scheduler_gamma"]
+        optimizer, step_size=scheduler_step, gamma=scheduler_gamma
     )
 
     start_epoch = 0

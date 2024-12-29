@@ -1,6 +1,6 @@
 import torch
 from datasets import Darcy
-from neural_operators.loss_fun import LprelLoss
+from loss_fun import LprelLoss
 from ray import tune
 from tune import tune_hyperparameters
 
@@ -37,6 +37,7 @@ def main():
     }
 
     model_builder = lambda config: CNO(
+        2,
         config["in_dim"],
         config["out_dim"],
         config["in_size"],
@@ -54,7 +55,6 @@ def main():
             "FourierF": config["FourierF"],
             "retrain": config["retrain"],
         },
-        device,
         config["batch_size"],
         search_path="/",
     )

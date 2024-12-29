@@ -36,6 +36,7 @@ class CNO_LReLu(nn.Module):
                 x, size=(1, self.out_size), mode="bicubic", antialias=True
             )
             return x[:, :, 0]
+
         elif self.problem_dim == 2:
             x = F.interpolate(
                 x,
@@ -48,6 +49,7 @@ class CNO_LReLu(nn.Module):
                 x, size=(self.out_size, self.out_size), mode="bicubic", antialias=True
             )
             return x
+
         else:
             raise ValueError("Problem dimension must be 1 or 2")
 
@@ -477,6 +479,7 @@ class CNO(nn.Module):
         for i in range(self.N_layers):
             self.res_nets.append(
                 ResNet(
+                    problem_dim=self.problem_dim,
                     channels=self.encoder_features[i],
                     size=self.encoder_sizes[i],
                     num_blocks=self.N_res,
@@ -486,6 +489,7 @@ class CNO(nn.Module):
             )
 
         self.res_net_neck = ResNet(
+            problem_dim=self.problem_dim,
             channels=self.encoder_features[self.N_layers],
             size=self.encoder_sizes[self.N_layers],
             num_blocks=self.N_res_neck,
