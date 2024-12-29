@@ -1,9 +1,10 @@
 import torch
+from datasets import Airfoil
 from FNO.FNO_arc import FNO_2D
-from data_benchmarks import Airfoil
-from neural_operators.loss_fun import LprelLoss
 from ray import tune
 from tune import tune_hyperparameters
+
+from neural_operators.loss_fun import LprelLoss
 
 
 def main():

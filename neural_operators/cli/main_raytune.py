@@ -39,19 +39,12 @@ import torch
 from CNO.CNO_1d import CNO1d
 from CNO.CNO_2d import CNO2d
 from CNO.CNO_utilities import CNO_initialize_hyperparameters
+from datasets import NO_load_data_model
 
 # FNO imports
 from FNO.FNO_arc import FNO_1D, FNO_2D
 from FNO.FNO_utilities import FNO_initialize_hyperparameters
-
-from data_benchmarks import NO_load_data_model
-from loss_fun import (
-    H1relLoss,
-    H1relLoss_1D,
-    LprelLoss,
-    MSELoss_rel,
-    SmoothL1Loss_rel,
-)
+from loss_fun import H1relLoss, H1relLoss_1D, LprelLoss, MSELoss_rel, SmoothL1Loss_rel
 from ray import init, train, tune
 from ray.train import Checkpoint
 from ray.tune.schedulers import ASHAScheduler
@@ -250,7 +243,6 @@ def train_hyperparameter(config):
     example = NO_load_data_model(
         which_example,
         hyperparams_arc,
-        device,
         batch_size,
         training_samples,
         in_dist,

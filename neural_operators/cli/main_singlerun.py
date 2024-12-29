@@ -38,11 +38,11 @@ import torch
 # CNO imports
 from CNO.CNO_1d import CNO1d
 from CNO.CNO_2d import CNO2d
-from CNO.CNO_utilities import CNO_initialize_hyperparameters, CNO_load_data_model
+from CNO.CNO_utilities import CNO_initialize_hyperparameters
 
 # FNO imports
 from FNO.FNO_arc import FNO_1D, FNO_2D
-from FNO.FNO_utilities import FNO_initialize_hyperparameters, FNO_load_data_model
+from FNO.FNO_utilities import FNO_initialize_hyperparameters
 from loss_fun import H1relLoss, H1relLoss_1D, LprelLoss
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
@@ -50,6 +50,8 @@ from train_fun import test_fun, test_fun_multiout, train_fun
 from utilities import count_params, plot_data
 from wrappers.AirfoilWrapper import AirfoilWrapper
 from wrappers.CrossTrussWrapper import CrossTrussWrapper
+
+from neural_operators.datasets import NO_load_data_model
 
 #########################################
 # default values
@@ -221,25 +223,13 @@ match arc:
 #########################################
 # Data and model loader, depending on the example chosen
 #########################################
-match arc:
-    case "FNO":
-        example = FNO_load_data_model(
-            which_example,
-            hyperparams_arc,
-            device,
-            batch_size,
-            training_samples,
-            in_dist,
-        )
-    case "CNO":
-        example = CNO_load_data_model(
-            which_example,
-            hyperparams_arc,
-            device,
-            batch_size,
-            training_samples,
-            in_dist,
-        )
+example = NO_load_data_model(
+    which_example,
+    hyperparams_arc,
+    batch_size,
+    training_samples,
+    in_dist,
+)
 
 train_loader = example.train_loader
 val_loader = example.val_loader

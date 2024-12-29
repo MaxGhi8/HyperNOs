@@ -35,8 +35,7 @@ import time
 import matplotlib.pyplot as plt
 import torch
 from beartype import beartype
-from CNO.CNO_utilities import CNO_load_data_model
-from FNO.FNO_utilities import FNO_load_data_model
+from cli.utilities_plot import test_plot_samples
 from jaxtyping import Float, jaxtyped
 from loss_fun import (
     H1relLoss,
@@ -50,7 +49,8 @@ from scipy.io import savemat
 from torch import Tensor
 from train_fun import test_fun, test_fun_tensors
 from utilities import count_params
-from utilities_plot import test_plot_samples
+
+from neural_operators.datasets import NO_load_data_model
 
 #########################################
 # default values
@@ -252,26 +252,13 @@ match p:
 #########################################
 # Data loader
 #########################################
-match arc:
-    case "FNO":
-        print("Loading data for FNO")
-        example = FNO_load_data_model(
-            which_example,
-            hyperparams_arc,
-            device,
-            batch_size,
-            training_samples,
-            in_dist,
-        )
-    case "CNO":
-        example = CNO_load_data_model(
-            which_example,
-            hyperparams_arc,
-            device,
-            batch_size,
-            training_samples,
-            in_dist,
-        )
+example = NO_load_data_model(
+    which_example,
+    hyperparams_arc,
+    batch_size,
+    training_samples,
+    in_dist,
+)
 
 train_loader = example.train_loader
 val_loader = example.val_loader

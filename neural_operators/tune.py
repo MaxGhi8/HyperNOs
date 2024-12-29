@@ -1,8 +1,13 @@
-from ray import tune, init
+import os
+import tempfile
+
+import torch
+from ray import init, train, tune
+from ray.train import Checkpoint
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.search.hyperopt import HyperOptSearch
 
-from neural_operators.train import train_model
+from neural_operators.train import train_epoch
 
 
 def tune_hyperparameters(
@@ -60,3 +65,60 @@ def tune_hyperparameters(
 
     results = tuner.fit()
     return results.get_best_result("relative_loss", "min")
+
+
+def train_model(config, model, train_loader, val_loader, loss_fn, max_epochs, device):
+    optimizer = torch.optim.AdamW(
+        model.parameters(),
+        lr=config["learning_rate"],
+        weight_decay=config["weight_decay"],
+    )
+    scheduler = torch.optim.lr_scheduler.StepLR(
+        optimizer, step_size=config["scheduler_step"], gamma=config["scheduler_gamma"]
+    )
+
+    start_epoch = 0
+    checkpoint = train.get_checkpoint()
+    if checkpoint:
+        with checkpoint.as_directory() as checkpoint_dir:
+            checkpoint_dict = torch.load(os.path.join(checkpoint_dir, "checkpoint.pt"))
+            start_epoch = checkpoint_dict["epoch"] + 1
+            model.load_state_dict(checkpoint_dict["model_state"])
+            optimizer.load_state_dict(checkpoint_dict["optimizer_state"])
+
+    for ep in range(start_epoch, max_epochs):
+        # Train the model for one epoch
+        train_epoch(model, train_loader, optimizer, scheduler, loss_fn, device)
+
+        # Validate the model for one epoch
+        acc = validate_epoch(model, val_loader, loss_fn, device)
+
+        if ep % 500 == 0 or ep == max_epochs - 1:
+            with tempfile.TemporaryDirectory() as temp_checkpoint_dir:
+                path = os.path.join(temp_checkpoint_dir, "checkpoint.pt")
+                torch.save((model.state_dict(), optimizer.state_dict()), path)
+                checkpoint = Checkpoint.from_directory(temp_checkpoint_dir)
+                train.report({"relative_loss": acc}, checkpoint=checkpoint)
+        else:
+            train.report({"relative_loss": acc})
+
+
+def validate_epoch(
+    model,
+    val_loader,
+    loss_fn,
+    device: torch.device,
+):
+    with torch.no_grad():
+        model.eval()
+        loss = 0.0
+        examples_count = 0
+
+        for input_batch, output_batch in val_loader:
+            input_batch = input_batch.to(device)
+            examples_count += input_batch.size(0)
+            output_batch = output_batch.to(device)
+            output_pred_batch = model.forward(input_batch)
+            loss += loss_fn(output_pred_batch, output_batch).item()
+
+    return loss / examples_count

@@ -1,5 +1,5 @@
 import torch
-from data_benchmarks import Darcy
+from datasets import Darcy
 from neural_operators.loss_fun import LprelLoss
 from ray import tune
 from tune import tune_hyperparameters

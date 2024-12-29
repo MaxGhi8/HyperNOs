@@ -2,8 +2,6 @@
 This file contains the necessary functions to load the data for the Fourier Neural Operator benchmarks.
 """
 
-import sys
-
 import h5py
 import numpy as np
 import scipy
@@ -12,8 +10,6 @@ from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, TensorDataset
-
-sys.path.append("../")
 from utilities import FourierFeatures, UnitGaussianNormalizer, find_file
 
 
@@ -23,7 +19,6 @@ from utilities import FourierFeatures, UnitGaussianNormalizer, find_file
 def NO_load_data_model(
     which_example: str,
     no_architecture,
-    device: torch.device,
     batch_size: int,
     training_samples: int,
     in_dist: bool,
@@ -36,7 +31,6 @@ def NO_load_data_model(
         case "shear_layer":
             example = ShearLayer(
                 no_architecture,
-                device,
                 batch_size,
                 training_samples,
                 in_dist=in_dist,
@@ -45,7 +39,6 @@ def NO_load_data_model(
         case "poisson":
             example = SinFrequency(
                 no_architecture,
-                device,
                 batch_size,
                 training_samples,
                 in_dist=in_dist,
@@ -54,7 +47,6 @@ def NO_load_data_model(
         case "wave_0_5":
             example = WaveEquation(
                 no_architecture,
-                device,
                 batch_size,
                 training_samples,
                 in_dist=in_dist,
@@ -63,7 +55,6 @@ def NO_load_data_model(
         case "allen":
             example = AllenCahn(
                 no_architecture,
-                device,
                 batch_size,
                 training_samples,
                 in_dist=in_dist,
@@ -72,7 +63,6 @@ def NO_load_data_model(
         case "cont_tran":
             example = ContTranslation(
                 no_architecture,
-                device,
                 batch_size,
                 training_samples,
                 in_dist=in_dist,
@@ -81,7 +71,6 @@ def NO_load_data_model(
         case "disc_tran":
             example = DiscContTranslation(
                 no_architecture,
-                device,
                 batch_size,
                 training_samples,
                 in_dist=in_dist,
@@ -90,7 +79,6 @@ def NO_load_data_model(
         case "airfoil":
             example = Airfoil(
                 no_architecture,
-                device,
                 batch_size,
                 training_samples,
                 in_dist=in_dist,
@@ -99,7 +87,6 @@ def NO_load_data_model(
         case "darcy":
             example = Darcy(
                 no_architecture,
-                device,
                 batch_size,
                 training_samples,
                 in_dist=in_dist,
@@ -282,7 +269,6 @@ class ShearLayer:
     def __init__(
         self,
         network_properties,
-        device,
         batch_size,
         training_samples,
         in_size=64,
@@ -458,7 +444,6 @@ class SinFrequency:
     def __init__(
         self,
         network_properties,
-        device,
         batch_size,
         training_samples=1024,
         s=64,
@@ -644,7 +629,6 @@ class WaveEquation:
     def __init__(
         self,
         network_properties,
-        device,
         batch_size,
         training_samples=1024,
         s=64,
@@ -818,7 +802,6 @@ class AllenCahn:
     def __init__(
         self,
         network_properties,
-        device,
         batch_size,
         training_samples=1024,
         s=64,
@@ -982,7 +965,6 @@ class ContTranslation:
     def __init__(
         self,
         network_properties,
-        device,
         batch_size,
         training_samples=512,
         s=64,
@@ -1148,7 +1130,6 @@ class DiscContTranslation:
     def __init__(
         self,
         network_properties,
-        device,
         batch_size,
         training_samples=512,
         s=64,
@@ -1316,7 +1297,6 @@ class Airfoil:
     def __init__(
         self,
         network_properties,
-        device,
         batch_size,
         training_samples=512,
         s=128,
@@ -1487,7 +1467,6 @@ class Darcy:
     def __init__(
         self,
         network_properties,
-        device,
         batch_size,
         training_samples=256,
         s=64,
