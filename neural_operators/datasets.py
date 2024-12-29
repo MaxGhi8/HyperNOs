@@ -139,11 +139,13 @@ def concat_datasets(*datasets):
     class ConcatenatedDataset:
         def __init__(self):
             self.train_loader = flatten(
-                map(lambda dataset: dataset.train_loader, datasets)
+                list(map(lambda dataset: dataset.train_loader, datasets))
             )
-            self.val_loader = flatten(map(lambda dataset: dataset.val_loader, datasets))
+            self.val_loader = flatten(
+                list(map(lambda dataset: dataset.val_loader, datasets))
+            )
             self.test_loader = flatten(
-                map(lambda dataset: dataset.test_loader, datasets)
+                list(map(lambda dataset: dataset.test_loader, datasets))
             )
 
     return ConcatenatedDataset()
