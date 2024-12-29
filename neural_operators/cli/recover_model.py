@@ -31,6 +31,8 @@ import argparse
 import json
 import os
 import time
+import sys
+sys.path.append("..")
 
 import matplotlib.pyplot as plt
 import torch
@@ -50,7 +52,7 @@ from torch import Tensor
 from train_fun import test_fun, test_fun_tensors
 from utilities import count_params
 
-from neural_operators.datasets import NO_load_data_model
+from datasets import NO_load_data_model
 
 #########################################
 # default values
@@ -135,7 +137,7 @@ in_dist = config["in_dist"]
 Norm_dict = {"L1": 0, "L2": 1, "H1": 2, "L1_SMOOTH": 3, "MSE": 4}
 
 # upload the model and the hyperparameters
-model_folder = f"./{arc}/TrainedModels/"
+model_folder = f"../{arc}/TrainedModels/"
 description_test = "test_" + exp_norm
 folder = (
     model_folder

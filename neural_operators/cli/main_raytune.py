@@ -32,6 +32,8 @@ This is the main file for hyperparameter search of the Neural Operator with the 
 import argparse
 import os
 import tempfile
+import sys
+sys.path.append("..")
 
 import torch
 

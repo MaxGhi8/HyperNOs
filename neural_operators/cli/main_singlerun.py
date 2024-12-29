@@ -32,6 +32,8 @@ This is the main file for training the Neural Operator with the FNO architecture
 import argparse
 import json
 import os
+import sys
+sys.path.append("..")
 
 import torch
 
@@ -50,7 +52,7 @@ from utilities import count_params, plot_data
 from wrappers.AirfoilWrapper import AirfoilWrapper
 from wrappers.CrossTrussWrapper import CrossTrussWrapper
 
-from neural_operators.datasets import NO_load_data_model
+from datasets import NO_load_data_model
 
 #########################################
 # default values

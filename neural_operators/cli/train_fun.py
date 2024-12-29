@@ -4,6 +4,8 @@ This is useful to clear the code in the main_singlerun.py file;
 it is also needed for the RayTune implementation.
 """
 
+import sys
+sys.path.append("..")
 import torch
 from loss_fun import (
     H1relLoss,

@@ -536,7 +536,7 @@ class CNO(nn.Module):
                 x = torch.cat((x, self.ED_expansion[self.N_layers - i](skip[-i])), 1)
 
             #! if self.add_inv:
-            x = self.decoder_inv[i](x)  #!
+            # x = self.decoder_inv[i](x)  #!
 
             # Apply (U) block
             x = self.decoder[i](x)

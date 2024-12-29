@@ -20,6 +20,8 @@ Plotting of input/output and prediction for the trained model.
     hh                   : Hodgkin-Huxley equations
 """
 
+import sys
+sys.path.append("..")
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
