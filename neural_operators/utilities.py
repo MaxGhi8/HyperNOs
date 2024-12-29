@@ -406,6 +406,7 @@ def plot_data(
 
         case "fhn":
             if "input" in title.lower():
+                data_plot = example.a_normalizer.decode(data_plot)
                 plot_data_fhn_input(
                     example,
                     data_plot,

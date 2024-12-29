@@ -22,7 +22,7 @@ def CNO_initialize_hyperparameters(which_example: str, mode: str):
         The mode to use to load the hyperparameters (this can be either 'best' or 'default').
     """
     # Here I use relative path
-    config_directory = "../CNO/configurations/"
+    config_directory = "./CNO/configurations/"
     config_path = find_file(f"{mode}_{which_example}.json", config_directory)
 
     # Load the configuration from the JSON file
