@@ -4,12 +4,12 @@ from neural_operators.loss_fun import LprelLoss
 from ray import tune
 from tune import tune_hyperparameters
 
-from CNO.CNO_2d import CNO2d
+from CNO.CNO import CNO
 
 
 def main():
 
-    device = torch.device("cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     config_space = {
         "FourierF": tune.choice([0]),
@@ -36,7 +36,7 @@ def main():
         "weight_decay": tune.quniform(1e-6, 1e-3, 1e-6),
     }
 
-    model_builder = lambda config: CNO2d(
+    model_builder = lambda config: CNO(
         config["in_dim"],
         config["out_dim"],
         config["in_size"],
@@ -67,7 +67,7 @@ def main():
         dataset_builder,
         loss_fn,
         runs_per_cpu=8,
-        runs_per_gpu=0,
+        runs_per_gpu=1,
     )
 
 

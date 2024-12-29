@@ -12,25 +12,44 @@ from torch import Tensor
 # Activation Function:
 #########################################
 class CNO_LReLu(nn.Module):
-    def __init__(self, in_size: int, out_size: int):
+    def __init__(self, problem_dim: int, in_size: int, out_size: int):
         super(CNO_LReLu, self).__init__()
 
+        self.problem_dim = problem_dim
         self.in_size = in_size
         self.out_size = out_size
         self.act = nn.LeakyReLU()
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "batch channel in_size in_size"]
-    ) -> Float[Tensor, "batch channel out_size out_size"]:
-        x = F.interpolate(
-            x, size=(2 * self.in_size, 2 * self.in_size), mode="bicubic", antialias=True
-        )
-        x = self.act(x)
-        x = F.interpolate(
-            x, size=(self.out_size, self.out_size), mode="bicubic", antialias=True
-        )
-        return x
+        self, x: Float[Tensor, "batch channel *in_size"]
+    ) -> Float[Tensor, "batch channel *out_size"]:
+        if self.problem_dim == 1:
+            x = F.interpolate(
+                x.unsqueeze(2),
+                size=(1, 2 * self.in_size),
+                mode="bicubic",
+                antialias=True,
+            )
+            x = self.act(x)
+            x = F.interpolate(
+                x, size=(1, self.out_size), mode="bicubic", antialias=True
+            )
+            return x[:, :, 0]
+        elif self.problem_dim == 2:
+            x = F.interpolate(
+                x,
+                size=(2 * self.in_size, 2 * self.in_size),
+                mode="bicubic",
+                antialias=True,
+            )
+            x = self.act(x)
+            x = F.interpolate(
+                x, size=(self.out_size, self.out_size), mode="bicubic", antialias=True
+            )
+            return x
+        else:
+            raise ValueError("Problem dimension must be 1 or 2")
 
 
 #########################################
@@ -39,6 +58,7 @@ class CNO_LReLu(nn.Module):
 class CNOBlock(nn.Module):
     def __init__(
         self,
+        problem_dim: int,
         in_channels: int,
         out_channels: int,
         in_size: int,
@@ -48,6 +68,7 @@ class CNOBlock(nn.Module):
     ):
         super(CNOBlock, self).__init__()
 
+        self.problem_dim = problem_dim
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.in_size = in_size
@@ -56,26 +77,45 @@ class CNOBlock(nn.Module):
         self.padding = self.kernel_size // 2
         self.use_bn = use_bn
 
-        self.convolution = torch.nn.Conv2d(
-            in_channels=self.in_channels,
-            out_channels=self.out_channels,
-            kernel_size=self.kernel_size,
-            padding=self.padding,
-            bias=not self.use_bn,
-        )
+        if self.problem_dim == 1:
+            self.convolution = torch.nn.Conv1d(
+                in_channels=self.in_channels,
+                out_channels=self.out_channels,
+                kernel_size=self.kernel_size,
+                padding=self.padding,
+                bias=not self.use_bn,
+            )
 
-        if use_bn:
-            self.batch_norm = nn.BatchNorm2d(self.out_channels)
+            if self.use_bn:
+                self.batch_norm = nn.BatchNorm1d(self.out_channels)
+            else:
+                self.batch_norm = nn.Identity()
+
+        elif self.problem_dim == 2:
+            self.convolution = torch.nn.Conv2d(
+                in_channels=self.in_channels,
+                out_channels=self.out_channels,
+                kernel_size=self.kernel_size,
+                padding=self.padding,
+                bias=not self.use_bn,
+            )
+
+            if use_bn:
+                self.batch_norm = nn.BatchNorm2d(self.out_channels)
+            else:
+                self.batch_norm = nn.Identity()
         else:
-            self.batch_norm = nn.Identity()
+            raise ValueError("Problem dimension must be 1 or 2")
 
         # Up/Down-sampling happens inside Activation
-        self.act = CNO_LReLu(in_size=self.in_size, out_size=self.out_size)
+        self.act = CNO_LReLu(
+            self.problem_dim, in_size=self.in_size, out_size=self.out_size
+        )
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "batch in_channel in_size in_size"]
-    ) -> Float[Tensor, "batch out_channel out_size out_size"]:
+        self, x: Float[Tensor, "batch in_channel *in_size"]
+    ) -> Float[Tensor, "batch out_channel *out_size"]:
         x = self.convolution(x)
         x = self.batch_norm(x)
         return self.act(x)
@@ -85,9 +125,12 @@ class CNOBlock(nn.Module):
 # Lift/Project Block:
 #########################################
 class LiftProjectBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, size, latent_dim=64, kernel_size=3):
+    def __init__(
+        self, problem_dim, in_channels, out_channels, size, latent_dim=64, kernel_size=3
+    ):
         super(LiftProjectBlock, self).__init__()
 
+        self.problem_dim = problem_dim
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.size = size
@@ -96,6 +139,7 @@ class LiftProjectBlock(nn.Module):
         self.padding = self.kernel_size // 2
 
         self.inter_CNOBlock = CNOBlock(
+            problem_dim=self.problem_dim,
             in_channels=self.in_channels,
             out_channels=self.latent_dim,
             in_size=self.size,
@@ -104,17 +148,27 @@ class LiftProjectBlock(nn.Module):
             use_bn=False,
         )
 
-        self.convolution = torch.nn.Conv2d(
-            in_channels=self.latent_dim,
-            out_channels=self.out_channels,
-            kernel_size=self.kernel_size,
-            padding=self.padding,
-        )
+        if self.problem_dim == 1:
+            self.convolution = torch.nn.Conv1d(
+                in_channels=self.latent_dim,
+                out_channels=self.out_channels,
+                kernel_size=self.kernel_size,
+                padding=self.padding,
+            )
+        elif self.problem_dim == 2:
+            self.convolution = torch.nn.Conv2d(
+                in_channels=self.latent_dim,
+                out_channels=self.out_channels,
+                kernel_size=self.kernel_size,
+                padding=self.padding,
+            )
+        else:
+            raise ValueError("Problem dimension must be 1 or 2")
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "batch in_channel size size"]
-    ) -> Float[Tensor, "batch out_channel size size"]:
+        self, x: Float[Tensor, "batch in_channel *size"]
+    ) -> Float[Tensor, "batch out_channel *size"]:
         x = self.inter_CNOBlock(x)
         x = self.convolution(x)
         return x
@@ -124,45 +178,71 @@ class LiftProjectBlock(nn.Module):
 # Residual Block:
 #########################################
 class ResidualBlock(nn.Module):
-    def __init__(self, channels, size, kernel_size=3, use_bn=True):
+    def __init__(self, problem_dim, channels, size, kernel_size=3, use_bn=True):
         super(ResidualBlock, self).__init__()
 
+        self.problem_dim = problem_dim
         self.channels = channels
         self.size = size
         self.kernel_size = kernel_size
         self.padding = self.kernel_size // 2
         self.use_bn = use_bn
 
-        self.convolution1 = torch.nn.Conv2d(
-            in_channels=self.channels,
-            out_channels=self.channels,
-            kernel_size=self.kernel_size,
-            padding=self.padding,
-            bias=not self.use_bn,
-        )
-        self.convolution2 = torch.nn.Conv2d(
-            in_channels=self.channels,
-            out_channels=self.channels,
-            kernel_size=self.kernel_size,
-            padding=self.padding,
-            bias=not self.use_bn,
-        )
+        if self.problem_dim == 1:
+            self.convolution1 = torch.nn.Conv1d(
+                in_channels=self.channels,
+                out_channels=self.channels,
+                kernel_size=self.kernel_size,
+                padding=self.padding,
+                bias=not self.use_bn,
+            )
+            self.convolution2 = torch.nn.Conv1d(
+                in_channels=self.channels,
+                out_channels=self.channels,
+                kernel_size=self.kernel_size,
+                padding=self.padding,
+                bias=not self.use_bn,
+            )
 
-        if self.use_bn:
-            self.batch_norm1 = nn.BatchNorm2d(self.channels)
-            self.batch_norm2 = nn.BatchNorm2d(self.channels)
+            if self.use_bn:
+                self.batch_norm1 = nn.BatchNorm1d(self.channels)
+                self.batch_norm2 = nn.BatchNorm1d(self.channels)
 
-        else:
-            self.batch_norm1 = nn.Identity()
-            self.batch_norm2 = nn.Identity()
+            else:
+                self.batch_norm1 = nn.Identity()
+                self.batch_norm2 = nn.Identity()
+
+        elif self.problem_dim == 2:
+            self.convolution1 = torch.nn.Conv2d(
+                in_channels=self.channels,
+                out_channels=self.channels,
+                kernel_size=self.kernel_size,
+                padding=self.padding,
+                bias=not self.use_bn,
+            )
+            self.convolution2 = torch.nn.Conv2d(
+                in_channels=self.channels,
+                out_channels=self.channels,
+                kernel_size=self.kernel_size,
+                padding=self.padding,
+                bias=not self.use_bn,
+            )
+
+            if self.use_bn:
+                self.batch_norm1 = nn.BatchNorm2d(self.channels)
+                self.batch_norm2 = nn.BatchNorm2d(self.channels)
+
+            else:
+                self.batch_norm1 = nn.Identity()
+                self.batch_norm2 = nn.Identity()
 
         # Up/Down-sampling happens inside Activation
-        self.act = CNO_LReLu(in_size=self.size, out_size=self.size)
+        self.act = CNO_LReLu(self.problem_dim, in_size=self.size, out_size=self.size)
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "batch channel in_size in_size"]
-    ) -> Float[Tensor, "batch channel out_size out_size"]:
+        self, x: Float[Tensor, "batch channel *in_size"]
+    ) -> Float[Tensor, "batch channel *out_size"]:
         out = self.convolution1(x)
         out = self.batch_norm1(out)
         out = self.act(out)
@@ -175,9 +255,12 @@ class ResidualBlock(nn.Module):
 # ResNet:
 #########################################
 class ResNet(nn.Module):
-    def __init__(self, channels, size, num_blocks, kernel_size=3, use_bn=True):
+    def __init__(
+        self, problem_dim, channels, size, num_blocks, kernel_size=3, use_bn=True
+    ):
         super(ResNet, self).__init__()
 
+        self.problem_dim = problem_dim
         self.channels = channels
         self.size = size
         self.num_blocks = num_blocks
@@ -188,6 +271,7 @@ class ResNet(nn.Module):
         for _ in range(self.num_blocks):
             self.res_nets.append(
                 ResidualBlock(
+                    problem_dim=problem_dim,
                     channels=channels,
                     size=size,
                     kernel_size=self.kernel_size,
@@ -199,8 +283,8 @@ class ResNet(nn.Module):
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "batch channel in_size in_size"]
-    ) -> Float[Tensor, "batch channel out_size out_size"]:
+        self, x: Float[Tensor, "batch channel *in_size"]
+    ) -> Float[Tensor, "batch channel *out_size"]:
         for i in range(self.num_blocks):
             x = self.res_nets[i](x)
         return x
@@ -209,9 +293,10 @@ class ResNet(nn.Module):
 #########################################
 # CNO:
 #########################################
-class CNO2d(nn.Module):
+class CNO(nn.Module):
     def __init__(
         self,
+        problem_dim,
         in_dim,
         out_dim,
         size,
@@ -224,7 +309,7 @@ class CNO2d(nn.Module):
         device=torch.device("cpu"),
     ):
         """
-        CNO2d: Convolutional Neural Operator 2D
+        CNO: Convolutional Neural Operator
 
         Parameters:
 
@@ -255,10 +340,10 @@ class CNO2d(nn.Module):
         use_bn: bool
             choose if Batch Normalization is used.
         """
-        super(CNO2d, self).__init__()
+        super(CNO, self).__init__()
 
-        self.problem_dim = 2  # 2D problem
-        self.N_layers = int(N_layers)
+        self.problem_dim = problem_dim
+        self.N_layers = N_layers
         self.lift_dim = (
             channel_multiplier // 2
         )  # Input is lifted to the half of channel_multiplier dimension
@@ -266,6 +351,7 @@ class CNO2d(nn.Module):
         self.out_dim = out_dim
         self.channel_multiplier = channel_multiplier  # The growth of the channels
         self.kernel_size = kernel_size
+        self.use_bn = use_bn
 
         #### Num of channels/features - evolution
         # Encoder (at every layer the number of channels is doubled)
@@ -299,6 +385,7 @@ class CNO2d(nn.Module):
 
         #### Define Lift and Project blocks
         self.lift = LiftProjectBlock(
+            problem_dim=self.problem_dim,
             in_channels=in_dim,
             out_channels=self.encoder_features[0],
             size=size,
@@ -306,6 +393,7 @@ class CNO2d(nn.Module):
         )
 
         self.project = LiftProjectBlock(
+            problem_dim=self.problem_dim,
             in_channels=self.encoder_features[0]
             + self.decoder_features_out[-1],  # concatenation with the ResNet
             out_channels=out_dim,
@@ -317,12 +405,13 @@ class CNO2d(nn.Module):
         self.encoder = nn.ModuleList(
             [
                 CNOBlock(
+                    problem_dim=self.problem_dim,
                     in_channels=self.encoder_features[i],
                     out_channels=self.encoder_features[i + 1],
                     in_size=self.encoder_sizes[i],
                     out_size=self.encoder_sizes[i + 1],
                     kernel_size=self.kernel_size,
-                    use_bn=use_bn,
+                    use_bn=self.use_bn,
                 )
                 for i in range(self.N_layers)
             ]
@@ -333,6 +422,7 @@ class CNO2d(nn.Module):
         self.ED_expansion = nn.ModuleList(
             [
                 CNOBlock(
+                    problem_dim=self.problem_dim,
                     in_channels=self.encoder_features[i],
                     out_channels=self.encoder_features[i],
                     in_size=self.encoder_sizes[i],
@@ -347,6 +437,7 @@ class CNO2d(nn.Module):
         self.decoder = nn.ModuleList(
             [
                 CNOBlock(
+                    problem_dim=self.problem_dim,
                     in_channels=self.decoder_features_in[i],
                     out_channels=self.decoder_features_out[i],
                     in_size=self.decoder_sizes[i],
@@ -365,6 +456,7 @@ class CNO2d(nn.Module):
         self.decoder_inv = nn.ModuleList(
             [
                 CNOBlock(
+                    problem_dim=self.problem_dim,
                     in_channels=self.inv_features[i],
                     out_channels=self.inv_features[i],
                     in_size=self.decoder_sizes[i],
@@ -389,7 +481,7 @@ class CNO2d(nn.Module):
                     size=self.encoder_sizes[i],
                     num_blocks=self.N_res,
                     kernel_size=self.kernel_size,
-                    use_bn=use_bn,
+                    use_bn=self.use_bn,
                 )
             )
 
@@ -398,7 +490,7 @@ class CNO2d(nn.Module):
             size=self.encoder_sizes[self.N_layers],
             num_blocks=self.N_res_neck,
             kernel_size=self.kernel_size,
-            use_bn=use_bn,
+            use_bn=self.use_bn,
         )
 
         # Move to device
@@ -407,11 +499,16 @@ class CNO2d(nn.Module):
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "batch size size in_dim"]
-    ) -> Float[Tensor, "batch size size out_dim"]:
-        # input has shape equals to (batch, size, size, d_a)
+        self, x: Float[Tensor, "batch *size in_dim"]
+    ) -> Float[Tensor, "batch *size out_dim"]:
 
-        x = self.lift(x.permute(0, 3, 1, 2))  # Execute Lift
+        if self.problem_dim == 1:
+            x = self.lift(x.permute(0, 2, 1))  # Execute Lift
+        elif self.problem_dim == 2:
+            x = self.lift(x.permute(0, 3, 1, 2))  # Execute Lift
+        else:
+            raise ValueError("Problem dimension must be 1 or 2")
+
         skip = []
 
         # Execute Encoder
@@ -443,7 +540,10 @@ class CNO2d(nn.Module):
         # Cat and Execute Projection
         x = torch.cat((x, self.ED_expansion[0](skip[0])), 1)
 
-        # project and reshape (for consistency with the rest of the models)
-        x = self.project(x).permute(0, 2, 3, 1)
-
-        return x
+        if self.problem_dim == 1:
+            return self.project(x).permute(0, 2, 1)
+        elif self.problem_dim == 2:
+            # project and reshape (for consistency with the rest of the models)
+            return self.project(x).permute(0, 2, 3, 1)
+        else:
+            raise ValueError("Problem dimension must be 1 or 2")
