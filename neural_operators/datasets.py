@@ -126,6 +126,29 @@ def NO_load_data_model(
     return example
 
 
+def concat_datasets(*datasets):
+    def flatten(iterables):
+        class MyIterable:
+            def __iter__(self):
+                for iterable in iterables:
+                    for batch in iterable:
+                        yield batch
+
+        return MyIterable()
+
+    class ConcatenatedDataset:
+        def __init__(self):
+            self.train_loader = flatten(
+                map(lambda dataset: dataset.train_loader, datasets)
+            )
+            self.val_loader = flatten(map(lambda dataset: dataset.val_loader, datasets))
+            self.test_loader = flatten(
+                map(lambda dataset: dataset.test_loader, datasets)
+            )
+
+    return ConcatenatedDataset()
+
+
 #########################################
 # Some functions needed for loading the Navier-Stokes data
 #########################################

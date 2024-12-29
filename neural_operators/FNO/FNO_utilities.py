@@ -3,6 +3,7 @@ In this file there are some utilities functions that are used in the main file.
 """
 
 import json
+
 from utilities import find_file
 
 
@@ -20,7 +21,7 @@ def FNO_initialize_hyperparameters(which_example: str, mode: str):
         The mode to use to load the hyperparameters (this can be either 'best' or 'default').
     """
     # Here I use relative path
-    config_directory = "./FNO/configurations/"
+    config_directory = "/Users/giorgio/Programming/HyperNOs/neural_operators/FNO/"
     config_path = find_file(f"{mode}_{which_example}.json", config_directory)
 
     # Load the configuration from the JSON file

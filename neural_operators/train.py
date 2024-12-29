@@ -9,8 +9,7 @@ from loss_fun import (
 )
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
-
-from neural_operators.utilities import count_params
+from utilities import count_params
 
 
 def train_model_without_ray(

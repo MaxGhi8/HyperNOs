@@ -1,11 +1,10 @@
 import torch
-from datasets import Airfoil
+from datasets import Airfoil, Darcy, concat_datasets
 from FNO.FNO_arc import FNO_2D
+from FNO.FNO_utilities import FNO_initialize_hyperparameters
+from loss_fun import LprelLoss
 from ray import tune
 from tune import tune_hyperparameters
-
-from neural_operators.FNO.FNO_utilities import FNO_initialize_hyperparameters
-from neural_operators.loss_fun import LprelLoss
 
 
 def main():
@@ -40,17 +39,17 @@ def main():
     )
 
     default_hyper_params = [
-        {
-            "learning_rate": hyperparams_train["learning_rate"],
-            "weight_decay": hyperparams_train["weight_decay"],
-            "scheduler_gamma": hyperparams_train["scheduler_gamma"],
-            "width": hyperparams_arc["width"],
-            "n_layers": hyperparams_arc["n_layers"],
-            "modes": hyperparams_arc["modes"],
-            "fun_act": hyperparams_arc["fun_act"],
-            "arc": hyperparams_arc["arc"],
-            "padding": hyperparams_arc["padding"],
-        }
+        # {
+        #     "learning_rate": hyperparams_train["learning_rate"],
+        #     "weight_decay": hyperparams_train["weight_decay"],
+        #     "scheduler_gamma": hyperparams_train["scheduler_gamma"],
+        #     "width": hyperparams_arc["width"],
+        #     "n_layers": hyperparams_arc["n_layers"],
+        #     "modes": hyperparams_arc["modes"],
+        #     "fun_act": hyperparams_arc["fun_act"],
+        #     "arc": hyperparams_arc["arc"],
+        #     "padding": hyperparams_arc["padding"],
+        # }
     ]
 
     model_builder = lambda config: FNO_2D(
@@ -70,14 +69,23 @@ def main():
         config["retrain"],
     )
 
-    dataset_builder = lambda config: Airfoil(
-        {
-            "FourierF": config["FourierF"],
-            "retrain": config["retrain"],
-        },
-        device,
-        config["batch_size"],
-        search_path="/",
+    dataset_builder = lambda config: concat_datasets(
+        Airfoil(
+            {
+                "FourierF": config["FourierF"],
+                "retrain": config["retrain"],
+            },
+            config["batch_size"],
+            search_path="/",
+        ),
+        Darcy(
+            {
+                "FourierF": config["FourierF"],
+                "retrain": config["retrain"],
+            },
+            config["batch_size"],
+            search_path="/",
+        ),
     )
 
     loss_fn = LprelLoss(2, False)
@@ -88,8 +96,8 @@ def main():
         dataset_builder,
         loss_fn,
         default_hyper_params,
-        runs_per_cpu=0,
-        runs_per_gpu=1,
+        runs_per_cpu=8,
+        runs_per_gpu=0,
     )
 
 

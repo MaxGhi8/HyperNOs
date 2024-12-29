@@ -6,8 +6,7 @@ from ray import init, train, tune
 from ray.train import Checkpoint
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.search.hyperopt import HyperOptSearch
-
-from neural_operators.train import train_epoch
+from train import train_epoch
 
 
 def tune_hyperparameters(
