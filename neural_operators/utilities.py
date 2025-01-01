@@ -312,15 +312,55 @@ def plot_data_generic_2d(
 
 
 #########################################
-# Function to plot cross-truss example
+# Function to plot the data for all the Mishra's example
 #########################################
-def plot_data_crosstruss_input(
+def plot_data_mishra_input(
+    example,
     data_plot: Tensor,
     title: str,
     ep: int,
     writer: SummaryWriter,
+    normalization: bool = True,
     plotting: bool = False,
 ):
+    if normalization:
+        data_plot = (example.max_data - example.min_data) * data_plot + example.min_data
+
+    plot_data_generic_2d(data_plot, title, ep, writer, plotting)
+
+
+def plot_data_mishra(
+    example,
+    data_plot: Tensor,
+    title: str,
+    ep: int,
+    writer: SummaryWriter,
+    normalization: bool = True,
+    plotting: bool = False,
+):
+    if normalization:
+        data_plot = (
+            example.max_model - example.min_model
+        ) * data_plot + example.min_model
+
+    plot_data_generic_2d(data_plot, title, ep, writer, plotting)
+
+
+#########################################
+# Function to plot cross-truss example
+#########################################
+def plot_data_crosstruss_input(
+    example,
+    data_plot: Tensor,
+    title: str,
+    ep: int,
+    writer: SummaryWriter,
+    normalization: bool = True,
+    plotting: bool = False,
+):
+    if normalization:
+        pass  # no normalization needed for the input of the crosstruss example
+
     n_idx = data_plot.size(0)
 
     fig, ax = plt.subplots(1, n_idx, figsize=(18, 5))
@@ -339,12 +379,22 @@ def plot_data_crosstruss_input(
 
 
 def plot_data_crosstruss(
+    example,
     data_plot: Tensor,
     title: str,
     ep: int,
     writer: SummaryWriter,
+    normalization: bool = True,
     plotting: bool = False,
 ):
+    if normalization:
+        data_plot[:, :, :, 0] = (example.max_x - example.min_x) * data_plot[
+            :, :, :, 0
+        ] + example.min_x
+        data_plot[:, :, :, 1] = (example.max_y - example.min_y) * data_plot[
+            :, :, :, 1
+        ] + example.min_y
+
     n_idx = data_plot.size(0)
 
     fig, ax = plt.subplots(2, n_idx, figsize=(18, 10))
@@ -373,30 +423,6 @@ def plot_data(
     which_example: str,
     plotting: bool = False,
 ):
-    """
-    Function to makes the plots of the data.
-
-    data_plot: torch.tensor
-        data_plot is a tensor of shape (n_samples, n_patch, *n).
-
-    title: str
-        title is the title of the plot.
-
-    ep: int
-        ep is the epoch number.
-
-    writer: tensorboardX.SummaryWriter
-        writer is the tensorboard writer.
-
-    which_example: str
-        which_example is the name of the example.
-
-    problem_dim: int
-        problem_dim is the dimension of the problem.
-
-    plotting: bool (default=False)
-        plotting is a boolean to decide if the plot is shown or not.
-    """
     ## 1D problem
     match which_example:
 
@@ -406,7 +432,6 @@ def plot_data(
 
         case "fhn":
             if "input" in title.lower():
-                data_plot = example.a_normalizer.decode(data_plot)
                 plot_data_fhn_input(
                     example,
                     data_plot,
@@ -417,114 +442,60 @@ def plot_data(
                     plotting,
                 )
             else:
-                # Denormalize the data
-                if "error" not in title.lower():
-                    data_plot[:, :, [0]] = example.v_normalizer.decode(
-                        data_plot[:, :, [0]]
-                    )
-                    data_plot[:, :, [1]] = example.w_normalizer.decode(
-                        data_plot[:, :, [1]]
-                    )
-                    # Plot the phase space (not for the error)
-                    plot_data_phield_space(
-                        data_plot, title + " phase space", ep, writer, plotting
-                    )
-
-                # Plot the data
-                plot_data_generic_1d(
-                    data_plot[..., 0],
-                    100,
-                    title + " V(t)",
-                    "V(t)",
+                plot_data_fhn(
+                    example,
+                    data_plot,
+                    title,
                     ep,
                     writer,
-                    plotting,
-                )
-                plot_data_generic_1d(
-                    data_plot[..., 1],
-                    100,
-                    title + " w(t)",
-                    "w(t)",
-                    ep,
-                    writer,
-                    plotting,
+                    normalization="error" not in title.lower(),
+                    plotting=plotting,
                 )
 
         case "hh":
             if "input" in title.lower():
-                # Denormalize the data
-                data_plot = example.a_normalizer.decode(data_plot)
-                # Plot the data
-                plot_data_generic_1d(
-                    data_plot, 100, title, "I(t)", ep, writer, plotting
+                plot_data_hh_input(
+                    example,
+                    data_plot,
+                    title,
+                    ep,
+                    writer,
+                    True,
+                    plotting,
                 )
             else:
-                # Denormalize the data
-                if "error" not in title.lower():
-                    data_plot[:, :, [0]] = example.v_normalizer.decode(
-                        data_plot[:, :, [0]]
-                    )
-                    data_plot[:, :, [1]] = example.m_normalizer.decode(
-                        data_plot[:, :, [1]]
-                    )
-                    data_plot[:, :, [2]] = example.h_normalizer.decode(
-                        data_plot[:, :, [2]]
-                    )
-                    data_plot[:, :, [3]] = example.n_normalizer.decode(
-                        data_plot[:, :, [3]]
-                    )
-
-                # Plot the data
-                plot_data_generic_1d(
-                    data_plot[..., 0],
-                    100,
-                    title + " V(t)",
-                    "V(t)",
+                plot_data_hh(
+                    example,
+                    data_plot,
+                    title,
                     ep,
                     writer,
-                    plotting,
-                )
-                plot_data_generic_1d(
-                    data_plot[..., 1],
-                    100,
-                    title + " m(t)",
-                    "m(t)",
-                    ep,
-                    writer,
-                    plotting,
-                )
-                plot_data_generic_1d(
-                    data_plot[..., 2],
-                    100,
-                    title + " h(t)",
-                    "h(t)",
-                    ep,
-                    writer,
-                    plotting,
-                )
-                plot_data_generic_1d(
-                    data_plot[..., 3],
-                    100,
-                    title + " n(t)",
-                    "n(t)",
-                    ep,
-                    writer,
-                    plotting,
+                    normalization="error" not in title.lower(),
+                    plotting=plotting,
                 )
 
     ## 2D problem
     if which_example == "crosstruss":
         if "input" in title.lower():
-            plot_data_crosstruss_input(data_plot, title, ep, writer, plotting)
+            plot_data_crosstruss_input(
+                example,
+                data_plot,
+                title,
+                ep,
+                writer,
+                normalization=True,
+                plotting=plotting,
+            )
         else:
-            if "error" not in title.lower():
-                data_plot[:, :, :, 0] = (example.max_x - example.min_x) * data_plot[
-                    :, :, :, 0
-                ] + example.min_x
-                data_plot[:, :, :, 1] = (example.max_y - example.min_y) * data_plot[
-                    :, :, :, 1
-                ] + example.min_y
-            plot_data_crosstruss(data_plot, title, ep, writer, plotting)
+            plot_data_crosstruss(
+                example,
+                data_plot,
+                title,
+                ep,
+                writer,
+                normalization="error" not in title.lower(),
+                plotting=plotting,
+            )
 
     elif which_example in [
         "poisson",
@@ -538,16 +509,25 @@ def plot_data(
     ]:
         # Denormalize the data
         if "input" in title.lower():
-            data_plot = (
-                example.max_data - example.min_data
-            ) * data_plot + example.min_data
-        elif "error" not in title.lower():
-            data_plot = (
-                example.max_model - example.min_model
-            ) * data_plot + example.min_model
+            plot_data_mishra_input(
+                example,
+                data_plot,
+                title,
+                ep,
+                writer,
+                True,
+                plotting,
+            )
 
-        # Plot the data
-        plot_data_generic_2d(data_plot, title, ep, writer, plotting)
+        plot_data_mishra(
+            example,
+            data_plot,
+            title,
+            ep,
+            writer,
+            normalization="error" not in title.lower(),
+            plotting=plotting,
+        )
 
     elif which_example in [
         "burgers_zongyi",
