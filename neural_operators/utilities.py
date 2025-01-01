@@ -518,16 +518,16 @@ def plot_data(
                 True,
                 plotting,
             )
-
-        plot_data_mishra(
-            example,
-            data_plot,
-            title,
-            ep,
-            writer,
-            normalization="error" not in title.lower(),
-            plotting=plotting,
-        )
+        else:
+            plot_data_mishra(
+                example,
+                data_plot,
+                title,
+                ep,
+                writer,
+                normalization="error" not in title.lower(),
+                plotting=plotting,
+            )
 
     elif which_example in [
         "burgers_zongyi",
