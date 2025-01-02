@@ -10,12 +10,12 @@ sys.path.append("..")
 from datasets import NO_load_data_model
 from FNO.FNO_arc import FNO_2D
 from FNO.FNO_utilities import FNO_initialize_hyperparameters
-from loss_fun import LprelLoss
+from loss_fun import loss_selector
 from ray import tune
 from tune import tune_hyperparameters
 
 
-def main(example_name, mode_hyperparams):
+def main(example_name, mode_hyperparams, loss_fn_str):
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -97,7 +97,11 @@ def main(example_name, mode_hyperparams):
     )
 
     # Define the loss function
-    loss_fn = LprelLoss(2, False)
+    loss_fn = loss_selector(
+        loss_fn_str=loss_fn_str,
+        problem_dim=config_space["problem_dim"],
+        beta=config_space["beta"],
+    )
 
     # Call the library function to tune the hyperparameters
     tune_hyperparameters(
@@ -112,4 +116,4 @@ def main(example_name, mode_hyperparams):
 
 
 if __name__ == "__main__":
-    main()
+    main("darcy", "default", "L1")
