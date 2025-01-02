@@ -46,7 +46,7 @@ def main():
     config_space = {
         "batch_size": tune.choice([32]),
         "in_dim": tune.choice([1]),
-        "d_u": tune.choice([1]),
+        "out_dim": tune.choice([1]),
         "fft_norm": tune.choice([None]),
         "fno_arc": tune.choice(["Classic", "Zongyi", "Residual"]),
         "FourierF": tune.choice([0]),
@@ -68,7 +68,7 @@ def main():
     model_builder = lambda config: FNO_2D(
         config["in_dim"],
         config["width"],
-        config["d_u"],
+        config["out_dim"],
         config["n_layers"],
         int(
             (total_default_params / (config["n_layers"] * config["width"] ** 2))
