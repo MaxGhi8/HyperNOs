@@ -4,6 +4,8 @@ This file contains the necessary functions to load the data for the Fourier Neur
 
 import h5py
 import numpy as np
+import os
+import random
 import scipy
 import torch
 from beartype import beartype
@@ -310,8 +312,16 @@ class ShearLayer:
 
         retrain = network_properties["retrain"]
         if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
             torch.manual_seed(retrain)
             torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g = torch.Generator()
+            g.manual_seed(retrain)
 
         # Change number of workers according to your preference
         num_workers = 0
@@ -330,6 +340,7 @@ class ShearLayer:
             shuffle=True,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.val_loader = DataLoader(
             ShearLayerDataset(
@@ -343,6 +354,7 @@ class ShearLayer:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.test_loader = DataLoader(
             ShearLayerDataset(
@@ -357,6 +369,7 @@ class ShearLayer:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
 
     @property
@@ -482,7 +495,16 @@ class SinFrequency:
 
         retrain = network_properties["retrain"]
         if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
             torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g = torch.Generator()
+            g.manual_seed(retrain)
 
         # Change number of workers according to your preference
         num_workers = 0
@@ -501,6 +523,7 @@ class SinFrequency:
             shuffle=True,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.val_loader = DataLoader(
             SinFrequencyDataset(
@@ -514,6 +537,7 @@ class SinFrequency:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.test_loader = DataLoader(
             SinFrequencyDataset(
@@ -528,6 +552,7 @@ class SinFrequency:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
 
     @property
@@ -667,7 +692,16 @@ class WaveEquation:
 
         retrain = network_properties["retrain"]
         if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
             torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g = torch.Generator()
+            g.manual_seed(retrain)
 
         # Change number of workers according to your preference
         num_workers = 0
@@ -687,6 +721,7 @@ class WaveEquation:
             shuffle=True,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.val_loader = DataLoader(
             WaveEquationDataset(
@@ -701,6 +736,7 @@ class WaveEquation:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.test_loader = DataLoader(
             WaveEquationDataset(
@@ -716,6 +752,7 @@ class WaveEquation:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
 
     @property
@@ -840,7 +877,16 @@ class AllenCahn:
 
         retrain = network_properties["retrain"]
         if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
             torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g = torch.Generator()
+            g.manual_seed(retrain)
 
         # Change number of workers according to your preference
         num_workers = 0
@@ -859,6 +905,7 @@ class AllenCahn:
             shuffle=True,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.val_loader = DataLoader(
             AllenCahnDataset(
@@ -872,6 +919,7 @@ class AllenCahn:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.test_loader = DataLoader(
             AllenCahnDataset(
@@ -886,6 +934,7 @@ class AllenCahn:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
 
     @property
@@ -1003,7 +1052,16 @@ class ContTranslation:
 
         retrain = network_properties["retrain"]
         if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
             torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g = torch.Generator()
+            g.manual_seed(retrain)
 
         # Change number of workers according to your preference
         num_workers = 0
@@ -1022,6 +1080,7 @@ class ContTranslation:
             shuffle=True,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.val_loader = DataLoader(
             ContTranslationDataset(
@@ -1035,6 +1094,7 @@ class ContTranslation:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.test_loader = DataLoader(
             ContTranslationDataset(
@@ -1049,6 +1109,7 @@ class ContTranslation:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
 
     # When data is already normalized I set the min and max to 0 and 1 (have no effects)
@@ -1168,7 +1229,16 @@ class DiscContTranslation:
 
         retrain = network_properties["retrain"]
         if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
             torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g = torch.Generator()
+            g.manual_seed(retrain)
 
         # Change number of workers according to your preference
         num_workers = 0
@@ -1187,6 +1257,7 @@ class DiscContTranslation:
             shuffle=True,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.val_loader = DataLoader(
             DiscContTranslationDataset(
@@ -1200,6 +1271,7 @@ class DiscContTranslation:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.test_loader = DataLoader(
             DiscContTranslationDataset(
@@ -1214,6 +1286,7 @@ class DiscContTranslation:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
 
     # When data is already normalized I set the min and max to 0 and 1 (have no effects)
@@ -1335,7 +1408,16 @@ class Airfoil:
 
         retrain = network_properties["retrain"]
         if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
             torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g = torch.Generator()
+            g.manual_seed(retrain)
 
         # Change number of workers according to your preference
         num_workers = 0
@@ -1354,6 +1436,7 @@ class Airfoil:
             shuffle=True,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.val_loader = DataLoader(
             AirfoilDataset(
@@ -1367,6 +1450,7 @@ class Airfoil:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.test_loader = DataLoader(
             AirfoilDataset(
@@ -1381,6 +1465,7 @@ class Airfoil:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
 
     # When data is already normalized I set the min and max to 0 and 1 (have no effects)
@@ -1505,7 +1590,16 @@ class Darcy:
 
         retrain = network_properties["retrain"]
         if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
             torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g = torch.Generator()
+            g.manual_seed(retrain)
 
         # Change number of workers according to your preference
         num_workers = 0
@@ -1520,6 +1614,7 @@ class Darcy:
             shuffle=True,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.val_loader = DataLoader(
             DarcyDataset(
@@ -1532,6 +1627,7 @@ class Darcy:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.test_loader = DataLoader(
             DarcyDataset(
@@ -1545,6 +1641,7 @@ class Darcy:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
 
     @property
@@ -1622,7 +1719,16 @@ class Darcy_Zongyi:
 
         retrain = network_properties["retrain"]
         if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
             torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g = torch.Generator()
+            g.manual_seed(retrain)
 
         # Training data
         g = torch.Generator().manual_seed(1)
@@ -1657,6 +1763,7 @@ class Darcy_Zongyi:
             shuffle=True,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.val_loader = DataLoader(
             TensorDataset(a_val, u_val),
@@ -1664,6 +1771,7 @@ class Darcy_Zongyi:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.test_loader = DataLoader(
             TensorDataset(a_test, u_test),
@@ -1671,6 +1779,7 @@ class Darcy_Zongyi:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
 
 
@@ -1714,7 +1823,16 @@ class Burgers_Zongyi:
 
         retrain = network_properties["retrain"]
         if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
             torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g = torch.Generator()
+            g.manual_seed(retrain)
 
         # Training data
         g = torch.Generator().manual_seed(1)
@@ -1749,6 +1867,7 @@ class Burgers_Zongyi:
             shuffle=True,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.val_loader = DataLoader(
             TensorDataset(a_val, u_val),
@@ -1756,6 +1875,7 @@ class Burgers_Zongyi:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.test_loader = DataLoader(
             TensorDataset(a_test, u_test),
@@ -1763,6 +1883,7 @@ class Burgers_Zongyi:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
 
 
@@ -1814,7 +1935,16 @@ class FitzHughNagumo:
 
         retrain = network_properties["retrain"]
         if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
             torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g = torch.Generator()
+            g.manual_seed(retrain)
 
         # Training data
         self.TrainDataPath = find_file(
@@ -1876,6 +2006,7 @@ class FitzHughNagumo:
             shuffle=True,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.val_loader = DataLoader(
             TensorDataset(a_val, u_val),
@@ -1883,6 +2014,7 @@ class FitzHughNagumo:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.test_loader = DataLoader(
             TensorDataset(a_test, u_test),
@@ -1890,6 +2022,7 @@ class FitzHughNagumo:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
 
 
@@ -1947,7 +2080,16 @@ class HodgkinHuxley:
 
         retrain = network_properties["retrain"]
         if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
             torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g = torch.Generator()
+            g.manual_seed(retrain)
 
         # Training data
         self.TrainDataPath = find_file(
@@ -2034,6 +2176,7 @@ class HodgkinHuxley:
             shuffle=True,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.val_loader = DataLoader(
             TensorDataset(a_val, u_val),
@@ -2041,6 +2184,7 @@ class HodgkinHuxley:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.test_loader = DataLoader(
             TensorDataset(a_test, u_test),
@@ -2048,6 +2192,7 @@ class HodgkinHuxley:
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
 
 
@@ -2123,7 +2268,16 @@ class CrossTruss(Dataset):
 
         retrain = network_properties["retrain"]
         if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
             torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g = torch.Generator()
+            g.manual_seed(retrain)
 
         # Change number of workers according to your preference
         num_workers = 0
@@ -2134,6 +2288,7 @@ class CrossTruss(Dataset):
             shuffle=True,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.val_loader = DataLoader(
             TensorDataset(inputs_val, outputs_val),
@@ -2141,6 +2296,7 @@ class CrossTruss(Dataset):
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
         self.test_loader = DataLoader(
             TensorDataset(inputs_test, outputs_test),
@@ -2148,4 +2304,5 @@ class CrossTruss(Dataset):
             shuffle=False,
             num_workers=num_workers,
             pin_memory=True,
+            generator=g,
         )
