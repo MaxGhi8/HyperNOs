@@ -15,7 +15,7 @@ from ray import tune
 from tune import tune_hyperparameters
 
 
-def main(example_name, mode_hyperparams, loss_fn_str):
+def main(example_name: str, mode_hyperparams: str, loss_fn_str: str):
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

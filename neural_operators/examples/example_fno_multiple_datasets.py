@@ -1,6 +1,5 @@
 """ 
-In this example I choose some parameters to tune and some to keep fixed. 
-Moreover I set the modes for the FNO in order to have comparable number of parameters across the different models.
+In this example I choose some parameters to tune and some to keep fixed for the FNO model. 
 """
 
 import torch
@@ -8,7 +7,7 @@ import sys
 
 sys.path.append("..")
 
-from datasets import NO_load_data_model
+from datasets import NO_load_data_model, concat_datasets
 from FNO.FNO_arc import FNO_2D
 from FNO.FNO_utilities import FNO_initialize_hyperparameters
 from loss_fun import loss_selector
@@ -16,19 +15,18 @@ from ray import tune
 from tune import tune_hyperparameters
 
 
-def main(example_name: str, mode_hyperparams: str, loss_fn_str: str):
+def main(
+    example_name: list,
+    example_default_params: str,
+    mode_hyperparams: str,
+    loss_fn_str: str,
+):
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load the default hyperparameters for the FNO model
     hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
-        example_name, mode=mode_hyperparams
-    )
-
-    total_default_params = (
-        hyperparams_arc["n_layers"]
-        * hyperparams_arc["width"] ** 2
-        * hyperparams_arc["modes"] ** hyperparams_arc["problem_dim"]
+        example_default_params, mode=mode_hyperparams
     )
 
     # Define the hyperparameter search space
@@ -38,6 +36,7 @@ def main(example_name: str, mode_hyperparams: str, loss_fn_str: str):
         "scheduler_gamma": tune.quniform(0.75, 0.99, 0.01),
         "width": tune.choice([4, 8, 16, 32, 64, 128, 256]),
         "n_layers": tune.randint(1, 6),
+        "modes": tune.choice([2, 4, 8, 12, 16, 20, 24, 28, 32]),  # modes1 = modes2
         "fun_act": tune.choice(["tanh", "relu", "gelu", "leaky_relu"]),
         "fno_arc": tune.choice(["Classic", "Zongyi", "Residual"]),
         "padding": tune.randint(0, 16),
@@ -66,14 +65,8 @@ def main(example_name: str, mode_hyperparams: str, loss_fn_str: str):
         config["width"],
         config["out_dim"],
         config["n_layers"],
-        int(
-            (total_default_params / (config["n_layers"] * config["width"] ** 2))
-            ** (1 / hyperparams_arc["problem_dim"])
-        ),
-        int(
-            (total_default_params / (config["n_layers"] * config["width"] ** 2))
-            ** (1 / hyperparams_arc["problem_dim"])
-        ),
+        config["modes"],
+        config["modes"],
         config["fun_act"],
         config["weights_norm"],
         config["fno_arc"],
@@ -84,17 +77,21 @@ def main(example_name: str, mode_hyperparams: str, loss_fn_str: str):
         config["retrain"],
     )
 
-    # Define the dataset builder
-    dataset_builder = lambda config: NO_load_data_model(
-        which_example=example_name,
-        no_architecture={
-            "FourierF": config["FourierF"],
-            "retrain": config["retrain"],
-        },
-        batch_size=config["batch_size"],
-        training_samples=config["training_samples"],
-        in_dist=True,
-        search_path="/",
+    dataset_builder = lambda config: concat_datasets(
+        *(
+            NO_load_data_model(
+                dataset_name,
+                no_architecture={
+                    "FourierF": config["FourierF"],
+                    "retrain": config["retrain"],
+                },
+                batch_size=config["batch_size"],
+                training_samples=config["training_samples"],
+                in_dist=True,
+                search_path="/",
+            )
+            for dataset_name in example_name
+        )
     )
 
     # Define the loss function
@@ -117,4 +114,4 @@ def main(example_name: str, mode_hyperparams: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    main("darcy", "default", "L1")
+    main(["darcy", "poisson"], "darcy", "default", "L1")

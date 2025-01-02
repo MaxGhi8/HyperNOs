@@ -7,7 +7,7 @@ import sys
 
 sys.path.append("..")
 
-from datasets import NO_load_data_model
+from datasets import NO_load_data_model, concat_datasets
 from CNO.CNO import CNO
 from CNO.CNO_utilities import CNO_initialize_hyperparameters
 from loss_fun import loss_selector
@@ -15,13 +15,18 @@ from ray import tune
 from tune import tune_hyperparameters
 
 
-def main(example_name: str, mode_hyperparams: str, loss_fn_str: str):
+def main(
+    example_name: list,
+    example_default_params: str,
+    mode_hyperparams: str,
+    loss_fn_str: str,
+):
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load the default hyperparameters for the CNO model
     hyperparams_train, hyperparams_arc = CNO_initialize_hyperparameters(
-        example_name, mode=mode_hyperparams
+        example_default_params, mode=mode_hyperparams
     )
 
     # Define the hyperparameter search space
@@ -74,16 +79,21 @@ def main(example_name: str, mode_hyperparams: str, loss_fn_str: str):
     )
 
     # Define the dataset builder
-    dataset_builder = lambda config: NO_load_data_model(
-        which_example=example_name,
-        no_architecture={
-            "FourierF": config["FourierF"],
-            "retrain": config["retrain"],
-        },
-        batch_size=config["batch_size"],
-        training_samples=config["training_samples"],
-        in_dist=True,
-        search_path="/",
+    dataset_builder = lambda config: concat_datasets(
+        *(
+            NO_load_data_model(
+                dataset_name,
+                no_architecture={
+                    "FourierF": config["FourierF"],
+                    "retrain": config["retrain"],
+                },
+                batch_size=config["batch_size"],
+                training_samples=config["training_samples"],
+                in_dist=True,
+                search_path="/",
+            )
+            for dataset_name in example_name
+        )
     )
 
     # Define the loss function
@@ -106,4 +116,4 @@ def main(example_name: str, mode_hyperparams: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    main("darcy", "default", "L1")
+    main(["darcy", "poisson"], "darcy", "default", "L1")
