@@ -9,6 +9,29 @@ from torch import Tensor
 
 
 #########################################
+# Loss function selector
+#########################################
+def loss_selector(loss_fn_str: str, problem_dim: int, beta: float = 1.0):
+    match loss_fn_str:
+        case "L1":
+            loss = LprelLoss(1, False)
+        case "L2":
+            loss = LprelLoss(2, False)
+        case "H1":
+            if problem_dim == 1:
+                loss = H1relLoss_1D(beta, False, 1.0)
+            elif problem_dim == 2:
+                loss = H1relLoss(beta, False, 1.0)
+        case "L1_SMOOTH":
+            loss = torch.nn.SmoothL1Loss()  # L^1 smooth loss (Mishra)
+        case "MSE":
+            loss = torch.nn.MSELoss()  # L^2 smooth loss (Mishra)
+        case _:
+            raise ValueError("This value of p is not allowed")
+    return loss
+
+
+#########################################
 # Smooth L1 relative loss
 #########################################
 class SmoothL1Loss_rel:

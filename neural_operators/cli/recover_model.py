@@ -19,7 +19,7 @@ This is the main file for makes test and plot the Neural Operator model.
     fhn_long            : FitzHugh-Nagumo equations in [0, 200]
     hh                   : Hodgkin-Huxley equations
 
-"exp_norm" can be one of the following options:
+"loss_fn_str" can be one of the following options:
     L1 : L^1 relative norm
     L2 : L^2 relative norm
     H1 : H^1 relative norm
@@ -41,12 +41,10 @@ from beartype import beartype
 from cli.utilities_plot import test_plot_samples
 from jaxtyping import Float, jaxtyped
 from loss_fun import (
-    H1relLoss,
-    H1relLoss_1D,
     H1relLoss_1D_multiout,
     H1relLoss_multiout,
-    LprelLoss,
     LprelLoss_multiout,
+    loss_selector,
 )
 from scipy.io import savemat
 from torch import Tensor
@@ -99,7 +97,7 @@ def parse_arguments():
         help="Select the architecture to use.",
     )
     parser.add_argument(
-        "loss_function",
+        "loss_fn_str",
         type=str,
         choices=["l1", "l2", "h1", "l1_smooth"],
         help="Select the relative loss function to use during the training process.",
@@ -122,7 +120,7 @@ def parse_arguments():
     return {
         "example": args.example.lower(),
         "architecture": args.architecture.upper(),
-        "loss_function": args.loss_function.upper(),
+        "loss_fn_str": args.loss_fn_str.upper(),
         "mode": args.mode.lower(),
         "in_dist": args.in_dist,
     }
@@ -131,7 +129,7 @@ def parse_arguments():
 config = parse_arguments()
 which_example = config["example"]
 arc = config["architecture"]
-exp_norm = config["loss_function"]
+loss_fn_str = config["loss_fn_str"]
 mode_str = config["mode"]
 in_dist = config["in_dist"]
 
@@ -139,7 +137,7 @@ Norm_dict = {"L1": 0, "L2": 1, "H1": 2, "L1_SMOOTH": 3, "MSE": 4}
 
 # upload the model and the hyperparameters
 model_folder = f"../{arc}/TrainedModels/"
-description_test = "test_" + exp_norm
+description_test = "test_" + loss_fn_str
 folder = (
     model_folder
     + which_example
@@ -182,9 +180,7 @@ with open(folder + "/hyperparams_arc.json", "r") as f:
     hyperparams_arc = json.load(f)
 
 # Choose the Loss function
-hyperparams_train["exp"] = Norm_dict[
-    exp_norm
-]  # 0 for L^1 relative norm, 1 for L^2 relative norm, 2 for H^1 relative norm
+hyperparams_train["loss_fn_str"] = loss_fn_str
 
 # Training hyperparameters
 learning_rate = hyperparams_train["learning_rate"]
@@ -193,7 +189,6 @@ scheduler_step = hyperparams_train["scheduler_step"]
 scheduler_gamma = hyperparams_train["scheduler_gamma"]
 epochs = hyperparams_train["epochs"]
 batch_size = hyperparams_train["batch_size"]
-p = hyperparams_train["exp"]
 beta = hyperparams_train["beta"]
 training_samples = hyperparams_train["training_samples"]
 test_samples = hyperparams_train["test_samples"]
@@ -235,22 +230,7 @@ match arc:
         raise ValueError("This architecture is not allowed")
 
 # Loss function
-match p:
-    case 0:
-        loss = LprelLoss(1, False)  # L^1 relative norm
-    case 1:
-        loss = LprelLoss(2, False)  # L^2 relative norm
-    case 2:
-        if problem_dim == 1:
-            loss = H1relLoss_1D(beta, False, 1.0)
-        elif problem_dim == 2:
-            loss = H1relLoss(beta, False, 1.0)  # H^1 relative norm
-    case 3:
-        loss = torch.nn.SmoothL1Loss()  # L^1 smooth loss (Mishra)
-    case 4:
-        loss = torch.nn.MSELoss()  # L^2 smooth loss (Mishra)
-    case _:
-        raise ValueError("This value of p is not allowed")
+loss = loss_selector(loss_fn_str=loss_fn_str, problem_dim=problem_dim, beta=beta)
 
 #########################################
 # Data loader
@@ -294,11 +274,10 @@ print(f"Total Model Size: {total_bytes:,} bytes ({total_mb:.2f} MB)")
     val_loader,
     train_loader,
     loss,
-    exp_norm,
+    loss_fn_str,
     val_samples,
     training_samples,
     device,
-    which_example,
     statistic=True,
 )
 
@@ -320,11 +299,10 @@ print("")
     test_loader,
     train_loader,
     loss,
-    exp_norm,
+    loss_fn_str,
     test_samples,
     training_samples,
     device,
-    which_example,
     statistic=True,
 )
 
@@ -558,7 +536,7 @@ test_plot_samples(
     "worst",
     which_example,
     ntest=100,
-    str_norm=exp_norm,
+    str_norm=loss_fn_str,
     n_idx=5,
 )
 
@@ -607,4 +585,4 @@ def save_tensor(
 
 
 # call the function to save tensors
-save_tensor(input_tensor, output_tensor, prediction_tensor, which_example, exp_norm)
+save_tensor(input_tensor, output_tensor, prediction_tensor, which_example, loss_fn_str)

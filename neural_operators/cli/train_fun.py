@@ -5,6 +5,7 @@ it is also needed for the RayTune implementation.
 """
 
 import sys
+
 sys.path.append("..")
 import torch
 from loss_fun import (
@@ -26,9 +27,7 @@ def train_fun(
     optimizer,
     scheduler,
     loss,
-    p: int,
     device: torch.device,
-    which_example: str,
     tepoch=None,
     n_idx: int = -1,
 ):
@@ -40,7 +39,6 @@ def train_fun(
     optimizer: the optimizer policy
     scheduler: the scheduler policy
     loss: the loss function to be used during training
-    p: integer associated to the loss function used during training
     device: the device where we have to store all the things
     which_example: the example of the PDEs that we are considering
     tepoch: the tqdm object to print the progress
@@ -102,7 +100,6 @@ def test_fun(
     test_samples: int,
     training_samples: int,
     device: torch.device,
-    which_example: str,
     tepoch=None,
     statistic=False,
 ):

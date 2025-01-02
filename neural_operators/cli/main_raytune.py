@@ -21,7 +21,7 @@ This is the main file for hyperparameter search of the Neural Operator with the 
 
     crosstruss          : Cross-shaped truss structure
 
-"exp_norm" can be one of the following options:
+"loss_fn_str" can be one of the following options:
     L1 : L^1 relative norm
     L2 : L^2 relative norm
     H1 : H^1 relative norm
@@ -99,7 +99,7 @@ def parse_arguments():
         help="Select the architecture to use.",
     )
     parser.add_argument(
-        "loss_function",
+        "loss_fn_str",
         type=str,
         choices=["l1", "l2", "h1", "l1_smooth"],
         help="Select the loss function to use during the training process.",
@@ -122,7 +122,7 @@ def parse_arguments():
     return {
         "example": args.example.lower().strip(),
         "architecture": args.architecture.upper().strip(),
-        "loss_function": args.loss_function.upper().strip(),
+        "loss_fn_str": args.loss_fn_str.upper().strip(),
         "mode": args.mode.lower().strip(),
         "in_dist": args.in_dist,
     }
@@ -131,7 +131,7 @@ def parse_arguments():
 config = parse_arguments()
 which_example = config["example"]
 arc = config["architecture"]
-exp_norm = config["loss_function"]
+loss_fn_str = config["loss_fn_str"]
 mode_str = config["mode"]
 in_dist = config["in_dist"]
 
@@ -152,14 +152,12 @@ match arc:
         raise ValueError("This architecture is not allowed")
 
 # loss function parameter
-Norm_dict = {"L1": 0, "L2": 1, "H1": 2, "L1_SMOOTH": 3, "MSE": 4}
-hyperparams_train["exp"] = Norm_dict[exp_norm]
+hyperparams_train["loss_fn_str"] = loss_fn_str
 
 #########################################
 # Load the fixed hyperparameters
 #########################################
 epochs = hyperparams_train["epochs"]
-p = hyperparams_train["exp"]
 beta = hyperparams_train["beta"]
 training_samples = hyperparams_train["training_samples"]
 val_samples = hyperparams_train["val_samples"]
@@ -336,9 +334,7 @@ def train_hyperparameter(config):
     ## Training process
     for ep in range(start_epoch, epochs):
         # Train the model for one epoch
-        train_fun(
-            model, train_loader, optimizer, scheduler, loss, p, device, which_example
-        )
+        train_fun(model, train_loader, optimizer, scheduler, loss, device)
 
         # Test the model for one epoch
         acc = test_fun(
@@ -346,11 +342,9 @@ def train_hyperparameter(config):
             val_loader,
             train_loader,
             loss,
-            exp_norm,
             val_samples,
             training_samples,
             device,
-            which_example,
             statistic=False,
         )
 

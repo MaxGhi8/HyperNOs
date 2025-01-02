@@ -1,12 +1,11 @@
 import os
-from ray.tune.utils import wait_for_gpu
 import tempfile
-
 import torch
 from ray import init, train, tune
 from ray.train import Checkpoint
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.search.hyperopt import HyperOptSearch
+
 from train import train_epoch
 
 
@@ -16,21 +15,14 @@ def tune_hyperparameters(
     dataset_builder,
     loss_fn,
     default_hyper_params=[],
-    learning_rate=tune.quniform(1e-4, 1e-2, 1e-5),
-    weight_decay=tune.quniform(1e-6, 1e-3, 1e-6),
-    scheduler_step=tune.choice([10]),
-    scheduler_gamma=tune.quniform(0.75, 0.99, 0.01),
-    num_samples=200,
-    grace_period=250,
-    reduction_factor=2,
-    max_epochs=1000,
-    runs_per_cpu=0,
-    runs_per_gpu=1,
+    num_samples: int = 200,
+    grace_period: int = 250,
+    reduction_factor: int = 4,
+    max_epochs: int = 1000,
+    checkpoint_freq: int = 500,
+    runs_per_cpu: float = 0.0,
+    runs_per_gpu: float = 1.0,
 ):
-    config_space["learning_rate"] = learning_rate
-    config_space["weight_decay"] = weight_decay
-    config_space["scheduler_step"] = scheduler_step
-    config_space["scheduler_gamma"] = scheduler_gamma
 
     def train_fn(config):
         dataset = dataset_builder(config)
@@ -46,6 +38,7 @@ def tune_hyperparameters(
             config["weight_decay"],
             config["scheduler_step"],
             config["scheduler_gamma"],
+            checkpoint_freq=checkpoint_freq,
         )
 
     init(
@@ -96,10 +89,11 @@ def train_model(
     loss_fn,
     max_epochs,
     device,
-    learning_rate,
-    weight_decay,
-    scheduler_step,
-    scheduler_gamma,
+    learning_rate: float = 1e-3,
+    weight_decay: float = 1e-6,
+    scheduler_step: int = 1,
+    scheduler_gamma: float = 0.99,
+    checkpoint_freq: int = 500,
 ):
     optimizer = torch.optim.AdamW(
         model.parameters(),
@@ -126,7 +120,7 @@ def train_model(
         # Validate the model for one epoch
         acc = validate_epoch(model, val_loader, loss_fn, device)
 
-        if ep % 500 == 0 or ep == max_epochs - 1:
+        if ep % checkpoint_freq == 0 or ep == max_epochs - 1:
             with tempfile.TemporaryDirectory() as temp_checkpoint_dir:
                 path = os.path.join(temp_checkpoint_dir, "checkpoint.pt")
                 torch.save((model.state_dict(), optimizer.state_dict()), path)

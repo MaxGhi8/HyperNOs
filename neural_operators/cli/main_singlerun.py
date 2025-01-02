@@ -21,7 +21,7 @@ This is the main file for training the Neural Operator with the FNO architecture
 
     crosstruss          : Cross-shaped truss structure
 
-"exp_norm" can be one of the following options:
+"loss_fn_str" can be one of the following options:
     L1 : L^1 relative norm
     L2 : L^2 relative norm
     H1 : H^1 relative norm
@@ -45,7 +45,7 @@ from CNO.CNO_utilities import CNO_initialize_hyperparameters
 # FNO imports
 from FNO.FNO_arc import FNO_1D, FNO_2D
 from FNO.FNO_utilities import FNO_initialize_hyperparameters
-from loss_fun import H1relLoss, H1relLoss_1D, LprelLoss
+from loss_fun import loss_selector
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 from train_fun import test_fun, test_fun_multiout, train_fun
@@ -99,7 +99,7 @@ def parse_arguments():
         help="Select the architecture to use.",
     )
     parser.add_argument(
-        "loss_function",
+        "loss_fn_str",
         type=str,
         choices=["l1", "l2", "h1", "l1_smooth"],
         help="Select the relative loss function to use during the training process.",
@@ -122,7 +122,7 @@ def parse_arguments():
     return {
         "example": args.example.lower(),
         "architecture": args.architecture.upper(),
-        "loss_function": args.loss_function.upper(),
+        "loss_fn_str": args.loss_fn_str.upper(),
         "mode": args.mode.lower(),
         "in_dist": args.in_dist,
     }
@@ -131,15 +131,15 @@ def parse_arguments():
 config = parse_arguments()
 which_example = config["example"]
 arc = config["architecture"]
-exp_norm = config["loss_function"]
+loss_fn_str = config["loss_fn_str"]
 mode_str = config["mode"]
 in_dist = config["in_dist"]
 
 #########################################
 # parameters for save the model
 #########################################
-folder = f"./{arc}/TrainedModels/{which_example}/exp_{arc}_test_{exp_norm}_{mode_str}_hyperparams"
-name_model = f"./{arc}/TrainedModels/{which_example}/model_{arc}_test_{exp_norm}_{mode_str}_hyperparams"
+folder = f"./{arc}/TrainedModels/{which_example}/exp_{arc}_test_{loss_fn_str}_{mode_str}_hyperparams"
+name_model = f"./{arc}/TrainedModels/{which_example}/model_{arc}_test_{loss_fn_str}_{mode_str}_hyperparams"
 
 writer = SummaryWriter(log_dir=folder)  # tensorboard
 
@@ -171,8 +171,7 @@ match arc:
         raise ValueError("This architecture is not allowed")
 
 # choose the Loss function
-Norm_dict = {"L1": 0, "L2": 1, "H1": 2, "L1_SMOOTH": 3, "MSE": 4}
-hyperparams_train["exp"] = Norm_dict[exp_norm]
+hyperparams_train["loss_fn_str"] = loss_fn_str
 
 # Training hyperparameters
 learning_rate = hyperparams_train["learning_rate"]
@@ -181,7 +180,6 @@ scheduler_step = hyperparams_train["scheduler_step"]
 scheduler_gamma = hyperparams_train["scheduler_gamma"]
 epochs = hyperparams_train["epochs"]
 batch_size = hyperparams_train["batch_size"]
-p = hyperparams_train["exp"]
 beta = hyperparams_train["beta"]
 training_samples = hyperparams_train["training_samples"]
 test_samples = hyperparams_train["test_samples"]
@@ -241,7 +239,7 @@ val_loader = example.val_loader
 #########################################
 with open(folder + "/norm_info.txt", "w") as f:
     f.write("Norm used during the training:\n")
-    f.write(f"{exp_norm}\n")
+    f.write(f"{loss_fn_str}\n")
 
 with open(folder + "/hyperparams_train.json", "w") as f:
     json.dump(hyperparams_train, f, indent=4)
@@ -335,23 +333,7 @@ scheduler = torch.optim.lr_scheduler.StepLR(
 )
 
 # Loss function
-match p:
-    case 0:
-        loss = LprelLoss(1, False)  # L^1 relative norm
-    case 1:
-        loss = LprelLoss(2, False)  # L^2 relative norm
-    case 2:
-        if problem_dim == 1:
-            loss = H1relLoss_1D(beta, False, 1.0)
-        elif problem_dim == 2:
-            loss = H1relLoss(beta, False, 1.0)  # H^1 relative norm
-    case 3:
-        loss = torch.nn.SmoothL1Loss()  # L^1 smooth loss (Mishra)
-    case 4:
-        loss = torch.nn.MSELoss()  # L^2 smooth loss (Mishra)
-    case _:
-        raise ValueError("This value of p is not allowed")
-
+loss = loss_selector(loss_fn_str=loss_fn_str, problem_dim=problem_dim, beta=beta)
 
 #### Training process
 for epoch in range(epochs):
@@ -366,9 +348,7 @@ for epoch in range(epochs):
                 optimizer,
                 scheduler,
                 loss,
-                p,
                 device,
-                which_example,
                 tepoch,
                 n_idx,
             )
@@ -379,9 +359,7 @@ for epoch in range(epochs):
                 optimizer,
                 scheduler,
                 loss,
-                p,
                 device,
-                which_example,
                 tepoch,
             )
 
@@ -397,11 +375,10 @@ for epoch in range(epochs):
             val_loader,
             train_loader,
             loss,
-            exp_norm,
+            loss_fn_str,
             val_samples,
             training_samples,
             device,
-            which_example,
             tepoch,
             statistic=True,
         )
@@ -410,7 +387,7 @@ for epoch in range(epochs):
         writer.add_scalars(
             f"{arc}_{problem_dim}D_{which_example}",
             {
-                "Train loss " + exp_norm: train_loss,
+                "Train loss " + loss_fn_str: train_loss,
                 "Test rel. L^1 error": test_relative_l1,
                 "Test rel. L^2 error": test_relative_l2,
                 "Test rel. semi-H^1 error": test_relative_semih1,
@@ -442,7 +419,7 @@ for epoch in range(epochs):
                 )
 
         with open(folder + "/errors.txt", "w") as file:
-            file.write("Training loss " + exp_norm + ": " + str(train_loss) + "\n")
+            file.write("Training loss " + loss_fn_str + ": " + str(train_loss) + "\n")
             file.write("Test relative L^1 error: " + str(test_relative_l1) + "\n")
             file.write("Test relative L^2 error: " + str(test_relative_l2) + "\n")
             file.write(
