@@ -23,7 +23,20 @@ def tune_hyperparameters(
     runs_per_cpu: float = 0.0,
     runs_per_gpu: float = 1.0,
 ):
+    # Check if the required keys are in the config_space
+    required_keys = [
+        "learning_rate",
+        "weight_decay",
+        "scheduler_step",
+        "scheduler_gamma",
+    ]
+    missing_keys = [key for key in required_keys if key not in config_space]
+    if missing_keys:
+        print(
+            f"Attention: the key {missing_keys} are missing in the config_space, so I'll using the default value."
+        )
 
+    # Define the training function
     def train_fn(config):
         dataset = dataset_builder(config)
         model = model_builder(config)
@@ -41,6 +54,7 @@ def tune_hyperparameters(
             checkpoint_freq=checkpoint_freq,
         )
 
+    # Initialize Ray
     init(
         address="auto",
         runtime_env={
@@ -48,6 +62,7 @@ def tune_hyperparameters(
         },
     )
 
+    # Define the scheduler
     scheduler = ASHAScheduler(
         metric="relative_loss",
         mode="min",
@@ -58,12 +73,14 @@ def tune_hyperparameters(
         stop_last_trials=True,
     )
 
+    # Define the search algorithm
     search_alg = HyperOptSearch(
         metric="relative_loss",
         mode="min",
         points_to_evaluate=default_hyper_params,
     )
 
+    # Define the tuner
     tuner = tune.Tuner(
         tune.with_resources(
             tune.with_parameters(train_fn),

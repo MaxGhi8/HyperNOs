@@ -1,6 +1,5 @@
 """ 
-In this example I choose some parameters to tune and some to keep fixed. 
-Moreover I set the modes for the FNO in order to have comparable number of parameters across the different models.
+In this example I choose some parameters to tune and some to keep fixed fot the CNO model. 
 """
 
 import torch
@@ -9,8 +8,8 @@ import sys
 sys.path.append("..")
 
 from datasets import NO_load_data_model
-from FNO.FNO_arc import FNO_2D
-from FNO.FNO_utilities import FNO_initialize_hyperparameters
+from CNO.CNO import CNO
+from CNO.CNO_utilities import CNO_initialize_hyperparameters
 from loss_fun import loss_selector
 from ray import tune
 from tune import tune_hyperparameters
@@ -20,15 +19,9 @@ def main(example_name, mode_hyperparams, loss_fn_str):
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Load the default hyperparameters for the FNO model
-    hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
+    # Load the default hyperparameters for the CNO model
+    hyperparams_train, hyperparams_arc = CNO_initialize_hyperparameters(
         example_name, mode=mode_hyperparams
-    )
-
-    total_default_params = (
-        hyperparams_arc["n_layers"]
-        * hyperparams_arc["width"] ** 2
-        * hyperparams_arc["modes"] ** hyperparams_arc["problem_dim"]
     )
 
     # Define the hyperparameter search space
@@ -36,12 +29,17 @@ def main(example_name, mode_hyperparams, loss_fn_str):
         "learning_rate": tune.quniform(1e-4, 1e-2, 1e-5),
         "weight_decay": tune.quniform(1e-6, 1e-3, 1e-6),
         "scheduler_gamma": tune.quniform(0.75, 0.99, 0.01),
-        "width": tune.choice([4, 8, 16, 32, 64, 128, 256]),
-        "n_layers": tune.randint(1, 6),
-        "fun_act": tune.choice(["tanh", "relu", "gelu", "leaky_relu"]),
-        "fno_arc": tune.choice(["Classic", "Zongyi", "Residual"]),
-        "padding": tune.randint(0, 16),
+        "N_layers": tune.randint(1, 5),
+        "channel_multiplier": tune.choice([8, 16, 24, 32, 40, 48, 56]),
+        "N_res_neck": tune.randint(1, 6),
+        "N_res": tune.randint(1, 8),
     }
+    # kernel size is different for different problem dimensions
+    if hyperparams_arc["problem_dim"] == 1:
+        config_space["kernel_size"] = tune.choice([11, 21, 31, 41, 51])
+    if hyperparams_arc["problem_dim"] == 2:
+        config_space["kernel_size"] = tune.choice([3, 5, 7])
+
     # Set all the other parameters to fixed values
     fixed_params = {
         **hyperparams_train,
@@ -61,27 +59,18 @@ def main(example_name, mode_hyperparams, loss_fn_str):
     ]
 
     # Define the model builders
-    model_builder = lambda config: FNO_2D(
-        config["in_dim"],
-        config["width"],
-        config["out_dim"],
-        config["n_layers"],
-        int(
-            (total_default_params / (config["n_layers"] * config["width"] ** 2))
-            ** (1 / hyperparams_arc["problem_dim"])
-        ),
-        int(
-            (total_default_params / (config["n_layers"] * config["width"] ** 2))
-            ** (1 / hyperparams_arc["problem_dim"])
-        ),
-        config["fun_act"],
-        config["weights_norm"],
-        config["fno_arc"],
-        config["RNN"],
-        config["fft_norm"],
-        config["padding"],
-        device,
-        config["retrain"],
+    model_builder = lambda config: CNO(
+        problem_dim=config["problem_dim"],
+        in_dim=config["in_dim"],
+        out_dim=config["out_dim"],
+        size=config["in_size"],
+        N_layers=config["N_layers"],
+        N_res=config["N_res"],
+        N_res_neck=config["N_res_neck"],
+        channel_multiplier=config["channel_multiplier"],
+        kernel_size=config["kernel_size"],
+        use_bn=config["bn"],
+        device=device,
     )
 
     # Define the dataset builder

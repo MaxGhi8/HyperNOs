@@ -1,6 +1,5 @@
 """ 
-In this example I choose some parameters to tune and some to keep fixed. 
-Moreover I set the modes for the FNO in order to have comparable number of parameters across the different models.
+In this example I choose some parameters to tune and some to keep fixed for the FNO model. 
 """
 
 import torch
@@ -25,12 +24,6 @@ def main(example_name, mode_hyperparams, loss_fn_str):
         example_name, mode=mode_hyperparams
     )
 
-    total_default_params = (
-        hyperparams_arc["n_layers"]
-        * hyperparams_arc["width"] ** 2
-        * hyperparams_arc["modes"] ** hyperparams_arc["problem_dim"]
-    )
-
     # Define the hyperparameter search space
     config_space = {
         "learning_rate": tune.quniform(1e-4, 1e-2, 1e-5),
@@ -38,6 +31,7 @@ def main(example_name, mode_hyperparams, loss_fn_str):
         "scheduler_gamma": tune.quniform(0.75, 0.99, 0.01),
         "width": tune.choice([4, 8, 16, 32, 64, 128, 256]),
         "n_layers": tune.randint(1, 6),
+        "modes": tune.choice([2, 4, 8, 12, 16, 20, 24, 28, 32]),  # modes1 = modes2
         "fun_act": tune.choice(["tanh", "relu", "gelu", "leaky_relu"]),
         "fno_arc": tune.choice(["Classic", "Zongyi", "Residual"]),
         "padding": tune.randint(0, 16),
@@ -66,14 +60,8 @@ def main(example_name, mode_hyperparams, loss_fn_str):
         config["width"],
         config["out_dim"],
         config["n_layers"],
-        int(
-            (total_default_params / (config["n_layers"] * config["width"] ** 2))
-            ** (1 / hyperparams_arc["problem_dim"])
-        ),
-        int(
-            (total_default_params / (config["n_layers"] * config["width"] ** 2))
-            ** (1 / hyperparams_arc["problem_dim"])
-        ),
+        config["modes"],
+        config["modes"],
         config["fun_act"],
         config["weights_norm"],
         config["fno_arc"],
