@@ -197,7 +197,7 @@ match arc:
         modes = hyperparams_arc["modes"]
         fun_act = hyperparams_arc["fun_act"]
         weights_norm = hyperparams_arc["weights_norm"]
-        fno_arc = hyperparams_arc["arc"]
+        fno_arc = hyperparams_arc["fno_arc"]
         RNN = hyperparams_arc["RNN"]
         FFTnorm = hyperparams_arc["fft_norm"]
         padding = hyperparams_arc["padding"]

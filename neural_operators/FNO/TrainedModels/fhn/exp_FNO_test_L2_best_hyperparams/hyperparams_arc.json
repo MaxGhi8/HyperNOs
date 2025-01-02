@@ -3,7 +3,7 @@
     "modes": 8,
     "n_layers": 5,
     "padding": 0,
-    "arc": "Residual",
+    "fno_arc": "Residual",
     "fun_act": "leaky_relu",
     "in_dim": 1,
     "out_dim": 2,

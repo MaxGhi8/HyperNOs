@@ -3,7 +3,7 @@
     "modes": 28,
     "n_layers": 2,
     "padding": 3,
-    "arc": "Classic",
+    "fno_arc": "Classic",
     "fun_act": "relu",
     "in_dim": 1,
     "out_dim": 1,

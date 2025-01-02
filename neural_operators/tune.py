@@ -68,7 +68,7 @@ def tune_hyperparameters(
     search_alg = HyperOptSearch(
         metric="relative_loss",
         mode="min",
-        # points_to_evaluate=default_hyper_params,
+        points_to_evaluate=default_hyper_params,
     )
 
     tuner = tune.Tuner(

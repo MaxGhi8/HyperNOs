@@ -16,7 +16,7 @@
 		"modes": 28,
 		"n_layers": 4,
 		"padding": 1,
-		"arc": "Classic",
+		"fno_arc": "Classic",
 		"fun_act": "gelu",
 		"in_dim": 1,
 		"out_dim": 1,

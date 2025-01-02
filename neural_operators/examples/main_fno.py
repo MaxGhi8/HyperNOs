@@ -43,7 +43,7 @@ def main():
         #     "n_layers": hyperparams_arc["n_layers"],
         #     "modes": hyperparams_arc["modes"],
         #     "fun_act": hyperparams_arc["fun_act"],
-        #     "arc": hyperparams_arc["arc"],
+        #     "fno_arc": hyperparams_arc["fno_arc"],
         #     "padding": hyperparams_arc["padding"],
         # }
     ]

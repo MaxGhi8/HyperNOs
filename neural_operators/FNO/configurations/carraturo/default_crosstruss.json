@@ -16,7 +16,7 @@
 		"modes": 8,
 		"n_layers": 2,
 		"padding": 4,
-		"arc": "Zongyi",
+		"fno_arc": "Zongyi",
 		"fun_act": "gelu",
 		"in_dim": 1,
 		"out_dim": 2,

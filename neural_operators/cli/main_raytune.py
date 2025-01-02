@@ -226,7 +226,7 @@ def train_hyperparameter(config):
             L = config["n_layers"]
             modes = config["modes"]
             fun_act = config["fun_act"]
-            fno_arc = config["arc"]
+            fno_arc = config["fno_arc"]
             padding = config["padding"]
 
         # CNO hyperparameters
@@ -386,7 +386,7 @@ def main(num_samples, max_num_epochs=epochs):
                     "n_layers": hyperparams_arc["n_layers"],
                     "modes": hyperparams_arc["modes"],
                     "fun_act": hyperparams_arc["fun_act"],
-                    "arc": hyperparams_arc["arc"],
+                    "fno_arc": hyperparams_arc["fno_arc"],
                     "padding": hyperparams_arc["padding"],
                 }
             ]
@@ -417,7 +417,7 @@ def main(num_samples, max_num_epochs=epochs):
                     [2, 4, 8, 12, 16, 20, 24, 28, 32]
                 ),  # modes1 = modes2
                 "fun_act": tune.choice(["tanh", "relu", "gelu", "leaky_relu"]),
-                "arc": tune.choice(["Classic", "Zongyi", "Residual"]),
+                "fno_arc": tune.choice(["Classic", "Zongyi", "Residual"]),
                 "padding": tune.randint(0, 16),
             }
         case "CNO":

@@ -16,7 +16,7 @@
 		"modes": 16,
 		"n_layers": 5,
 		"padding": 0,
-		"arc": "Classic",
+		"fno_arc": "Classic",
 		"fun_act": "leaky_relu",
 		"in_dim": 1,
 		"out_dim": 1,
