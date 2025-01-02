@@ -78,6 +78,7 @@ def tune_hyperparameters(
         metric="relative_loss",
         mode="min",
         points_to_evaluate=default_hyper_params,
+        n_initial_points=20,
     )
 
     # Define the tuner
@@ -96,6 +97,13 @@ def tune_hyperparameters(
     )
 
     results = tuner.fit()
+
+    # # Get the best trial
+    # best_result = results.get_best_result("relative_loss", "min")
+    # print("Best trial config: {}".format(best_result.config))
+    # # print("Best trial test_relative_loss: {}".format(best_result.metrics["relative_loss"]))
+    # print("Best trial directory: {}".format(best_result.path))
+
     return results.get_best_result("relative_loss", "min")
 
 

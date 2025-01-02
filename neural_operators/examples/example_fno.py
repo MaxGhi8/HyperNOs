@@ -15,7 +15,7 @@ from ray import tune
 from tune import tune_hyperparameters
 
 
-def main(example_name: str, mode_hyperparams: str, loss_fn_str: str):
+def example_fno(example_name: str, mode_hyperparams: str, loss_fn_str: str):
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -105,4 +105,4 @@ def main(example_name: str, mode_hyperparams: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    main("darcy", "default", "L1")
+    example_fno("darcy", "default", "L2")

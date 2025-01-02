@@ -68,7 +68,7 @@ def train_fun(
 
         # set the postfix for print
         train_loss += loss_f.item()
-        try:
+        if tepoch is not None:
             tepoch.set_postfix(
                 {
                     "Batch": step + 1,
@@ -76,8 +76,6 @@ def train_fun(
                     / (input_batch.shape[0] * (step + 1)),
                 }
             )
-        except Exception:
-            pass
 
     # update the learning rate after an epoch
     scheduler.step()
