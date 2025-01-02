@@ -13,7 +13,9 @@ from torch import Tensor
 #########################################
 class SmoothL1Loss_rel:
     def __call__(
-        self, x: Float[Tensor, "n_samples *n d_u"], y: Float[Tensor, "n_samples *n d_u"]
+        self,
+        x: Float[Tensor, "n_samples *n out_dim"],
+        y: Float[Tensor, "n_samples *n out_dim"],
     ) -> Float[Tensor, "1"]:
         return torch.nn.SmoothL1Loss(x, y) / torch.nn.SmoothL1Loss(
             torch.zeros_like(y, device=y.device), y
@@ -25,7 +27,9 @@ class SmoothL1Loss_rel:
 #########################################
 class MSELoss_rel:
     def __call__(
-        self, x: Float[Tensor, "n_samples *n d_u"], y: Float[Tensor, "n_samples *n d_u"]
+        self,
+        x: Float[Tensor, "n_samples *n out_dim"],
+        y: Float[Tensor, "n_samples *n out_dim"],
     ) -> Float[Tensor, "1"]:
         return torch.nn.MSELoss(x, y) / torch.nn.MSELoss(
             torch.zeros_like(y, device=y.device), y
@@ -40,7 +44,7 @@ class LprelLoss:
     Sum of relative errors in L^p norm
 
     x, y: torch.tensor
-          x and y are tensors of shape (n_samples, *n, d_u)
+          x and y are tensors of shape (n_samples, *n, out_dim)
           where *n indicates that the spatial dimensions can be arbitrary
     """
 
@@ -50,7 +54,9 @@ class LprelLoss:
 
     @jaxtyped(typechecker=beartype)
     def rel(
-        self, x: Float[Tensor, "n_samples *n d_u"], y: Float[Tensor, "n_samples *n d_u"]
+        self,
+        x: Float[Tensor, "n_samples *n out_dim"],
+        y: Float[Tensor, "n_samples *n out_dim"],
     ) -> Float[Tensor, "*n_samples"]:
         num_examples = x.size(0)
 
@@ -74,7 +80,9 @@ class LprelLoss:
 
     @jaxtyped(typechecker=beartype)
     def __call__(
-        self, x: Float[Tensor, "n_samples *n d_u"], y: Float[Tensor, "n_samples *n d_u"]
+        self,
+        x: Float[Tensor, "n_samples *n out_dim"],
+        y: Float[Tensor, "n_samples *n out_dim"],
     ) -> Float[Tensor, "*n_samples"]:
         return self.rel(x, y)
 
@@ -87,7 +95,7 @@ class LprelLoss_multiout:
     I want to compute the relative error for each output channel separately, and return it separately.
 
     x, y: torch.tensor
-          x and y are tensors of shape (n_samples, *n, d_u), with d_u > 1
+          x and y are tensors of shape (n_samples, *n, out_dim), with out_dim > 1
           where *n indicates that the spatial dimensions can be arbitrary
     """
 
@@ -97,13 +105,15 @@ class LprelLoss_multiout:
 
     @jaxtyped(typechecker=beartype)
     def __call__(
-        self, x: Float[Tensor, "n_samples *n d_u"], y: Float[Tensor, "n_samples *n d_u"]
-    ) -> Float[Tensor, "*n_samples d_u"]:
-        d_u = x.size(-1)
+        self,
+        x: Float[Tensor, "n_samples *n out_dim"],
+        y: Float[Tensor, "n_samples *n out_dim"],
+    ) -> Float[Tensor, "*n_samples out_dim"]:
+        out_dim = x.size(-1)
         return torch.stack(
             [
                 LprelLoss(p=self.p, size_mean=self.size_mean)(x[..., [i]], y[..., [i]])
-                for i in range(d_u)
+                for i in range(out_dim)
             ],
             dim=-1,
         )
@@ -125,8 +135,8 @@ class H1relLoss_1D:
     @jaxtyped(typechecker=beartype)
     def rel(
         self,
-        x: Complex[Tensor, "n_samples n_x d_u"],
-        y: Complex[Tensor, "n_samples n_x d_u"],
+        x: Complex[Tensor, "n_samples n_x out_dim"],
+        y: Complex[Tensor, "n_samples n_x out_dim"],
     ) -> Float[Tensor, "*n_samples"]:
         num_examples = x.size(0)
 
@@ -151,10 +161,10 @@ class H1relLoss_1D:
     @jaxtyped(typechecker=beartype)
     def __call__(
         self,
-        x: Float[Tensor, "n_samples n_y d_u"],
-        y: Float[Tensor, "n_samples n_y d_u"],
+        x: Float[Tensor, "n_samples n_y out_dim"],
+        y: Float[Tensor, "n_samples n_y out_dim"],
     ) -> Float[Tensor, "*n_samples"]:
-        n_x, d_u = x.size()[1:]
+        n_x, out_dim = x.size()[1:]
 
         k_x = (
             torch.cat(
@@ -165,9 +175,9 @@ class H1relLoss_1D:
                 0,
             )
             .reshape(n_x, 1)
-            .repeat(1, d_u)
+            .repeat(1, out_dim)
         )
-        k_x = torch.abs(k_x).reshape(1, n_x, d_u).to(x.device)
+        k_x = torch.abs(k_x).reshape(1, n_x, out_dim).to(x.device)
 
         x = torch.fft.fftn(x, dim=[1])
         y = torch.fft.fftn(y, dim=[1])
@@ -198,16 +208,16 @@ class H1relLoss_1D_multiout:
     @jaxtyped(typechecker=beartype)
     def __call__(
         self,
-        x: Float[Tensor, "n_samples n_x d_u"],
-        y: Float[Tensor, "n_samples n_x d_u"],
-    ) -> Float[Tensor, "*n_samples d_u"]:
-        d_u = x.size(-1)
+        x: Float[Tensor, "n_samples n_x out_dim"],
+        y: Float[Tensor, "n_samples n_x out_dim"],
+    ) -> Float[Tensor, "*n_samples out_dim"]:
+        out_dim = x.size(-1)
         return torch.stack(
             [
                 H1relLoss_1D(self.beta, self.size_mean, self.alpha)(
                     x[..., [i]], y[..., [i]]
                 )
-                for i in range(d_u)
+                for i in range(out_dim)
             ],
             dim=-1,
         )
@@ -229,8 +239,8 @@ class H1relLoss:
     @jaxtyped(typechecker=beartype)
     def rel(
         self,
-        x: Complex[Tensor, "n_samples n_x n_y d_u"],
-        y: Complex[Tensor, "n_samples n_x n_y d_u"],
+        x: Complex[Tensor, "n_samples n_x n_y out_dim"],
+        y: Complex[Tensor, "n_samples n_x n_y out_dim"],
     ) -> Float[Tensor, "*n_samples"]:
         num_examples = x.size(0)
 
@@ -255,10 +265,10 @@ class H1relLoss:
     @jaxtyped(typechecker=beartype)
     def __call__(
         self,
-        x: Float[Tensor, "n_samples n_x n_y d_u"],
-        y: Float[Tensor, "n_samples n_x n_y d_u"],
+        x: Float[Tensor, "n_samples n_x n_y out_dim"],
+        y: Float[Tensor, "n_samples n_x n_y out_dim"],
     ) -> Float[Tensor, "*n_samples"]:
-        n_x, n_y, d_u = x.size()[1:]
+        n_x, n_y, out_dim = x.size()[1:]
 
         k_x = (
             torch.cat(
@@ -269,7 +279,7 @@ class H1relLoss:
                 0,
             )
             .reshape(n_x, 1, 1)
-            .repeat(1, n_y, d_u)
+            .repeat(1, n_y, out_dim)
         )
         k_y = (
             torch.cat(
@@ -280,10 +290,10 @@ class H1relLoss:
                 0,
             )
             .reshape(1, n_y, 1)
-            .repeat(n_x, 1, d_u)
+            .repeat(n_x, 1, out_dim)
         )
-        k_x = torch.abs(k_x).reshape(1, n_x, n_y, d_u).to(x.device)
-        k_y = torch.abs(k_y).reshape(1, n_x, n_y, d_u).to(x.device)
+        k_x = torch.abs(k_x).reshape(1, n_x, n_y, out_dim).to(x.device)
+        k_y = torch.abs(k_y).reshape(1, n_x, n_y, out_dim).to(x.device)
 
         x = torch.fft.fftn(x, dim=[1, 2])
         y = torch.fft.fftn(y, dim=[1, 2])
@@ -312,16 +322,16 @@ class H1relLoss_multiout:
     @jaxtyped(typechecker=beartype)
     def __call__(
         self,
-        x: Float[Tensor, "n_samples n_x n_y d_u"],
-        y: Float[Tensor, "n_samples n_x n_y d_u"],
-    ) -> Float[Tensor, "*n_samples d_u"]:
-        d_u = x.size(-1)
+        x: Float[Tensor, "n_samples n_x n_y out_dim"],
+        y: Float[Tensor, "n_samples n_x n_y out_dim"],
+    ) -> Float[Tensor, "*n_samples out_dim"]:
+        out_dim = x.size(-1)
         return torch.stack(
             [
                 H1relLoss(self.beta, self.size_mean, self.alpha)(
                     x[..., [i]], y[..., [i]]
                 )
-                for i in range(d_u)
+                for i in range(out_dim)
             ],
             dim=-1,
         )

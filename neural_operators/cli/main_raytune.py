@@ -171,7 +171,7 @@ match arc:
     case "FNO":
         # fno fixed hyperparameters
         in_dim = hyperparams_arc["in_dim"]
-        d_u = hyperparams_arc["d_u"]
+        out_dim = hyperparams_arc["out_dim"]
         weights_norm = hyperparams_arc["weights_norm"]
         RNN = hyperparams_arc["RNN"]
         FFTnorm = hyperparams_arc["fft_norm"]
@@ -256,7 +256,7 @@ def train_hyperparameter(config):
                 model = FNO_1D(
                     in_dim,
                     d_v,
-                    d_u,
+                    out_dim,
                     L,
                     modes,
                     fun_act,
@@ -272,7 +272,7 @@ def train_hyperparameter(config):
                 model = FNO_2D(
                     in_dim,
                     d_v,
-                    d_u,
+                    out_dim,
                     L,
                     modes,
                     modes,

@@ -91,7 +91,7 @@ def train_model_without_ray(
             )
 
             # make plots with loss separated for every component of the output
-            if config["d_u"] > 1:
+            if config["out_dim"] > 1:
                 (
                     test_relative_l1_multiout,
                     test_relative_l2_multiout,
@@ -101,9 +101,9 @@ def train_model_without_ray(
                     model,
                     dataset.test_loader,
                     device,
-                    config["d_u"],
+                    config["out_dim"],
                 )
-                for i in range(config["d_u"]):
+                for i in range(config["out_dim"]):
                     writer.add_scalars(
                         f"{experiment_name}_output_{i}",
                         {

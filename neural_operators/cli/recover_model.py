@@ -204,7 +204,7 @@ match arc:
         # fno architecture hyperparameters
         in_dim = hyperparams_arc["in_dim"]
         d_v = hyperparams_arc["width"]
-        d_u = hyperparams_arc["d_u"]
+        out_dim = hyperparams_arc["out_dim"]
         L = hyperparams_arc["n_layers"]
         modes = hyperparams_arc["modes"]
         fun_act = hyperparams_arc["fun_act"]

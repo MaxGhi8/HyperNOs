@@ -19,7 +19,7 @@
 		"arc": "Residual",
 		"fun_act": "leaky_relu",
 		"in_dim": 1,
-		"d_u": 2,
+		"out_dim": 2,
 		"fft_norm": null,
 		"FourierF": 0,
 		"RNN": false,

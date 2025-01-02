@@ -19,7 +19,7 @@
 		"arc": "Zongyi",
 		"fun_act": "gelu",
 		"in_dimdimdim": 1,
-		"d_u": 4,
+		"out_dim": 4,
 		"fft_norm": null,
 		"FourierF": 0,
 		"RNN": false,

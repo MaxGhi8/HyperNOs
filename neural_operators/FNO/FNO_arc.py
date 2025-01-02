@@ -352,7 +352,7 @@ class FNO_1D(nn.Module):
         self,
         in_dim: int,
         d_v: int,
-        d_u: int,
+        out_dim: int,
         L: int,
         modes: int,
         fun_act: str,
@@ -371,7 +371,7 @@ class FNO_1D(nn.Module):
         d_v : int
             dimension of the space in the integral Fourier operator
 
-        d_u : int
+        out_dim : int
             dimension of the output space
 
         L: int
@@ -408,7 +408,7 @@ class FNO_1D(nn.Module):
         self.problem_dim = 1  # 1D problem
         self.in_dim = in_dim + self.problem_dim
         self.d_v = d_v
-        self.d_u = d_u
+        self.out_dim = out_dim
         self.L = L
         self.modes = modes
         self.fun_act = fun_act
@@ -524,7 +524,7 @@ class FNO_1D(nn.Module):
                 )
 
         ## Projection (that is non linear for the NOMAD article)
-        self.q = MLP_1D(self.d_v, self.d_u, 128, self.fun_act)
+        self.q = MLP_1D(self.d_v, self.out_dim, 128, self.fun_act)
 
         ## Move to device
         self.to(device)
@@ -532,7 +532,7 @@ class FNO_1D(nn.Module):
     @jaxtyped(typechecker=beartype)
     def forward(
         self, x: Float[Tensor, "n_batch n_x in_dim"]
-    ) -> Float[Tensor, "n_batch n_x d_u"]:
+    ) -> Float[Tensor, "n_batch n_x out_dim"]:
         ## Grid and initialization
         grid = self.get_grid(x.shape).to(self.device)
         x = torch.cat(
@@ -601,7 +601,7 @@ class FNO_1D(nn.Module):
 
         ## Perform projection (Q)
         x = x.permute(0, 2, 1)  # (n_samples)*(n_x)*(d_v)
-        x = self.q(x)  # shape --> (n_samples)*(nx)*(d_u)
+        x = self.q(x)  # shape --> (n_samples)*(nx)*(out_dim)
 
         return x
 
@@ -625,7 +625,7 @@ class FNO_2D(nn.Module):
         self,
         in_dim: int,
         d_v: int,
-        d_u: int,
+        out_dim: int,
         L: int,
         modes1: int,
         modes2: int,
@@ -645,7 +645,7 @@ class FNO_2D(nn.Module):
         d_v : int
             dimension of the space in the integral Fourier operator
 
-        d_u : int
+        out_dim : int
             dimension of the output space
 
         L: int
@@ -685,7 +685,7 @@ class FNO_2D(nn.Module):
         self.problem_dim = 2  # 2D problem
         self.in_dim = in_dim + self.problem_dim
         self.d_v = d_v
-        self.d_u = d_u
+        self.out_dim = out_dim
         self.L = L
         self.modes1 = modes1
         self.modes2 = modes2
@@ -808,7 +808,7 @@ class FNO_2D(nn.Module):
                 )
 
         ## Projection
-        self.q = MLP_2D(self.d_v, self.d_u, 128, self.fun_act)
+        self.q = MLP_2D(self.d_v, self.out_dim, 128, self.fun_act)
 
         ## Move to device
         self.to(device)
@@ -816,7 +816,7 @@ class FNO_2D(nn.Module):
     @jaxtyped(typechecker=beartype)
     def forward(
         self, x: Float[Tensor, "n_batch n_x n_y in_dim"]
-    ) -> Float[Tensor, "n_batch n_x n_y d_u"]:
+    ) -> Float[Tensor, "n_batch n_x n_y out_dim"]:
         ## Grid and initialization
         grid = self.get_grid(x.shape).to(self.device)
         x = torch.cat(
@@ -885,7 +885,7 @@ class FNO_2D(nn.Module):
 
         ## Perform projection (Q)
         x = x.permute(0, 2, 3, 1)  # (n_samples)*(n_x)*(n_y)*(d_v)
-        x = self.q(x)  # shape --> (n_samples)*(nx)*(ny)*(d_u) for fourier
+        x = self.q(x)  # shape --> (n_samples)*(nx)*(ny)*(out_dim) for fourier
 
         return x
 

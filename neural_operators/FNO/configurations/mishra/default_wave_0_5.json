@@ -19,7 +19,7 @@
 		"arc": "Classic",
 		"fun_act": "leaky_relu",
 		"in_dimdim": 1,
-		"d_u": 1,
+		"out_dim": 1,
 		"fft_norm": null,
 		"FourierF": 0,
 		"RNN": false,
