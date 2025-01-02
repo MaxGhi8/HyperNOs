@@ -8,7 +8,7 @@ import sys
 sys.path.append("..")
 
 from datasets import NO_load_data_model
-from FNO.FNO_arc import FNO_2D
+from FNO.FNO import FNO
 from FNO.FNO_utilities import FNO_initialize_hyperparameters
 from loss_fun import loss_selector
 from ray import tune
@@ -55,12 +55,12 @@ def example_fno(example_name: str, mode_hyperparams: str, loss_fn_str: str):
     ]
 
     # Define the model builders
-    model_builder = lambda config: FNO_2D(
+    model_builder = lambda config: FNO(
+        config["problem_dim"],
         config["in_dim"],
         config["width"],
         config["out_dim"],
         config["n_layers"],
-        config["modes"],
         config["modes"],
         config["fun_act"],
         config["weights_norm"],

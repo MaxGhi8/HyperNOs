@@ -362,14 +362,21 @@ class FNO(nn.Module):
         self.device = device
 
         ## Lifting
-        # self.p = torch.nn.Conv(self.problem_dim, self.in_dim, self.d_v, 1)
+        # if self.problem_dim == 1:
+        #     self.p = torch.nn.Conv1d(self.in_dim, self.d_v, 1)
+        # elif self.problem_dim == 2:
+        #     self.p = torch.nn.Conv2d(self.in_dim, self.d_v, 1)
         self.p = MLP(self.problem_dim, self.in_dim, self.d_v, 128, self.fun_act)
 
         ## Fourier layer
         if self.arc == "Tran":  # residual form
             if self.RNN:
-                self.ws1 = torch.nn.Conv(self.problem_dim, self.d_v, self.d_v, 1)
-                self.ws2 = torch.nn.Conv(self.problem_dim, self.d_v, self.d_v, 1)
+                if self.problem_dim == 1:
+                    self.ws1 = torch.nn.Conv1d(self.d_v, self.d_v, 1)
+                    self.ws2 = torch.nn.Conv1d(self.d_v, self.d_v, 1)
+                elif self.problem_dim == 2:
+                    self.ws1 = torch.nn.Conv2d(self.d_v, self.d_v, 1)
+                    self.ws2 = torch.nn.Conv2d(self.d_v, self.d_v, 1)
                 self.integrals = FourierLayer(
                     self.problem_dim,
                     self.d_v,
@@ -380,18 +387,21 @@ class FNO(nn.Module):
                     self.FFTnorm,
                 )
             else:
-                self.ws1 = nn.ModuleList(
-                    [
-                        torch.nn.Conv(self.problem_dim, self.d_v, self.d_v, 1)
-                        for _ in range(self.L)
-                    ]
-                )
-                self.ws2 = nn.ModuleList(
-                    [
-                        torch.nn.Conv(self.problem_dim, self.d_v, self.d_v, 1)
-                        for _ in range(self.L)
-                    ]
-                )
+                if self.problem_dim == 1:
+                    self.ws1 = nn.ModuleList(
+                        [torch.nn.Conv1d(self.d_v, self.d_v, 1) for _ in range(self.L)]
+                    )
+                    self.ws2 = nn.ModuleList(
+                        [torch.nn.Conv1d(self.d_v, self.d_v, 1) for _ in range(self.L)]
+                    )
+                elif self.problem_dim == 2:
+                    self.ws1 = nn.ModuleList(
+                        [torch.nn.Conv2d(self.d_v, self.d_v, 1) for _ in range(self.L)]
+                    )
+                    self.ws2 = nn.ModuleList(
+                        [torch.nn.Conv2d(self.d_v, self.d_v, 1) for _ in range(self.L)]
+                    )
+
                 self.integrals = nn.ModuleList(
                     [
                         FourierLayer(
@@ -409,7 +419,10 @@ class FNO(nn.Module):
 
         elif self.arc == "Zongyi":
             if self.RNN:
-                self.ws = torch.nn.Conv(self.problem_dim, self.d_v, self.d_v, 1)
+                if self.problem_dim == 1:
+                    self.ws = torch.nn.Conv1d(self.d_v, self.d_v, 1)
+                elif self.problem_dim == 2:
+                    self.ws = torch.nn.Conv2d(self.d_v, self.d_v, 1)
                 self.mlps = MLP_conv(
                     self.problem_dim, self.d_v, self.d_v, self.d_v, self.fun_act
                 )
@@ -423,12 +436,15 @@ class FNO(nn.Module):
                     self.FFTnorm,
                 )
             else:
-                self.ws = nn.ModuleList(
-                    [
-                        torch.nn.Conv(self.problem_dim, self.d_v, self.d_v, 1)
-                        for _ in range(self.L)
-                    ]
-                )
+                if self.problem_dim == 1:
+                    self.ws = nn.ModuleList(
+                        [torch.nn.Conv1d(self.d_v, self.d_v, 1) for _ in range(self.L)]
+                    )
+                elif self.problem_dim == 2:
+                    self.ws = nn.ModuleList(
+                        [torch.nn.Conv2d(self.d_v, self.d_v, 1) for _ in range(self.L)]
+                    )
+
                 self.mlps = nn.ModuleList(
                     [
                         MLP_conv(
@@ -454,7 +470,11 @@ class FNO(nn.Module):
 
         elif self.arc == "Classic" or self.arc == "Residual":
             if self.RNN:
-                self.ws = torch.nn.Conv(self.problem_dim, self.d_v, self.d_v, 1)
+                if self.problem_dim == 1:
+                    self.ws = torch.nn.Conv1d(self.d_v, self.d_v, 1)
+                elif self.problem_dim == 2:
+                    self.ws = torch.nn.Conv2d(self.d_v, self.d_v, 1)
+
                 self.integrals = FourierLayer(
                     self.problem_dim,
                     self.d_v,
@@ -465,12 +485,15 @@ class FNO(nn.Module):
                     self.FFTnorm,
                 )
             else:
-                self.ws = nn.ModuleList(
-                    [
-                        nn.Conv(self.problem_dim, self.d_v, self.d_v, 1)
-                        for _ in range(self.L)
-                    ]
-                )
+                if self.problem_dim == 1:
+                    self.ws = nn.ModuleList(
+                        [nn.Conv1d(self.d_v, self.d_v, 1) for _ in range(self.L)]
+                    )
+                elif self.problem_dim == 2:
+                    self.ws = nn.ModuleList(
+                        [nn.Conv2d(self.d_v, self.d_v, 1) for _ in range(self.L)]
+                    )
+
                 self.integrals = nn.ModuleList(
                     [
                         FourierLayer(

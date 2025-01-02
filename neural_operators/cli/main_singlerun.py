@@ -43,7 +43,7 @@ from CNO.CNO import CNO
 from CNO.CNO_utilities import CNO_initialize_hyperparameters
 
 # FNO imports
-from FNO.FNO_arc import FNO_1D, FNO_2D
+from FNO.FNO import FNO
 from FNO.FNO_utilities import FNO_initialize_hyperparameters
 from loss_fun import loss_selector
 from tensorboardX import SummaryWriter
@@ -252,39 +252,22 @@ with open(folder + "/hyperparams_arc.json", "w") as f:
 #########################################
 match arc:
     case "FNO":
-        if problem_dim == 1:
-            model = FNO_1D(
-                in_dim,
-                d_v,
-                out_dim,
-                L,
-                modes,
-                fun_act,
-                weights_norm,
-                fno_arc,
-                RNN,
-                FFTnorm,
-                padding,
-                device,
-                retrain,
-            )
-        elif problem_dim == 2:
-            model = FNO_2D(
-                in_dim,
-                d_v,
-                out_dim,
-                L,
-                modes,
-                modes,
-                fun_act,
-                weights_norm,
-                fno_arc,
-                RNN,
-                FFTnorm,
-                padding,
-                device,
-                retrain,
-            )
+        model = FNO(
+            problem_dim,
+            in_dim,
+            d_v,
+            out_dim,
+            L,
+            modes,
+            fun_act,
+            weights_norm,
+            fno_arc,
+            RNN,
+            FFTnorm,
+            padding,
+            device,
+            retrain,
+        )
     case "CNO":
         model = CNO(
             problem_dim,
