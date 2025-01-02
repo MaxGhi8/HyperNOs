@@ -46,7 +46,7 @@ from datasets import NO_load_data_model
 # FNO imports
 from FNO.FNO_arc import FNO_1D, FNO_2D
 from FNO.FNO_utilities import FNO_initialize_hyperparameters
-from loss_fun import H1relLoss, H1relLoss_1D, LprelLoss, MSELoss_rel, SmoothL1Loss_rel
+from loss_fun import loss_selector
 from ray import init, train, tune
 from ray.train import Checkpoint
 from ray.tune.schedulers import ASHAScheduler
@@ -190,22 +190,7 @@ match arc:
         raise ValueError("This architecture is not allowed")
 
 # Loss function
-match p:
-    case 0:
-        loss = LprelLoss(1, False)  # L^1 relative norm
-    case 1:
-        loss = LprelLoss(2, False)  # L^2 relative norm
-    case 2:
-        if problem_dim == 1:
-            loss = H1relLoss_1D(beta, False, 1.0)
-        elif problem_dim == 2:
-            loss = H1relLoss(beta, False, 1.0)  # H^1 relative norm
-    case 3:
-        loss = SmoothL1Loss_rel()  # L^1 smooth loss (Mishra)
-    case 4:
-        loss = MSELoss_rel()  # L^2 smooth loss (Mishra)
-    case _:
-        raise ValueError("This value of p is not allowed")
+loss = loss_selector(loss_fn_str=loss_fn_str, problem_dim=problem_dim, beta=beta)
 
 
 #########################################

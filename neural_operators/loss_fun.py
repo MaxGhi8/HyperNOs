@@ -12,7 +12,7 @@ from torch import Tensor
 # Loss function selector
 #########################################
 def loss_selector(loss_fn_str: str, problem_dim: int, beta: float = 1.0):
-    match loss_fn_str:
+    match loss_fn_str.upper():
         case "L1":
             loss = LprelLoss(1, False)
         case "L2":
