@@ -21,6 +21,7 @@ Plotting of input/output and prediction for the trained model.
 """
 
 import sys
+
 sys.path.append("..")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -642,7 +643,7 @@ def plot_crosstruss(input_tensor, output_tensor, prediction_tensor, idx):
 
 @jaxtyped(typechecker=beartype)
 def test_plot_samples(
-    input_tensor: Float[Tensor, "n_samples *n d_a"],
+    input_tensor: Float[Tensor, "n_samples *n in_dim"],
     output_tensor: Float[Tensor, "n_samples *n d_v"],
     prediction_tensor: Float[Tensor, "n_samples *n d_v"],
     error: Float[Tensor, "n_samples"],

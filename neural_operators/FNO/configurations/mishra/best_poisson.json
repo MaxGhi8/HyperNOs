@@ -18,7 +18,7 @@
 		"padding": 0,
 		"arc": "Zongyi",
 		"fun_act": "tanh",
-		"d_a": 1,
+		"in_dimdim": 1,
 		"d_u": 1,
 		"fft_norm": null,
 		"FourierF": 0,

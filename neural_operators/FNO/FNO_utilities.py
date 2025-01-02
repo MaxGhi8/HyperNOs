@@ -4,6 +4,7 @@ In this file there are some utilities functions that are used in the main file.
 
 import json
 import sys
+
 sys.path.append("..")
 
 from utilities import find_file

@@ -16,7 +16,7 @@ def main():
         "RNN": tune.choice([False]),
         "batch_size": tune.choice([32]),
         "fno_arc": tune.choice(["Classic", "Zongyi", "Residual"]),
-        "d_a": tune.choice([1]),
+        "in_dim": tune.choice([1]),
         "d_u": tune.choice([1]),
         "fft_norm": tune.choice([None]),
         "fun_act": tune.choice(["tanh", "relu", "gelu", "leaky_relu"]),
@@ -49,7 +49,7 @@ def main():
     ]
 
     model_builder = lambda config: FNO_2D(
-        config["d_a"],
+        config["in_dim"],
         config["width"],
         config["d_u"],
         config["n_layers"],

@@ -5,7 +5,7 @@
     "padding": 7,
     "arc": "Zongyi",
     "fun_act": "leaky_relu",
-    "d_a": 1,
+    "in_dim": 1,
     "d_u": 4,
     "fft_norm": null,
     "FourierF": 0,

@@ -18,7 +18,7 @@
 		"padding": 4,
 		"arc": "Classic",
 		"fun_act": "leaky_relu",
-		"d_a": 1,
+		"in_dimdim": 1,
 		"d_u": 1,
 		"fft_norm": null,
 		"FourierF": 0,

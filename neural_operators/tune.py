@@ -1,4 +1,5 @@
 import os
+from ray.tune.utils import wait_for_gpu
 import tempfile
 
 import torch
@@ -47,7 +48,12 @@ def tune_hyperparameters(
             config["scheduler_gamma"],
         )
 
-    init(address="auto")
+    init(
+        address="auto",
+        runtime_env={
+            "env_vars": {"PYTHONPATH": os.path.abspath("..")},
+        },
+    )
 
     scheduler = ASHAScheduler(
         metric="relative_loss",
@@ -62,7 +68,7 @@ def tune_hyperparameters(
     search_alg = HyperOptSearch(
         metric="relative_loss",
         mode="min",
-        points_to_evaluate=default_hyper_params,
+        # points_to_evaluate=default_hyper_params,
     )
 
     tuner = tune.Tuner(

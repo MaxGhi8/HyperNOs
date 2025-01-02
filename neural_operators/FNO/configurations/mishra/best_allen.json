@@ -18,7 +18,7 @@
 		"padding": 3,
 		"arc": "Classic",
 		"fun_act": "relu",
-		"d_a": 1,
+		"in_dim": 1,
 		"d_u": 1,
 		"fft_norm": null,
 		"FourierF": 0,

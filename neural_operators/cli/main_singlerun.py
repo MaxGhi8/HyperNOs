@@ -33,6 +33,7 @@ import argparse
 import json
 import os
 import sys
+
 sys.path.append("..")
 
 import torch
@@ -189,7 +190,7 @@ val_samples = hyperparams_train["val_samples"]
 match arc:
     case "FNO":
         # fno architecture hyperparameters
-        d_a = hyperparams_arc["d_a"]
+        in_dim = hyperparams_arc["in_dim"]
         d_v = hyperparams_arc["width"]
         out_dim = hyperparams_arc["d_u"]
         L = hyperparams_arc["n_layers"]
@@ -255,7 +256,7 @@ match arc:
     case "FNO":
         if problem_dim == 1:
             model = FNO_1D(
-                d_a,
+                in_dim,
                 d_v,
                 out_dim,
                 L,
@@ -271,7 +272,7 @@ match arc:
             )
         elif problem_dim == 2:
             model = FNO_2D(
-                d_a,
+                in_dim,
                 d_v,
                 out_dim,
                 L,

@@ -32,6 +32,7 @@ import json
 import os
 import time
 import sys
+
 sys.path.append("..")
 
 import matplotlib.pyplot as plt
@@ -201,7 +202,7 @@ val_samples = hyperparams_train["val_samples"]
 match arc:
     case "FNO":
         # fno architecture hyperparameters
-        d_a = hyperparams_arc["d_a"]
+        in_dim = hyperparams_arc["in_dim"]
         d_v = hyperparams_arc["width"]
         d_u = hyperparams_arc["d_u"]
         L = hyperparams_arc["n_layers"]

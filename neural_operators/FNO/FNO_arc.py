@@ -350,7 +350,7 @@ class FNO_1D(nn.Module):
 
     def __init__(
         self,
-        d_a: int,
+        in_dim: int,
         d_v: int,
         d_u: int,
         L: int,
@@ -365,7 +365,7 @@ class FNO_1D(nn.Module):
         retrain_fno=-1,
     ):
         """
-        d_a : int
+        in_dim : int
             dimension of the input space
 
         d_v : int
@@ -406,7 +406,7 @@ class FNO_1D(nn.Module):
         """
         super(FNO_1D, self).__init__()
         self.problem_dim = 1  # 1D problem
-        self.d_a = d_a + self.problem_dim
+        self.in_dim = in_dim + self.problem_dim
         self.d_v = d_v
         self.d_u = d_u
         self.L = L
@@ -421,8 +421,8 @@ class FNO_1D(nn.Module):
         self.device = device
 
         ## Lifting
-        # self.p = torch.nn.Conv1d(self.d_a, self.d_v, 1)
-        self.p = MLP_1D(self.d_a, self.d_v, 128, self.fun_act)
+        # self.p = torch.nn.Conv1d(self.in_dim, self.d_v, 1)
+        self.p = MLP_1D(self.in_dim, self.d_v, 128, self.fun_act)
 
         ## Fourier layer
         if self.arc == "Tran":  # residual form
@@ -531,16 +531,16 @@ class FNO_1D(nn.Module):
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "n_batch n_x d_a"]
+        self, x: Float[Tensor, "n_batch n_x in_dim"]
     ) -> Float[Tensor, "n_batch n_x d_u"]:
         ## Grid and initialization
         grid = self.get_grid(x.shape).to(self.device)
         x = torch.cat(
             (grid, x), dim=-1
-        )  # concatenate last dimension --> (n_samples)*(n_x)*(d_a+self.problem_dim)
+        )  # concatenate last dimension --> (n_samples)*(n_x)*(in_dim+self.problem_dim)
 
         ## Perform lifting operator P
-        x = self.p(x)  # shape = (n_samples)*(n_x)*(d_a + self.problem_dim)
+        x = self.p(x)  # shape = (n_samples)*(n_x)*(in_dim + self.problem_dim)
         x = x.permute(0, 2, 1)  # (n_samples)*(d_v)*(n_x)
 
         ## Padding
@@ -623,7 +623,7 @@ class FNO_2D(nn.Module):
 
     def __init__(
         self,
-        d_a: int,
+        in_dim: int,
         d_v: int,
         d_u: int,
         L: int,
@@ -639,7 +639,7 @@ class FNO_2D(nn.Module):
         retrain_fno=-1,
     ):
         """
-        d_a : int
+        in_dim : int
             dimension of the input space
 
         d_v : int
@@ -683,7 +683,7 @@ class FNO_2D(nn.Module):
         """
         super(FNO_2D, self).__init__()
         self.problem_dim = 2  # 2D problem
-        self.d_a = d_a + self.problem_dim
+        self.in_dim = in_dim + self.problem_dim
         self.d_v = d_v
         self.d_u = d_u
         self.L = L
@@ -699,8 +699,8 @@ class FNO_2D(nn.Module):
         self.device = device
 
         ## Lifting
-        # self.p = torch.nn.Conv2d(self.d_a, self.d_v, 1)
-        self.p = MLP_2D(self.d_a, self.d_v, 128, self.fun_act)
+        # self.p = torch.nn.Conv2d(self.in_dim, self.d_v, 1)
+        self.p = MLP_2D(self.in_dim, self.d_v, 128, self.fun_act)
 
         ## Fourier layer
         if self.arc == "Tran":  # residual form
@@ -815,16 +815,16 @@ class FNO_2D(nn.Module):
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "n_batch n_x n_y d_a"]
+        self, x: Float[Tensor, "n_batch n_x n_y in_dim"]
     ) -> Float[Tensor, "n_batch n_x n_y d_u"]:
         ## Grid and initialization
         grid = self.get_grid(x.shape).to(self.device)
         x = torch.cat(
             (grid, x), dim=-1
-        )  # concatenate last dimension --> (n_samples)*(n_x)*(n_y)*(d_a + 2)
+        )  # concatenate last dimension --> (n_samples)*(n_x)*(n_y)*(in_dim + 2)
 
         ## Perform lifting operator P
-        x = self.p(x)  # shape = (n_samples)*(nx)*(ny)*(d_a + 2)
+        x = self.p(x)  # shape = (n_samples)*(nx)*(ny)*(in_dim + 2)
         x = x.permute(0, 3, 1, 2)  # (n_samples)*(d_v)*(n_x)*(n_y)
 
         ## Padding

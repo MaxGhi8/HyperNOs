@@ -33,6 +33,7 @@ import argparse
 import os
 import tempfile
 import sys
+
 sys.path.append("..")
 
 import torch
@@ -169,7 +170,7 @@ scheduler_step = hyperparams_train["scheduler_step"]
 match arc:
     case "FNO":
         # fno fixed hyperparameters
-        d_a = hyperparams_arc["d_a"]
+        in_dim = hyperparams_arc["in_dim"]
         d_u = hyperparams_arc["d_u"]
         weights_norm = hyperparams_arc["weights_norm"]
         RNN = hyperparams_arc["RNN"]
@@ -253,7 +254,7 @@ def train_hyperparameter(config):
         case "FNO":
             if problem_dim == 1:
                 model = FNO_1D(
-                    d_a,
+                    in_dim,
                     d_v,
                     d_u,
                     L,
@@ -269,7 +270,7 @@ def train_hyperparameter(config):
                 )
             elif problem_dim == 2:
                 model = FNO_2D(
-                    d_a,
+                    in_dim,
                     d_v,
                     d_u,
                     L,
