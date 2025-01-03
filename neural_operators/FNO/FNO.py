@@ -55,14 +55,16 @@ class MLP(nn.Module):
     ):
         super(MLP, self).__init__()
         self.problem_dim = problem_dim
+        self.in_channels = in_channels
+        self.out_channels = out_channels
         self.mlp1 = torch.nn.Linear(in_channels, mid_channels)
         self.mlp2 = torch.nn.Linear(mid_channels, out_channels)
         self.fun_act = fun_act
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "n_samples *d_x d_in"]
-    ) -> Float[Tensor, "n_samples *d_x d_out"]:
+        self, x: Float[Tensor, "n_samples *d_x {self.in_channels}"]
+    ) -> Float[Tensor, "n_samples *d_x {self.out_channels}"]:
         x = self.mlp1(x)  # affine transformation
         x = activation(x, self.fun_act)  # activation function
         x = self.mlp2(x)  # affine transformation
@@ -82,6 +84,9 @@ class MLP_conv(nn.Module):
     ):
         super(MLP_conv, self).__init__()
         self.problem_dim = problem_dim
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+
         if self.problem_dim == 1:
             self.mlp1 = torch.nn.Conv1d(in_channels, mid_channels, 1)
             self.mlp2 = torch.nn.Conv1d(mid_channels, out_channels, 1)
@@ -92,8 +97,8 @@ class MLP_conv(nn.Module):
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "n_samples d_in *d_x"]
-    ) -> Float[Tensor, "n_samples d_out *d_x"]:
+        self, x: Float[Tensor, "n_samples {self.in_channels} *d_x"]
+    ) -> Float[Tensor, "n_samples {self.out_channels} *d_x"]:
         x = self.mlp1(x)  # affine transformation
         x = activation(x, self.fun_act)  # activation function
         x = self.mlp2(x)  # affine transformation
@@ -199,9 +204,9 @@ class FourierLayer(nn.Module):
     @jaxtyped(typechecker=beartype)
     def tensor_mul_1d(
         self,
-        input: Complex[Tensor, "n_batch d_i modes"],
-        weights: Complex[Tensor, "d_i d_o modes"],
-    ) -> Complex[Tensor, "n_batch d_o modes"]:
+        input: Complex[Tensor, "n_batch {self.in_channels} {self.modes}"],
+        weights: Complex[Tensor, "{self.in_channels} {self.out_channels} {self.modes}"],
+    ) -> Complex[Tensor, "n_batch {self.out_channels} {self.modes}"]:
         """Multiplication between complex numbers"""
         # (batch, in_channel, modes), (in_channel, out_channel, modes) -> (batch, out_channel, modes)
         return torch.einsum("bim,iom->bom", input, weights)
@@ -209,17 +214,19 @@ class FourierLayer(nn.Module):
     @jaxtyped(typechecker=beartype)
     def tensor_mul_2d(
         self,
-        input: Complex[Tensor, "n_batch d_i modes1 modes2"],
-        weights: Complex[Tensor, "d_i d_o modes1 modes2"],
-    ) -> Complex[Tensor, "n_batch d_o modes1 modes2"]:
+        input: Complex[Tensor, "n_batch {self.in_channels} {self.modes} {self.modes}"],
+        weights: Complex[
+            Tensor, "{self.in_channels} {self.out_channels} {self.modes} {self.modes}"
+        ],
+    ) -> Complex[Tensor, "n_batch {self.out_channels} {self.modes} {self.modes}"]:
         """Multiplication between complex numbers"""
         # (batch, in_channel, x, y), (in_channel, out_channel, x, y) -> (batch, out_channel, x,y)
         return torch.einsum("bixy,ioxy->boxy", input, weights)
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "n_batch d_i *n_x"]
-    ) -> Float[Tensor, "n_batch d_o *n_x"]:
+        self, x: Float[Tensor, "n_batch {self.in_channels} *n_x"]
+    ) -> Float[Tensor, "n_batch {self.out_channels} *n_x"]:
         """
         input --> FFT --> parameters --> IFFT --> output
         Total computation cost is equal to O(n log(n))
@@ -517,8 +524,8 @@ class FNO(nn.Module):
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "n_batch *n_x in_dim"]
-    ) -> Float[Tensor, "n_batch *n_x out_dim"]:
+        self, x: Float[Tensor, "n_batch *n_x {self.in_dim-2}"]
+    ) -> Float[Tensor, "n_batch *n_x {self.out_dim}"]:
 
         ## Grid and initialization
         if self.problem_dim == 1:

@@ -116,8 +116,8 @@ class CNOBlock(nn.Module):
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "batch in_channel *in_size"]
-    ) -> Float[Tensor, "batch out_channel *out_size"]:
+        self, x: Float[Tensor, "batch {self.in_channels} *in_size"]
+    ) -> Float[Tensor, "batch {self.out_channels} *out_size"]:
         x = self.convolution(x)
         x = self.batch_norm(x)
         return self.act(x)
@@ -169,8 +169,8 @@ class LiftProjectBlock(nn.Module):
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "batch in_channel *size"]
-    ) -> Float[Tensor, "batch out_channel *size"]:
+        self, x: Float[Tensor, "batch {self.in_channels} *size"]
+    ) -> Float[Tensor, "batch {self.out_channels} *size"]:
         x = self.inter_CNOBlock(x)
         x = self.convolution(x)
         return x
@@ -243,8 +243,8 @@ class ResidualBlock(nn.Module):
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "batch channel *in_size"]
-    ) -> Float[Tensor, "batch channel *out_size"]:
+        self, x: Float[Tensor, "batch {self.channels} *in_size"]
+    ) -> Float[Tensor, "batch {self.channels} *out_size"]:
         out = self.convolution1(x)
         out = self.batch_norm1(out)
         out = self.act(out)
@@ -285,8 +285,8 @@ class ResNet(nn.Module):
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "batch channel *in_size"]
-    ) -> Float[Tensor, "batch channel *out_size"]:
+        self, x: Float[Tensor, "batch {self.channels} *in_size"]
+    ) -> Float[Tensor, "batch {self.channels} *out_size"]:
         for i in range(self.num_blocks):
             x = self.res_nets[i](x)
         return x
@@ -503,8 +503,8 @@ class CNO(nn.Module):
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "batch *size in_dim"]
-    ) -> Float[Tensor, "batch *size out_dim"]:
+        self, x: Float[Tensor, "batch *size {self.in_dim}"]
+    ) -> Float[Tensor, "batch *size {self.out_dim}"]:
 
         if self.problem_dim == 1:
             x = self.lift(x.permute(0, 2, 1))  # Execute Lift
@@ -536,7 +536,7 @@ class CNO(nn.Module):
                 x = torch.cat((x, self.ED_expansion[self.N_layers - i](skip[-i])), 1)
 
             #! if self.add_inv:
-            # x = self.decoder_inv[i](x)  #!
+            x = self.decoder_inv[i](x)  #!
 
             # Apply (U) block
             x = self.decoder[i](x)
