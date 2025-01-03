@@ -2,6 +2,7 @@
 In this example I choose some parameters to tune and some to keep fixed for the FNO model. 
 """
 
+import os
 import torch
 import sys
 
@@ -11,48 +12,23 @@ from datasets import NO_load_data_model
 from FNO.FNO import FNO
 from FNO.FNO_utilities import FNO_initialize_hyperparameters
 from loss_fun import loss_selector
-from ray import tune
-from tune import tune_hyperparameters
+from train import train_fixed_model
+from utilities import get_plot_function
 
 
-def ray_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
+def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load the default hyperparameters for the FNO model
     hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
-        which_example, mode=mode_hyperparams
+        which_example, mode_hyperparams
     )
 
-    # Define the hyperparameter search space
-    config_space = {
-        "learning_rate": tune.quniform(1e-4, 1e-2, 1e-5),
-        "weight_decay": tune.quniform(1e-6, 1e-3, 1e-6),
-        "scheduler_gamma": tune.quniform(0.75, 0.99, 0.01),
-        "width": tune.choice([4, 8, 16, 32, 64, 128, 256]),
-        "n_layers": tune.randint(1, 6),
-        "modes": tune.choice([2, 4, 8, 12, 16, 20, 24, 28, 32]),  # modes1 = modes2
-        "fun_act": tune.choice(["tanh", "relu", "gelu", "leaky_relu"]),
-        "fno_arc": tune.choice(["Classic", "Zongyi", "Residual"]),
-        "padding": tune.randint(0, 16),
-    }
-    # Set all the other parameters to fixed values
-    fixed_params = {
+    default_hyper_params = {
         **hyperparams_train,
         **hyperparams_arc,
     }
-    parameters_to_tune = config_space.keys()
-    for param in parameters_to_tune:
-        fixed_params.pop(param, None)
-    config_space.update(fixed_params)
-
-    # Default value for the hyper-parameters in the search space
-    default_hyper_params = [
-        {
-            **hyperparams_train,
-            **hyperparams_arc,
-        }
-    ]
 
     # Define the model builders
     model_builder = lambda config: FNO(
@@ -88,21 +64,34 @@ def ray_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
     # Define the loss function
     loss_fn = loss_selector(
         loss_fn_str=loss_fn_str,
-        problem_dim=config_space["problem_dim"],
-        beta=config_space["beta"],
+        problem_dim=default_hyper_params["problem_dim"],
+        beta=default_hyper_params["beta"],
     )
 
+    experiment_name = f"FNO/{which_example}/loss_{loss_fn_str}_mode_{mode_hyperparams}"
+
+    # Create the right folder if it doesn't exist
+    folder = f"../tests/{experiment_name}"
+    if not os.path.isdir(folder):
+        print("Generated new folder")
+        os.makedirs(folder, exist_ok=True)
+
+    # Save the norm information
+    with open(folder + "/norm_info.txt", "w") as f:
+        f.write("Norm used during the training:\n")
+        f.write(f"{loss_fn_str}\n")
+
     # Call the library function to tune the hyperparameters
-    tune_hyperparameters(
-        config_space,
+    train_fixed_model(
+        default_hyper_params,
         model_builder,
         dataset_builder,
         loss_fn,
-        default_hyper_params,
-        runs_per_cpu=8.0,
-        runs_per_gpu=0.5,
+        experiment_name,
+        get_plot_function(which_example, "input"),
+        get_plot_function(which_example, "output"),
     )
 
 
 if __name__ == "__main__":
-    ray_fno("darcy", "default", "L2")
+    train_fno("darcy", "default", "L2")

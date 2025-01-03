@@ -416,88 +416,28 @@ def plot_data_crosstruss(
     writer.add_figure(title, fig, ep)
 
 
-def plot_data(
-    example,
-    data_plot: Tensor,
-    title: str,
-    ep: int,
-    writer: SummaryWriter,
+def get_plot_function(
     which_example: str,
-    plotting: bool = False,
+    title: str,
 ):
     ## 1D problem
     match which_example:
-
         case "fhn_long":
-            pass
-            # TODO
-
+            return None  # TODO
         case "fhn":
             if "input" in title.lower():
-                plot_data_fhn_input(
-                    example,
-                    data_plot,
-                    title,
-                    ep,
-                    writer,
-                    True,
-                    plotting,
-                )
-            else:
-                plot_data_fhn(
-                    example,
-                    data_plot,
-                    title,
-                    ep,
-                    writer,
-                    normalization="error" not in title.lower(),
-                    plotting=plotting,
-                )
-
+                return plot_data_fhn_input
+            return plot_data_fhn
         case "hh":
             if "input" in title.lower():
-                plot_data_hh_input(
-                    example,
-                    data_plot,
-                    title,
-                    ep,
-                    writer,
-                    True,
-                    plotting,
-                )
-            else:
-                plot_data_hh(
-                    example,
-                    data_plot,
-                    title,
-                    ep,
-                    writer,
-                    normalization="error" not in title.lower(),
-                    plotting=plotting,
-                )
+                return plot_data_hh_input
+            return plot_data_hh
 
     ## 2D problem
     if which_example == "crosstruss":
         if "input" in title.lower():
-            plot_data_crosstruss_input(
-                example,
-                data_plot,
-                title,
-                ep,
-                writer,
-                normalization=True,
-                plotting=plotting,
-            )
-        else:
-            plot_data_crosstruss(
-                example,
-                data_plot,
-                title,
-                ep,
-                writer,
-                normalization="error" not in title.lower(),
-                plotting=plotting,
-            )
+            return plot_data_crosstruss_input
+        return plot_data_crosstruss
 
     elif which_example in [
         "poisson",
@@ -509,32 +449,39 @@ def plot_data(
         "airfoil",
         "darcy",
     ]:
-        # Denormalize the data
         if "input" in title.lower():
-            plot_data_mishra_input(
-                example,
-                data_plot,
-                title,
-                ep,
-                writer,
-                True,
-                plotting,
-            )
-        else:
-            plot_data_mishra(
-                example,
-                data_plot,
-                title,
-                ep,
-                writer,
-                normalization="error" not in title.lower(),
-                plotting=plotting,
-            )
+            return plot_data_mishra_input
+        return plot_data_mishra
 
     elif which_example in [
         "burgers_zongyi",
         "darcy_zongyi",
         "navier_stokes_zongyi",
     ]:
-        pass
-        # TODO
+        return None  # TODO
+
+    return None
+
+
+def plot_data(
+    example,
+    data_plot: Tensor,
+    title: str,
+    ep: int,
+    writer: SummaryWriter,
+    which_example: str,
+    plotting: bool = False,
+):
+    plot_func = get_plot_function(which_example, title)
+    if plot_func is not None:
+        plot_func(
+            example,
+            data_plot,
+            title,
+            ep,
+            writer,
+            True,
+            plotting,
+        )
+    else:
+        print(f"Plot function for {which_example} not found.")

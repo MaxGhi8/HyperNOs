@@ -16,7 +16,7 @@ from tune import tune_hyperparameters
 
 
 def main(
-    example_name: list,
+    which_example: list,
     example_default_params: str,
     mode_hyperparams: str,
     loss_fn_str: str,
@@ -92,7 +92,7 @@ def main(
                 in_dist=True,
                 search_path="/",
             )
-            for dataset_name in example_name
+            for dataset_name in which_example
         )
     )
 

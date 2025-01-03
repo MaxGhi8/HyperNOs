@@ -16,13 +16,13 @@ from ray import tune
 from tune import tune_hyperparameters
 
 
-def main(example_name: str, mode_hyperparams: str, loss_fn_str: str):
+def main(which_example: str, mode_hyperparams: str, loss_fn_str: str):
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load the default hyperparameters for the FNO model
     hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
-        example_name, mode=mode_hyperparams
+        which_example, mode=mode_hyperparams
     )
 
     total_default_params = (
@@ -83,7 +83,7 @@ def main(example_name: str, mode_hyperparams: str, loss_fn_str: str):
 
     # Define the dataset builder
     dataset_builder = lambda config: NO_load_data_model(
-        which_example=example_name,
+        which_example=which_example,
         no_architecture={
             "FourierF": config["FourierF"],
             "retrain": config["retrain"],

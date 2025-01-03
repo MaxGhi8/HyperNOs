@@ -37,11 +37,12 @@ def train_fixed_model(
             f"Attention: the key {missing_keys} are missing in the config_space, so I'll using the default value."
         )
 
+    dataset = dataset_builder(config)
     model = model_builder(config)
     train_model_without_ray(
         config,
         model,
-        dataset_builder(config),
+        dataset,
         model.device,
         loss_fn,
         experiment_name,
@@ -70,24 +71,19 @@ def train_model_without_ray(
     scheduler_step: int = 1,
     scheduler_gamma: float = 0.99,
 ):
-    folder = f"./experiments/{experiment_name}"
-    name_model = f"./experiments/model_{experiment_name}"
+    folder = f"../tests/{experiment_name}"
+    name_model = f"../tests/{experiment_name}/model_{model.__class__.__name__}_{config["problem_dim"]}D_{dataset.__class__.__name__}"
 
     # Create the right folder if it doesn't exist
     if not os.path.isdir(folder):
         print("Generated new folder")
-        os.mkdir(folder)
+        os.makedirs(folder, exist_ok=True)
 
     # Tensorboard support
     writer = SummaryWriter(log_dir=folder)
     start_epoch = 0
     ep_step = 50
     plotting = False
-
-    #!
-    # with open(folder + "/norm_info.txt", "w") as f:
-    #     f.write("Norm used during the training:\n")
-    #     f.write(f"{loss_fn_str}\n")
 
     with open(folder + "/chosed_hyperparams.json", "w") as f:
         json.dump(config, f, indent=4)

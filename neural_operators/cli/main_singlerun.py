@@ -386,9 +386,7 @@ for epoch in range(epochs):
                 test_relative_l2_multiout,
                 test_relative_semih1_multiout,
                 test_relative_h1_multiout,
-            ) = test_fun_multiout(
-                model, val_loader, val_samples, device, which_example, out_dim
-            )
+            ) = test_fun_multiout(model, val_loader, val_samples, device, out_dim)
             for i in range(out_dim):
                 writer.add_scalars(
                     f"{arc}_{problem_dim}D_{which_example}_output_{i}",
