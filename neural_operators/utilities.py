@@ -256,7 +256,9 @@ def plot_data_hh(
 ):
     if normalization:
         data_plot[:, :, [0]] = example.v_normalizer.decode(data_plot[:, :, [0]])
-        data_plot[:, :, [1]] = example.w_normalizer.decode(data_plot[:, :, [1]])
+        data_plot[:, :, [1]] = example.m_normalizer.decode(data_plot[:, :, [1]])
+        data_plot[:, :, [2]] = example.h_normalizer.decode(data_plot[:, :, [2]])
+        data_plot[:, :, [3]] = example.n_normalizer.decode(data_plot[:, :, [3]])
 
         # phase-phield space (not for the error)
         plot_data_phield_space(data_plot, title + " phase space", ep, writer, plotting)
