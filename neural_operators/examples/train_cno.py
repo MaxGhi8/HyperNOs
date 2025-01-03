@@ -1,5 +1,5 @@
 """ 
-In this example I fix all the hyperparameters for the FNO model and train it.
+In this example I fix all the hyperparameters for the CNO model and train it.
 """
 
 import os
@@ -9,45 +9,43 @@ import sys
 sys.path.append("..")
 
 from datasets import NO_load_data_model
-from FNO.FNO import FNO
-from FNO.FNO_utilities import FNO_initialize_hyperparameters
+from CNO.CNO import CNO
+from CNO.CNO_utilities import CNO_initialize_hyperparameters
 from loss_fun import loss_selector
 from train import train_fixed_model
 from utilities import get_plot_function
 from wrappers.wrap_model import wrap_model_builder
 
 
-def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
+def train_cno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
 
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Load the default hyperparameters for the FNO model
-    hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
-        which_example, mode_hyperparams
+    # Load the default hyperparameters for the CNO model
+    hyperparams_train, hyperparams_arc = CNO_initialize_hyperparameters(
+        which_example, mode=mode_hyperparams
     )
 
+    # Default value for the hyper-parameters in the search space
     default_hyper_params = {
         **hyperparams_train,
         **hyperparams_arc,
     }
 
     # Define the model builders
-    model_builder = lambda config: FNO(
-        config["problem_dim"],
-        config["in_dim"],
-        config["width"],
-        config["out_dim"],
-        config["n_layers"],
-        config["modes"],
-        config["fun_act"],
-        config["weights_norm"],
-        config["fno_arc"],
-        config["RNN"],
-        config["fft_norm"],
-        config["padding"],
-        device,
-        config["retrain"],
+    model_builder = lambda config: CNO(
+        problem_dim=config["problem_dim"],
+        in_dim=config["in_dim"],
+        out_dim=config["out_dim"],
+        size=config["in_size"],
+        N_layers=config["N_layers"],
+        N_res=config["N_res"],
+        N_res_neck=config["N_res_neck"],
+        channel_multiplier=config["channel_multiplier"],
+        kernel_size=config["kernel_size"],
+        use_bn=config["bn"],
+        device=device,
     )
     # Wrap the model builder
     model_builder = wrap_model_builder(model_builder, which_example)
@@ -98,4 +96,4 @@ def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    train_fno("crosstruss", "default", "L2")
+    train_cno("darcy", "default", "L2")

@@ -14,6 +14,7 @@ from FNO.FNO_utilities import FNO_initialize_hyperparameters
 from loss_fun import loss_selector
 from ray import tune
 from tune import tune_hyperparameters
+from wrappers.wrap_model import wrap_model_builder
 
 
 def main(which_example: str, mode_hyperparams: str, loss_fn_str: str):
@@ -80,6 +81,8 @@ def main(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         device,
         config["retrain"],
     )
+    # Wrap the model builder
+    model_builder = wrap_model_builder(model_builder, which_example)
 
     # Define the dataset builder
     dataset_builder = lambda config: NO_load_data_model(

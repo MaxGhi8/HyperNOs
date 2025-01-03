@@ -183,7 +183,7 @@ batch_size = hyperparams_train["batch_size"]
 beta = hyperparams_train["beta"]
 training_samples = hyperparams_train["training_samples"]
 test_samples = hyperparams_train["test_samples"]
-val_samples = hyperparams_train["val_samples"]
+test_samples = hyperparams_train["test_samples"]
 
 match arc:
     case "FNO":
@@ -232,7 +232,7 @@ example = NO_load_data_model(
 )
 
 train_loader = example.train_loader
-val_loader = example.val_loader
+test_loader = example.test_loader
 
 #########################################
 # save hyper-parameter in txt and json files
@@ -355,11 +355,11 @@ for epoch in range(epochs):
             train_loss,
         ) = test_fun(
             model,
-            val_loader,
+            test_loader,
             train_loader,
             loss,
             loss_fn_str,
-            val_samples,
+            test_samples,
             training_samples,
             device,
             tepoch,
@@ -386,7 +386,7 @@ for epoch in range(epochs):
                 test_relative_l2_multiout,
                 test_relative_semih1_multiout,
                 test_relative_h1_multiout,
-            ) = test_fun_multiout(model, val_loader, val_samples, device, out_dim)
+            ) = test_fun_multiout(model, test_loader, test_samples, device, out_dim)
             for i in range(out_dim):
                 writer.add_scalars(
                     f"{arc}_{problem_dim}D_{which_example}_output_{i}",
