@@ -1,5 +1,4 @@
 data/
-# TrainedModels/
 plots/*.png
 *.jpeg
 data/*.jpg
@@ -13,11 +12,3 @@ __pycache__/
 *.fdb_latexmk
 *.fls
 *.tdo
-neural_operators/CNO/TrainedModels/shear_layer/model_CNO_test_L1_best_hyperparams
-
-
-cli.py
-client_secrets.json
-dataset-loader-442913-3ac688262e7b.json
-login_key.json
-token.json
