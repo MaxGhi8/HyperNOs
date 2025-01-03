@@ -1,4 +1,9 @@
+import json
+import os
 import torch
+from tensorboardX import SummaryWriter
+from tqdm import tqdm
+
 from loss_fun import (
     H1relLoss,
     H1relLoss_1D,
@@ -7,26 +12,97 @@ from loss_fun import (
     LprelLoss,
     LprelLoss_multiout,
 )
-from tensorboardX import SummaryWriter
-from tqdm import tqdm
 from utilities import count_params
+
+
+def train_fixed_model(
+    config,
+    model_builder,
+    dataset_builder,
+    loss_fn,
+    experiment_name,
+    plot_data_input,
+    plot_data_output,
+):
+    required_keys = [
+        "learning_rate",
+        "weight_decay",
+        "scheduler_step",
+        "scheduler_gamma",
+        "epochs",
+    ]
+    missing_keys = [key for key in required_keys if key not in config]
+    if missing_keys:
+        print(
+            f"Attention: the key {missing_keys} are missing in the config_space, so I'll using the default value."
+        )
+
+    model = model_builder(config)
+    train_model_without_ray(
+        config,
+        model,
+        dataset_builder(config),
+        model.device,
+        loss_fn,
+        experiment_name,
+        plot_data_input,
+        plot_data_output,
+        config["epochs"],
+        config["learning_rate"],
+        config["weight_decay"],
+        config["scheduler_step"],
+        config["scheduler_gamma"],
+    )
 
 
 def train_model_without_ray(
     config,
     model,
     dataset,
-    loss_fn,
-    max_epochs,
     device,
+    loss_fn,
     experiment_name,
     plot_data_input,
     plot_data_output,
-    learning_rate,
-    weight_decay,
-    scheduler_step,
-    scheduler_gamma,
+    max_epochs: int = 1000,
+    learning_rate: float = 1e-3,
+    weight_decay: float = 1e-6,
+    scheduler_step: int = 1,
+    scheduler_gamma: float = 0.99,
 ):
+    folder = f"./experiments/{experiment_name}"
+    name_model = f"./experiments/model_{experiment_name}"
+
+    # Create the right folder if it doesn't exist
+    if not os.path.isdir(folder):
+        print("Generated new folder")
+        os.mkdir(folder)
+
+    # Tensorboard support
+    writer = SummaryWriter(log_dir=folder)
+    start_epoch = 0
+    ep_step = 50
+    plotting = False
+
+    #!
+    # with open(folder + "/norm_info.txt", "w") as f:
+    #     f.write("Norm used during the training:\n")
+    #     f.write(f"{loss_fn_str}\n")
+
+    with open(folder + "/chosed_hyperparams.json", "w") as f:
+        json.dump(config, f, indent=4)
+
+    # count and print the total number of parameters
+    total_params, total_bytes = count_params(model)
+    total_mb = total_bytes / (1024**2)
+    print(f"Total Parameters: {total_params:,}")
+    print(f"Total Model Size: {total_bytes:,} bytes ({total_mb:.2f} MB)")
+    writer.add_text("Parameters", f"Total Parameters: {total_params:,}", 0)
+    writer.add_text(
+        "Model Size", f"Total Model Size: {total_bytes:,} bytes ({total_mb:.2f} MB)", 0
+    )
+
+    # Optimizer and scheduler
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=learning_rate,
@@ -36,18 +112,11 @@ def train_model_without_ray(
         optimizer, step_size=scheduler_step, gamma=scheduler_gamma
     )
 
-    folder = f"./experiments/{experiment_name}"
-    name_model = f"./experiments/model_{experiment_name}"
-
-    writer = SummaryWriter(log_dir=folder)  # tensorboard
-    start_epoch = 0
-    ep_step = 50
-    plotting = False
-
     for epoch in range(start_epoch, max_epochs):
         with tqdm(
             desc=f"Epoch {epoch}", bar_format="{desc}: [{elapsed_s:.2f}{postfix}]"
         ) as tepoch:
+            # train the model for one epoch
             train_epoch_result = train_epoch(
                 model,
                 dataset.train_loader,
@@ -68,7 +137,7 @@ def train_model_without_ray(
                 test_relative_semih1,
                 test_relative_h1,
                 train_loss,
-            ) = validate_epoch2(
+            ) = validate_epoch(
                 model,
                 dataset.test_loader,
                 dataset.train_loader,
@@ -79,7 +148,7 @@ def train_model_without_ray(
 
             # save the results of train and test on tensorboard
             writer.add_scalars(
-                experiment_name,
+                f"{model.__class__.__name__}_{config["problem_dim"]}D_{dataset.__class__.__name__}",
                 {
                     "Train loss": train_loss,
                     "Test rel. L^1 error": test_relative_l1,
@@ -105,7 +174,7 @@ def train_model_without_ray(
                 )
                 for i in range(config["out_dim"]):
                     writer.add_scalars(
-                        f"{experiment_name}_output_{i}",
+                        f"{model.__class__.__name__}_{config["problem_dim"]}D_{dataset.__class__.__name__}_output_{i}",
                         {
                             "Test rel. L^1 error": test_relative_l1_multiout[i],
                             "Test rel. L^2 error": test_relative_l2_multiout[i],
@@ -117,8 +186,6 @@ def train_model_without_ray(
                         epoch,
                     )
 
-            total_params, total_bytes = count_params(model)
-            total_mb = total_bytes / (1024**2)
             with open(folder + "/errors.txt", "w") as file:
                 file.write("Training loss: " + str(train_loss) + "\n")
                 file.write("Test relative L^1 error: " + str(test_relative_l1) + "\n")
@@ -186,10 +253,10 @@ def train_model_without_ray(
                     plotting=plotting,
                 )
 
-        writer.flush()  # for saving final data
-        writer.close()  # close the tensorboard writer
+    writer.flush()  # for saving final data
+    writer.close()  # close the tensorboard writer
 
-        torch.save(model, name_model)
+    torch.save(model, name_model)
 
 
 def train_epoch(
@@ -256,7 +323,7 @@ def train_epoch(
         return None
 
 
-def validate_epoch2(
+def validate_epoch(
     model,
     test_loader,
     train_loader,

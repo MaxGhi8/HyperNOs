@@ -38,8 +38,8 @@ import sys
 
 sys.path.append("..")
 
-from examples.example_fno import example_fno
-from examples.example_cno import example_cno
+from examples.ray_fno import ray_fno
+from examples.ray_cno import ray_cno
 
 
 # Choose the example to run from CLI
@@ -108,8 +108,8 @@ mode_str = config["mode"]
 # Run the chosed example
 match arc:
     case "FNO":
-        example_fno(which_example, mode_str, loss_fn_str)
+        ray_fno(which_example, mode_str, loss_fn_str)
     case "CNO":
-        example_cno(which_example, mode_str, loss_fn_str)
+        ray_cno(which_example, mode_str, loss_fn_str)
     case _:
         raise ValueError("This architecture is not allowed")

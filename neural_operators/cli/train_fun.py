@@ -221,7 +221,6 @@ def test_fun_multiout(
     test_loader,
     test_samples: int,
     device: torch.device,
-    which_example: str,
     dim_output: int,
 ):
     """
