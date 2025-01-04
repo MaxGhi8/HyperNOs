@@ -12,3 +12,4 @@ __pycache__/
 *.fdb_latexmk
 *.fls
 *.tdo
+neural_operators/tests/FNO/shear_layer/loss_L1_mode_default/model_FNO_2D_ShearLayer

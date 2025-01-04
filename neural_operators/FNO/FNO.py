@@ -524,7 +524,7 @@ class FNO(nn.Module):
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "n_batch *n_x {self.in_dim-2}"]
+        self, x: Float[Tensor, "n_batch *n_x {self.in_dim-self.problem_dim}"]
     ) -> Float[Tensor, "n_batch *n_x {self.out_dim}"]:
 
         ## Grid and initialization
