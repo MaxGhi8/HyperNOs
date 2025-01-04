@@ -70,7 +70,7 @@ def train_cno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         beta=default_hyper_params["beta"],
     )
 
-    experiment_name = f"FNO/{which_example}/loss_{loss_fn_str}_mode_{mode_hyperparams}"
+    experiment_name = f"CNO/{which_example}/loss_{loss_fn_str}_mode_{mode_hyperparams}"
 
     # Create the right folder if it doesn't exist
     folder = f"../tests/{experiment_name}"
@@ -96,4 +96,4 @@ def train_cno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    train_cno("poisson", "default", "L2")
+    train_cno("hh", "default", "L2")

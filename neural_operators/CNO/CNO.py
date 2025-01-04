@@ -5,8 +5,6 @@ from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from torch import Tensor
 
-# torch.manual_seed(0)  #!
-
 
 #########################################
 # Activation Function:
@@ -66,7 +64,7 @@ class CNOBlock(nn.Module):
         in_size: int,
         out_size: int,
         kernel_size: int = 3,
-        use_bn: bool = True,
+        use_bn: bool = False,
     ):
         super(CNOBlock, self).__init__()
 
