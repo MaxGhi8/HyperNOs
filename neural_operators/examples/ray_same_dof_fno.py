@@ -30,7 +30,7 @@ def main(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         hyperparams_arc["n_layers"]
         * hyperparams_arc["width"] ** 2
         * hyperparams_arc["modes"] ** hyperparams_arc["problem_dim"]
-    )
+    )  # Constant factor can be dropped
 
     # Define the hyperparameter search space
     config_space = {
@@ -68,9 +68,12 @@ def main(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         config["width"],
         config["out_dim"],
         config["n_layers"],
-        int(
-            (total_default_params / (config["n_layers"] * config["width"] ** 2))
-            ** (1 / hyperparams_arc["problem_dim"])
+        max(
+            int(
+                (total_default_params / (config["n_layers"] * config["width"] ** 2))
+                ** (1 / hyperparams_arc["problem_dim"])
+            ),
+            1,
         ),
         config["fun_act"],
         config["weights_norm"],

@@ -135,29 +135,19 @@ class FourierLayer(nn.Module):
 
         if self.problem_dim == 1:
             self.scale = 1 / (in_channels * out_channels)
-            self.weights1 = nn.Parameter(
-                self.scale
-                * torch.rand(in_channels, out_channels, self.modes, dtype=torch.cfloat)
-            )
-            self.weights2 = nn.Parameter(
+            self.weights = nn.Parameter(
                 self.scale
                 * torch.rand(in_channels, out_channels, self.modes, dtype=torch.cfloat)
             )
 
             # if self.weights_norm == 'Xavier':
             #     # Xavier normalization
-            #     self.weights1 = nn.init.xavier_normal_(
-            #         nn.Parameter(torch.empty(self.in_channels, self.out_channels, self.modes, dtype=torch.cfloat)),
-            #         gain = 1/(self.in_channels*self.out_channels))
-            #     self.weights2 = nn.init.xavier_normal_(
+            #     self.weights = nn.init.xavier_normal_(
             #         nn.Parameter(torch.empty(self.in_channels, self.out_channels, self.modes, dtype=torch.cfloat)),
             #         gain = 1/(self.in_channels*self.out_channels))
             # elif self.weights_norm == 'Kaiming':
             #     # Kaiming normalization
-            #     self.weights1 = torch.nn.init.kaiming_normal_(
-            #         nn.Parameter(torch.empty(self.in_channels, self.out_channels, self.modes, dtype=torch.cfloat)),
-            #         a = 0, mode = 'fan_in', nonlinearity = self.fun_act)
-            #     self.weights2 = torch.nn.init.kaiming_normal_(
+            #     self.weights = torch.nn.init.kaiming_normal_(
             #         nn.Parameter(torch.empty(self.in_channels, self.out_channels, self.modes, dtype=torch.cfloat)),
             #         a = 0, mode = 'fan_in', nonlinearity = self.fun_act)
 
@@ -252,10 +242,7 @@ class FourierLayer(nn.Module):
                 device=x.device,
             )
             out_ft[:, :, : self.modes] = self.tensor_mul_1d(
-                x_ft[:, :, : self.modes], self.weights1
-            )
-            out_ft[:, :, -self.modes :] = self.tensor_mul_1d(
-                x_ft[:, :, -self.modes :], self.weights2
+                x_ft[:, :, : self.modes], self.weights
             )
 
             # Inverse Fourier transform
