@@ -68,12 +68,15 @@ def main(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         config["width"],
         config["out_dim"],
         config["n_layers"],
-        max(
-            int(
-                (total_default_params / (config["n_layers"] * config["width"] ** 2))
-                ** (1 / hyperparams_arc["problem_dim"])
+        min(
+            max(
+                int(
+                    (total_default_params / (config["n_layers"] * config["width"] ** 2))
+                    ** (1 / hyperparams_arc["problem_dim"])
+                ),
+                1,
             ),
-            1,
+            31,
         ),
         config["fun_act"],
         config["weights_norm"],
@@ -120,4 +123,4 @@ def main(which_example: str, mode_hyperparams: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    main("darcy", "default", "L1")
+    main("fhn", "default", "L2")
