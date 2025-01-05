@@ -120,7 +120,6 @@ def train_model(
     scheduler_gamma: float = 0.99,
     checkpoint_freq: int = 500,
 ):
-    print("number of modes used are: ", model.modes)
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=learning_rate,

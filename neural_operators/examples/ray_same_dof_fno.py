@@ -37,7 +37,7 @@ def main(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         "learning_rate": tune.quniform(1e-4, 1e-2, 1e-5),
         "weight_decay": tune.quniform(1e-6, 1e-3, 1e-6),
         "scheduler_gamma": tune.quniform(0.75, 0.99, 0.01),
-        "width": tune.choice([4, 8, 16, 32, 64, 128, 256]),
+        "width": tune.choice([4, 8, 16, 32, 48, 64, 80, 96, 112, 128]),
         "n_layers": tune.randint(1, 6),
         "fun_act": tune.choice(["tanh", "relu", "gelu", "leaky_relu"]),
         "fno_arc": tune.choice(["Classic", "Zongyi", "Residual"]),
