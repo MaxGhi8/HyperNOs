@@ -1,0 +1,8 @@
+Training loss: 0.0037195503463347754
+Test relative L^1 error: 0.0048165374199549355
+Test relative L^2 error: 0.008757179876168569
+Test relative semi-H^1 error: 0.07201991256078084
+Test relative H^1 error: 0.07151053285598755
+Current Epoch: 999
+Total Parameters: 5,638,402
+Total Model Size: 43,525,128 bytes (41.51 MB)

@@ -69,11 +69,9 @@ def ray_model_problem():
         },
         batch_size=config["batch_size"],
         training_samples=config["training_samples"],
-        in_dist=True,
-        search_path="/",
     )
 
-    loss_fn = LprelLoss(2, False)
+    loss_fn = LprelLoss(2)
 
     tune_hyperparameters(
         config_space,
