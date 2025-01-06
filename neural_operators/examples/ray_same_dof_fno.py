@@ -123,4 +123,4 @@ def main(which_example: str, mode_hyperparams: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    main("fhn", "default", "L2")
+    main("hh", "default", "L2")
