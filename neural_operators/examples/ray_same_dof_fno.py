@@ -17,7 +17,7 @@ from tune import tune_hyperparameters
 from wrappers.wrap_model import wrap_model_builder
 
 
-def main(which_example: str, mode_hyperparams: str, loss_fn_str: str):
+def main(which_example: str, mode_hyperparams: str, loss_fn_str: str, maximum: int):
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -76,7 +76,7 @@ def main(which_example: str, mode_hyperparams: str, loss_fn_str: str):
                 ),
                 1,
             ),
-            31,
+            maximum,
         ),
         config["fun_act"],
         config["weights_norm"],
@@ -123,4 +123,4 @@ def main(which_example: str, mode_hyperparams: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    main("hh", "default", "L2")
+    main("hh", "default", "L2", 621)
