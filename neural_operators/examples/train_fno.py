@@ -33,7 +33,7 @@ def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
     }
 
     # Define the model builders
-    model_builder = lambda config: FNO(
+    model_builder = lambda config: FNO(  # noqa: E731
         config["problem_dim"],
         config["in_dim"],
         config["width"],
@@ -53,7 +53,7 @@ def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
     model_builder = wrap_model_builder(model_builder, which_example)
 
     # Define the dataset builder
-    dataset_builder = lambda config: NO_load_data_model(
+    dataset_builder = lambda config: NO_load_data_model(  # noqa: E731
         which_example=which_example,
         no_architecture={
             "FourierF": config["FourierF"],
@@ -98,4 +98,4 @@ def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    train_fno("fhn", "default", "L2")
+    train_fno("hh", "best_samedofs", "L2")

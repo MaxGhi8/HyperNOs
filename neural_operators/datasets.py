@@ -23,107 +23,76 @@ def NO_load_data_model(
     no_architecture,
     batch_size: int,
     training_samples: int,
-    in_dist: bool,
+    in_size: int = None,  # Make in_size optional
+    in_dist: bool = True,  # Default value for in_dist
     search_path: str = "/",
 ):
     """
     Function to load the data and the model.
+    If in_size is specified, it modifies the parameter "s" of the functions.
+    Otherwise, the functions maintain their default value for "s".
     """
-    match which_example:
-        case "shear_layer":
-            example = ShearLayer(
-                no_architecture,
-                batch_size,
-                training_samples,
-                in_dist=in_dist,
-                search_path=search_path,
-            )
-        case "poisson":
-            example = SinFrequency(
-                no_architecture,
-                batch_size,
-                training_samples,
-                in_dist=in_dist,
-                search_path=search_path,
-            )
-        case "wave_0_5":
-            example = WaveEquation(
-                no_architecture,
-                batch_size,
-                training_samples,
-                in_dist=in_dist,
-                search_path=search_path,
-            )
-        case "allen":
-            example = AllenCahn(
-                no_architecture,
-                batch_size,
-                training_samples,
-                in_dist=in_dist,
-                search_path=search_path,
-            )
-        case "cont_tran":
-            example = ContTranslation(
-                no_architecture,
-                batch_size,
-                training_samples,
-                in_dist=in_dist,
-                search_path=search_path,
-            )
-        case "disc_tran":
-            example = DiscContTranslation(
-                no_architecture,
-                batch_size,
-                training_samples,
-                in_dist=in_dist,
-                search_path=search_path,
-            )
-        case "airfoil":
-            example = Airfoil(
-                no_architecture,
-                batch_size,
-                training_samples,
-                in_dist=in_dist,
-                search_path=search_path,
-            )
-        case "darcy":
-            example = Darcy(
-                no_architecture,
-                batch_size,
-                training_samples,
-                in_dist=in_dist,
-                search_path=search_path,
-            )
+    # Define a dictionary to map which_example to the corresponding class and its arguments
+    example_map = {
+        "shear_layer": ShearLayer,
+        "poisson": SinFrequency,
+        "wave_0_5": WaveEquation,
+        "allen": AllenCahn,
+        "cont_tran": ContTranslation,
+        "disc_tran": DiscContTranslation,
+        "airfoil": Airfoil,
+        "darcy": Darcy,
+        ###
+        "burgers_zongyi": Burgers_Zongyi,
+        "darcy_zongyi": Darcy_Zongyi,
+        # "navier_stokes_zongyi" #todo
+        ###
+        "fhn": FitzHughNagumo,
+        "fhn_long": FitzHughNagumo,
+        "hh": HodgkinHuxley,
+        ###
+        "crosstruss": CrossTruss,
+    }
 
-        case "burgers_zongyi":
-            example = Burgers_Zongyi(
-                no_architecture, batch_size, search_path=search_path
-            )
-        case "darcy_zongyi":
-            example = Darcy_Zongyi(no_architecture, batch_size, search_path=search_path)
-        case "navier_stokes_zongyi":
-            pass  # TODO
+    # Define additional parameters for specific cases
+    additional_params = {
+        "fhn": {"time": "_tf_100"},
+        "fhn_long": {"time": "_tf_200"},
+    }
 
-        case "fhn":
-            time = "_tf_100"
-            example = FitzHughNagumo(
-                time, no_architecture, batch_size, search_path=search_path
-            )
-        case "fhn_long":
-            time = "_tf_200"
-            example = FitzHughNagumo(
-                time, no_architecture, batch_size, search_path=search_path
-            )
-        case "hh":
-            example = HodgkinHuxley(
-                no_architecture, batch_size, search_path=search_path
-            )
+    # Check if the example is valid
+    if which_example not in example_map:
+        raise ValueError("the variable which_example is typed wrong")
 
-        case "crosstruss":
-            example = CrossTruss(no_architecture, batch_size, search_path=search_path)
+    # Get the class for the example
+    example_class = example_map[which_example]
 
-        case _:
-            raise ValueError("the variable which_example is typed wrong")
+    # Prepare the arguments for the class
+    args = [no_architecture, batch_size, training_samples]
+    kwargs = {
+        "in_dist": in_dist,
+        "search_path": search_path,
+    }
+
+    # Add additional kwargs for specific cases
+    if which_example in additional_params:
+        kwargs.update(additional_params[which_example])
+
+    # Add in_size to kwargs if it is specified
+    if in_size is not None:
+        if which_example in ["fhn", "fhn_long", "hh"]:
+            points = 5040
+            stride = points // in_size
+            if abs(stride - points / in_size) > 1e-3:
+                raise ValueError(
+                    f"Invalid size, the in_size must divide the original grid size (in this example {points})"
+                )
+            kwargs["s"] = stride
+        else:
+            kwargs["s"] = in_size
+
+    # Create the example instance
+    example = example_class(*args, **kwargs)
 
     return example
 
@@ -197,7 +166,7 @@ class ShearLayerDataset(Dataset):
         self.in_dist = in_dist
 
         if in_dist:
-            if self.s == 64:
+            if self.s <= 64:
                 self.file_data = find_file(
                     "NavierStokes_64x64_IN.h5", search_path
                 )  # In-distribution file 64x64
@@ -237,7 +206,7 @@ class ShearLayerDataset(Dataset):
         return self.length
 
     def __getitem__(self, index):
-        if self.s == 64 and self.in_dist:
+        if self.s <= 64 and self.in_dist:
             inputs = (
                 torch.from_numpy(
                     self.reader["Sample_" + str(index + self.start)]["input"][:]
@@ -252,6 +221,15 @@ class ShearLayerDataset(Dataset):
                 .type(torch.float32)
                 .reshape(1, self.s, self.s)
             )
+
+            # Down-sample the data
+            stride = 64 // self.s
+            if abs(stride - 64 / self.s) > 1e-3:
+                raise ValueError(
+                    "Invalid size, the in_size must divide the original grid size (in this example 64)"
+                )
+            inputs = inputs[:, ::stride, ::stride]
+            labels = labels[:, ::stride, ::stride]
 
         else:
             inputs = self.reader["Sample_" + str(index + self.start)]["input"][
@@ -303,11 +281,8 @@ class ShearLayer:
         in_dist=True,
         search_path="/",
     ):
-        if "in_size" in network_properties:
-            self.in_size = network_properties["in_size"]
-            assert self.in_size <= 128
-        else:
-            self.in_size = 64  # Default value
+        self.in_size = in_size
+        assert self.in_size <= 128
 
         self.N_Fourier_F = network_properties["FourierF"]
 
@@ -408,6 +383,7 @@ class SinFrequencyDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
+        self.s = s
         if in_dist:
             self.file_data = find_file("PoissonData_64x64_IN.h5", search_path)
         else:
@@ -447,18 +423,27 @@ class SinFrequencyDataset(Dataset):
                 self.reader["Sample_" + str(index + self.start)]["input"][:]
             )
             .type(torch.float32)
-            .reshape(1, self.s, self.s)
+            .reshape(1, 64, 64)
         )
         labels = (
             torch.from_numpy(
                 self.reader["Sample_" + str(index + self.start)]["output"][:]
             )
             .type(torch.float32)
-            .reshape(1, self.s, self.s)
+            .reshape(1, 64, 64)
         )
 
         inputs = (inputs - self.min_data) / (self.max_data - self.min_data)
         labels = (labels - self.min_model) / (self.max_model - self.min_model)
+
+        # Down-sample the data
+        stride = 64 // self.s
+        if abs(stride - 64 / self.s) > 1e-3:
+            raise ValueError(
+                "Invalid size, the in_size must divide the original grid size (in this example 64)"
+            )
+        inputs = inputs[:, ::stride, ::stride]
+        labels = labels[:, ::stride, ::stride]
 
         if self.N_Fourier_F > 0:
             grid = self.get_grid()
@@ -592,6 +577,7 @@ class WaveEquationDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
+        self.s = s
         if in_dist:
             self.file_data = find_file("WaveData_64x64_IN.h5", search_path)
         else:
@@ -605,7 +591,6 @@ class WaveEquationDataset(Dataset):
         self.min_model = self.reader["min_u"][()]
         self.max_model = self.reader["max_u"][()]
 
-        # What time? DEFAULT : t = 5
         self.t = t
 
         if which == "training":
@@ -656,6 +641,15 @@ class WaveEquationDataset(Dataset):
 
         inputs = (inputs - self.min_data) / (self.max_data - self.min_data)
         labels = (labels - self.min_model) / (self.max_model - self.min_model)
+
+        # Down-sample the data
+        stride = 64 // self.s
+        if abs(stride - 64 / self.s) > 1e-3:
+            raise ValueError(
+                "Invalid size, the in_size must divide the original grid size (in this example 64)"
+            )
+        inputs = inputs[:, ::stride, ::stride]
+        labels = labels[:, ::stride, ::stride]
 
         if self.N_Fourier_F > 0:
             grid = self.get_grid()
@@ -791,6 +785,7 @@ class AllenCahnDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
+        self.s = s
         if in_dist:
             self.file_data = find_file("AllenCahn_64x64_IN.h5", search_path)
         else:
@@ -841,6 +836,15 @@ class AllenCahnDataset(Dataset):
 
         inputs = (inputs - self.min_data) / (self.max_data - self.min_data)
         labels = (labels - self.min_model) / (self.max_model - self.min_model)
+
+        # Down-sample the data
+        stride = 64 // self.s
+        if abs(stride - 64 / self.s) > 1e-3:
+            raise ValueError(
+                "Invalid size, the in_size must divide the original grid size (in this example 64)"
+            )
+        inputs = inputs[:, ::stride, ::stride]
+        labels = labels[:, ::stride, ::stride]
 
         if self.N_Fourier_F > 0:
             grid = self.get_grid()
@@ -973,6 +977,7 @@ class ContTranslationDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
+        self.s = s
         # The data is already normalized
         if in_dist:
             self.file_data = find_file("ContTranslation_64x64_IN.h5", search_path)
@@ -1016,6 +1021,15 @@ class ContTranslationDataset(Dataset):
             .type(torch.float32)
             .reshape(1, 64, 64)
         )
+
+        # Down-sample the data
+        stride = 64 // self.s
+        if abs(stride - 64 / self.s) > 1e-3:
+            raise ValueError(
+                "Invalid size, the in_size must divide the original grid size (in this example 64)"
+            )
+        inputs = inputs[:, ::stride, ::stride]
+        labels = labels[:, ::stride, ::stride]
 
         if self.N_Fourier_F > 0:
             grid = self.get_grid()
@@ -1149,6 +1163,7 @@ class DiscContTranslationDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
+        self.s = s
         # The data is already normalized
         if in_dist:
             self.file_data = find_file("DiscTranslation_64x64_IN.h5", search_path)
@@ -1193,6 +1208,15 @@ class DiscContTranslationDataset(Dataset):
             .type(torch.float32)
             .reshape(1, 64, 64)
         )
+
+        # Down-sample the data
+        stride = 64 // self.s
+        if abs(stride - 64 / self.s) > 1e-3:
+            raise ValueError(
+                "Invalid size, the in_size must divide the original grid size (in this example 64)"
+            )
+        inputs = inputs[:, ::stride, ::stride]
+        labels = labels[:, ::stride, ::stride]
 
         if self.N_Fourier_F > 0:
             grid = self.get_grid()
@@ -1326,6 +1350,7 @@ class AirfoilDataset(Dataset):
         in_dist=True,
         search_path="/",
     ):
+        self.s = s
         # We DO NOT normalize the data in this case
         if in_dist:
             self.file_data = find_file("Airfoil_128x128_IN.h5", search_path)
@@ -1372,6 +1397,15 @@ class AirfoilDataset(Dataset):
         )
         # post process the output to fit the domain
         labels[inputs == 1] = 1
+
+        # Down-sample the data
+        stride = 128 // self.s
+        if abs(stride - 128 / self.s) > 1e-3:
+            raise ValueError(
+                "Invalid size, the in_size must divide the original grid size (in this example 128)"
+            )
+        inputs = inputs[:, ::stride, ::stride]
+        labels = labels[:, ::stride, ::stride]
 
         if self.N_Fourier_F > 0:
             grid = self.get_grid()
@@ -1501,9 +1535,11 @@ class DarcyDataset(Dataset):
         which="training",
         nf=0,
         training_samples=256,
+        s=64,
         insample=True,
         search_path="/",
     ):
+        self.s = s
         if insample:
             self.file_data = find_file("Darcy_64x64_IN.h5", search_path)
         else:
@@ -1553,6 +1589,15 @@ class DarcyDataset(Dataset):
 
         inputs = (inputs - self.min_data) / (self.max_data - self.min_data)
         labels = (labels - self.min_model) / (self.max_model - self.min_model)
+
+        # Down-sample the data
+        stride = 64 // self.s
+        if abs(stride - 64 / self.s) > 1e-3:
+            raise ValueError(
+                "Invalid size, the in_size must divide the original grid size (in this example 64)"
+            )
+        inputs = inputs[:, ::stride, ::stride]
+        labels = labels[:, ::stride, ::stride]
 
         if self.N_Fourier_F > 0:
             grid = self.get_grid()
@@ -1927,9 +1972,9 @@ class FitzHughNagumo:
         time: str,
         network_properties,
         batch_size,
-        ntrain=3000,
-        ntest=375,
+        training_samples=3000,  # todo
         s=4,
+        in_dist=True,  # todo
         search_path="/",
     ):
         # s = 4 --> (5040)//s  = 1260 points
@@ -2072,9 +2117,9 @@ class HodgkinHuxley:
         self,
         network_properties,
         batch_size,
-        ntrain=3000,
-        ntest=375,
+        training_samples=3000,  # todo
         s=4,
+        in_dist=True,  # todo
         search_path="/",
     ):
         # s = 4 --> (5040)//s  = 1260 points

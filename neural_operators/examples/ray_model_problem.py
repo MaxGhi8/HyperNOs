@@ -44,7 +44,7 @@ def ray_model_problem():
         "width": tune.choice([4, 8, 16, 32, 64, 128, 256]),
     }
 
-    model_builder = lambda config: FNO(
+    model_builder = lambda config: FNO(  # noqa: E731
         config["problem_dim"],
         config["in_dim"],
         config["width"],
@@ -62,7 +62,7 @@ def ray_model_problem():
     )
 
     # Define the dataset builder
-    dataset_builder = lambda config: Darcy(
+    dataset_builder = lambda config: Darcy(  # noqa: E731
         {
             "FourierF": config["FourierF"],
             "retrain": config["retrain"],
