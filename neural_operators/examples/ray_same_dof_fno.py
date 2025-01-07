@@ -21,16 +21,17 @@ def main(which_example: str, mode_hyperparams: str, loss_fn_str: str, maximum: i
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Load the default hyperparameters for the FNO model
+    # Load the baseline model
     hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
         which_example, mode=mode_hyperparams
     )
 
+    # Approximate the total number of parameters (constant factor can be dropped)
     total_default_params = (
         hyperparams_arc["n_layers"]
         * hyperparams_arc["width"] ** 2
         * hyperparams_arc["modes"] ** hyperparams_arc["problem_dim"]
-    )  # Constant factor can be dropped
+    )
 
     # Define the hyperparameter search space
     config_space = {

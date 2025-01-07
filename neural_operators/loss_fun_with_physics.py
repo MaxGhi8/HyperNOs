@@ -1,266 +1,265 @@
 import torch
-import torch.nn as nn
 import torch.autograd as autograd
-import numpy as np
 
 
-class PhysicsInformedLoss:
-    def __init__(self, pde_type="navier-stokes", lambda_physics=1.0, lambda_data=1.0):
-        """
-        Initialize Physics-Informed Loss
+def compute_spatial_derivatives_first_order(u, x, y):
+    """Compute spatial derivatives using automatic differentiation, first order"""
+    u_x = autograd.grad(u.sum(), x, create_graph=True)[0]
+    u_y = autograd.grad(u.sum(), y, create_graph=True)[0]
 
-        Args:
-            pde_type: Type of PDE ('navier-stokes', 'heat', 'wave', etc.)
-            lambda_physics: Weight for physics loss term
-            lambda_data: Weight for data loss term
-        """
-        self.pde_type = pde_type
-        self.lambda_physics = lambda_physics
-        self.lambda_data = lambda_data
-        self.mse_loss = nn.MSELoss()
-
-    def compute_spatial_derivatives(self, u, x, y, t):
-        """Compute spatial derivatives using automatic differentiation"""
-        u_x = autograd.grad(u.sum(), x, create_graph=True)[0]
-        u_y = autograd.grad(u.sum(), y, create_graph=True)[0]
-        u_xx = autograd.grad(u_x.sum(), x, create_graph=True)[0]
-        u_yy = autograd.grad(u_y.sum(), y, create_graph=True)[0]
-        u_t = autograd.grad(u.sum(), t, create_graph=True)[0]
-
-        return u_x, u_y, u_xx, u_yy, u_t
-
-    def navier_stokes_residual(self, u, v, p, x, y, t, params):
-        """
-        Compute Navier-Stokes equations residual
-
-        Args:
-            u, v: Velocity components
-            p: Pressure
-            x, y, t: Spatial and temporal coordinates
-            params: Dictionary containing physical parameters (Re, etc.)
-        """
-        Re = params.get("Reynolds", 100)
-
-        # Compute derivatives
-        u_x, u_y, u_xx, u_yy, u_t = self.compute_spatial_derivatives(u, x, y, t)
-        v_x, v_y, v_xx, v_yy, v_t = self.compute_spatial_derivatives(v, x, y, t)
-        p_x = autograd.grad(p.sum(), x, create_graph=True)[0]
-        p_y = autograd.grad(p.sum(), y, create_graph=True)[0]
-
-        # Continuity equation
-        continuity = u_x + v_y
-
-        # Momentum equations
-        momentum_x = u_t + u * u_x + v * u_y + p_x - (1 / Re) * (u_xx + u_yy)
-        momentum_y = v_t + u * v_x + v * v_y + p_y - (1 / Re) * (v_xx + v_yy)
-
-        return continuity, momentum_x, momentum_y
-
-    def heat_equation_residual(self, u, x, y, t, params):
-        """
-        Compute heat equation residual
-
-        Args:
-            u: Temperature field
-            x, y, t: Spatial and temporal coordinates
-            params: Dictionary containing physical parameters (diffusivity, etc.)
-        """
-        alpha = params.get("diffusivity", 1.0)
-
-        # Compute derivatives
-        u_x, u_y, u_xx, u_yy, u_t = self.compute_spatial_derivatives(u, x, y, t)
-
-        # Heat equation residual
-        residual = u_t - alpha * (u_xx + u_yy)
-
-        return residual
-
-    def wave_equation_residual(self, u, x, y, t, params):
-        """
-        Compute wave equation residual
-
-        Args:
-            u: Wave field
-            x, y, t: Spatial and temporal coordinates
-            params: Dictionary containing physical parameters (wave speed, etc.)
-        """
-        c = params.get("wave_speed", 1.0)
-
-        # Compute derivatives
-        u_x, u_y, u_xx, u_yy, u_t = self.compute_spatial_derivatives(u, x, y, t)
-        u_tt = autograd.grad(u_t.sum(), t, create_graph=True)[0]
-
-        # Wave equation residual
-        residual = u_tt - c**2 * (u_xx + u_yy)
-
-        return residual
-
-    def boundary_conditions_loss(self, u_pred, u_true, bc_mask):
-        """
-        Compute loss for boundary conditions
-
-        Args:
-            u_pred: Predicted solution
-            u_true: True solution at boundaries
-            bc_mask: Mask indicating boundary points
-        """
-        return self.mse_loss(u_pred[bc_mask], u_true[bc_mask])
-
-    def conservation_laws_loss(self, u, v, domain):
-        """
-        Compute loss for conservation laws (mass, momentum, energy)
-
-        Args:
-            u, v: Velocity components
-            domain: Dictionary containing domain information
-        """
-        # Mass conservation
-        mass_conservation = torch.abs(torch.sum(u * domain["dx"] * domain["dy"]))
-
-        # Momentum conservation
-        momentum_conservation = torch.abs(torch.sum(u**2 * domain["dx"] * domain["dy"]))
-
-        return mass_conservation + momentum_conservation
-
-    def __call__(self, pred, target, coords, params):
-        """
-        Compute total physics-informed loss
-
-        Args:
-            pred: Dictionary containing model predictions
-            target: Dictionary containing target values
-            coords: Dictionary containing spatial and temporal coordinates
-            params: Dictionary containing physical parameters
-        """
-        # Data loss
-        data_loss = self.mse_loss(pred["u"], target["u"])
-
-        # Physics loss based on PDE type
-        if self.pde_type == "navier-stokes":
-            continuity, momentum_x, momentum_y = self.navier_stokes_residual(
-                pred["u"],
-                pred["v"],
-                pred["p"],
-                coords["x"],
-                coords["y"],
-                coords["t"],
-                params,
-            )
-            physics_loss = (
-                torch.mean(continuity**2)
-                + torch.mean(momentum_x**2)
-                + torch.mean(momentum_y**2)
-            )
-
-        elif self.pde_type == "heat":
-            residual = self.heat_equation_residual(
-                pred["u"], coords["x"], coords["y"], coords["t"], params
-            )
-            physics_loss = torch.mean(residual**2)
-
-        elif self.pde_type == "wave":
-            residual = self.wave_equation_residual(
-                pred["u"], coords["x"], coords["y"], coords["t"], params
-            )
-            physics_loss = torch.mean(residual**2)
-
-        # Boundary conditions loss
-        bc_loss = self.boundary_conditions_loss(
-            pred["u"], target["u"], params["bc_mask"]
-        )
-
-        # Conservation laws loss
-        if "v" in pred:
-            conservation_loss = self.conservation_laws_loss(
-                pred["u"], pred["v"], params["domain"]
-            )
-        else:
-            conservation_loss = 0.0
-
-        # Total loss
-        total_loss = (
-            self.lambda_data * data_loss
-            + self.lambda_physics * physics_loss
-            + 0.1 * bc_loss
-            + 0.1 * conservation_loss
-        )
-
-        return {
-            "total_loss": total_loss,
-            "data_loss": data_loss,
-            "physics_loss": physics_loss,
-            "bc_loss": bc_loss,
-            "conservation_loss": conservation_loss,
-        }
+    return u_x, u_y
 
 
-# Example usage with Ray Tune
-def train_with_physics(config):
-    model = AdaptiveNeuralOperator(**config["model_params"])
-    optimizer = torch.optim.AdamW(model.parameters(), lr=config["lr"])
+def compute_spatial_derivatives_second_order(u, x, y):
+    """Compute spatial derivatives using automatic differentiation, second order"""
+    u_x = autograd.grad(u.sum(), x, create_graph=True)[0]
+    u_y = autograd.grad(u.sum(), y, create_graph=True)[0]
+    u_xx = autograd.grad(u_x.sum(), x, create_graph=True)[0]
+    u_yy = autograd.grad(u_y.sum(), y, create_graph=True)[0]
 
-    # Initialize physics-informed loss
-    physics_loss = PhysicsInformedLoss(
-        pde_type=config["pde_type"],
-        lambda_physics=config["lambda_physics"],
-        lambda_data=config["lambda_data"],
-    )
-
-    for epoch in range(config["num_epochs"]):
-        epoch_losses = []
-
-        for batch in train_loader:
-            pred = model(batch["input"])
-
-            # Compute physics-informed loss
-            loss_dict = physics_loss(
-                pred=pred,
-                target=batch["target"],
-                coords=batch["coords"],
-                params={
-                    "Reynolds": config["Reynolds"],
-                    "bc_mask": batch["bc_mask"],
-                    "domain": batch["domain"],
-                },
-            )
-
-            # Optimization step
-            optimizer.zero_grad()
-            loss_dict["total_loss"].backward()
-            optimizer.step()
-
-            epoch_losses.append({k: v.item() for k, v in loss_dict.items()})
-
-        # Report metrics to Ray Tune
-        avg_losses = {
-            k: np.mean([loss[k] for loss in epoch_losses])
-            for k in epoch_losses[0].keys()
-        }
-
-        tune.report(**avg_losses)
+    return u_x, u_y, u_xx, u_yy
 
 
-# Configure Ray Tune with physics-informed parameters
-def physics_informed_tune_setup():
-    config = {
-        "model_params": {
-            "modes1": tune.randint(4, 16),
-            "modes2": tune.randint(4, 16),
-            "width": tune.choice([32, 64, 128]),
-        },
-        "pde_type": tune.choice(["navier-stokes", "heat", "wave"]),
-        "lambda_physics": tune.loguniform(0.1, 10.0),
-        "lambda_data": tune.loguniform(0.1, 10.0),
-        "Reynolds": tune.uniform(100, 1000),
-        "lr": tune.loguniform(1e-4, 1e-2),
-        "num_epochs": 100,
-    }
+def poisson_residual(rhs, u, x, y):
+    """
+    Compute Poisson equation residual
+    """
+    _, _, u_xx, u_yy = compute_spatial_derivatives_second_order(u, x, y)
+    laplacian_u = u_xx + u_yy
+    residual = laplacian_u - rhs
 
-    analysis = tune.run(
-        train_with_physics,
-        config=config,
-        num_samples=50,
-        resources_per_trial={"cpu": 4, "gpu": 1},
-    )
+    return residual
 
-    return analysis
+
+def darcy_residual(u, K, x, y, params):
+    """
+    Compute Darcy equation residual
+
+    Args:
+        u: Pressure field (output of the neural network)
+        K: Permeability field (can be constant or a function of x, y)
+        x, y: Spatial coordinates
+        params: Dictionary containing physical parameters (optional)
+    """
+    # Compute spatial derivatives of u
+    u_x, u_y = compute_spatial_derivatives_first_order(u, x, y)
+    u_xx = autograd.grad(u_x.sum(), x, create_graph=True)[0]
+    u_yy = autograd.grad(u_y.sum(), y, create_graph=True)[0]
+
+    # Compute ∇ · (K ∇u)
+    # First, compute K * ∇u
+    K_grad_u_x = K * u_x
+    K_grad_u_y = K * u_y
+
+    # Then, compute the divergence: ∂(K * ∂u/∂x)/∂x + ∂(K * ∂u/∂y)/∂y
+    K_grad_u_x_x = autograd.grad(K_grad_u_x.sum(), x, create_graph=True)[0]
+    K_grad_u_y_y = autograd.grad(K_grad_u_y.sum(), y, create_graph=True)[0]
+
+    div_K_grad_u = K_grad_u_x_x + K_grad_u_y_y
+
+    # Residual of the Darcy equation
+    residual = -div_K_grad_u  # -∇ · (K ∇u) = 0
+
+    return residual
+
+
+def helmholtz_residual(u, x, y, params):
+    """
+    Compute Helmholtz equation residual
+
+    Args:
+        u: Field (output of the neural network)
+        x, y: Spatial coordinates
+        params: Dictionary containing physical parameters (k, source_term f(x, y))
+    """
+    # Compute second-order spatial derivatives of u
+    u_x, u_y, u_xx, u_yy = compute_spatial_derivatives_second_order(u, x, y)
+
+    # Laplacian of u: ∇²u = u_xx + u_yy
+    laplacian_u = u_xx + u_yy
+
+    # Wave number k and source term f(x, y)
+    k = params.get("k", 1.0)
+    f = params.get("source_term", torch.zeros_like(u))
+
+    # Residual of the Helmholtz equation: ∇²u + k²u - f = 0
+    residual = laplacian_u + (k**2) * u - f
+
+    return residual
+
+
+def biharmonic_residual(u, x, y, params):
+    """
+    Compute Biharmonic equation residual
+
+    Args:
+        u: Field (output of the neural network)
+        x, y: Spatial coordinates
+        params: Dictionary containing physical parameters (source_term f(x, y))
+    """
+    # Compute second-order spatial derivatives of u
+    u_x, u_y, u_xx, u_yy = compute_spatial_derivatives_second_order(u, x, y)
+
+    # Compute fourth-order derivatives
+    u_xxx = autograd.grad(u_xx.sum(), x, create_graph=True)[0]
+    u_yyy = autograd.grad(u_yy.sum(), y, create_graph=True)[0]
+    u_xxyy = autograd.grad(u_xx.sum(), y, create_graph=True)[0]
+
+    # Biharmonic operator: ∇⁴u = u_xxxx + 2u_xxyy + u_yyyy
+    biharmonic_u = u_xxx + 2 * u_xxyy + u_yyy
+
+    # Source term f(x, y)
+    f = params.get("source_term", torch.zeros_like(u))
+
+    # Residual of the Biharmonic equation: ∇⁴u - f = 0
+    residual = biharmonic_u - f
+
+    return residual
+
+
+def advection_diffusion_residual(u, x, y, params):
+    """
+    Compute Advection-Diffusion equation residual
+
+    Args:
+        u: Field (output of the neural network)
+        x, y: Spatial coordinates
+        params: Dictionary containing physical parameters (D, v, source_term f(x, y))
+    """
+    # Compute first-order spatial derivatives of u
+    u_x, u_y = compute_spatial_derivatives_first_order(u, x, y)
+
+    # Diffusion coefficient D and velocity field v = [vx, vy]
+    D = params.get("D", 1.0)
+    vx = params.get("vx", 1.0)
+    vy = params.get("vy", 1.0)
+
+    # Compute second-order derivatives for diffusion term
+    u_xx = autograd.grad(u_x.sum(), x, create_graph=True)[0]
+    u_yy = autograd.grad(u_y.sum(), y, create_graph=True)[0]
+
+    # Diffusion term: ∇ · (D ∇u) = D (u_xx + u_yy)
+    diffusion_term = D * (u_xx + u_yy)
+
+    # Advection term: v · ∇u = vx * u_x + vy * u_y
+    advection_term = vx * u_x + vy * u_y
+
+    # Source term f(x, y)
+    f = params.get("source_term", torch.zeros_like(u))
+
+    # Residual of the Advection-Diffusion equation: ∇ · (D ∇u) + v · ∇u - f = 0
+    residual = diffusion_term + advection_term - f
+
+    return residual
+
+
+def nonlinear_poisson_residual(u, x, y, params):
+    """
+    Compute Nonlinear Poisson equation residual
+
+    Args:
+        u: Field (output of the neural network)
+        x, y: Spatial coordinates
+        params: Dictionary containing physical parameters (nonlinear function g(u), source_term f(x, y))
+    """
+    # Compute second-order spatial derivatives of u
+    u_x, u_y, u_xx, u_yy = compute_spatial_derivatives_second_order(u, x, y)
+
+    # Laplacian of u: ∇²u = u_xx + u_yy
+    laplacian_u = u_xx + u_yy
+
+    # Nonlinear function g(u) and source term f(x, y)
+    g = params.get("g", lambda u: u**2)  # Default nonlinearity: g(u) = u²
+    f = params.get("source_term", torch.zeros_like(u))
+
+    # Residual of the Nonlinear Poisson equation: ∇²u + g(u) - f = 0
+    residual = laplacian_u + g(u) - f
+
+    return residual
+
+
+def allen_cahn_residual(u, x, y, t, params):
+    """
+    Compute Allen-Cahn equation residual at a fixed time t
+
+    Args:
+        u: Field (output of the neural network)
+        x, y: Spatial coordinates
+        t: Time coordinate (fixed)
+        params: Dictionary containing physical parameters (epsilon)
+    """
+    # Compute spatial derivatives
+    u_x, u_y, u_xx, u_yy = compute_spatial_derivatives_second_order(u, x, y)
+
+    # Compute time derivative (fixed time, so ∂u/∂t is treated as a parameter)
+    u_t = autograd.grad(u.sum(), t, create_graph=True)[0]
+
+    # Parameter epsilon
+    epsilon = params.get("epsilon", 0.1)
+
+    # Residual of the Allen-Cahn equation: ∂u/∂t - ε∇²u + u³ - u = 0
+    residual = u_t - epsilon * (u_xx + u_yy) + u**3 - u
+
+    return residual
+
+
+def navier_stokes_residual(u, v, p, x, y, t, params):
+    """
+    Compute Navier-Stokes equations residual at a fixed time t
+
+    Args:
+        u, v: Velocity components
+        p: Pressure
+        x, y: Spatial coordinates
+        t: Time coordinate (fixed)
+        params: Dictionary containing physical parameters (nu, etc.)
+    """
+    # Compute spatial derivatives for u and v
+    u_x, u_y, u_xx, u_yy = compute_spatial_derivatives_second_order(u, x, y)
+    v_x, v_y, v_xx, v_yy = compute_spatial_derivatives_second_order(v, x, y)
+
+    # Compute time derivatives (fixed time, so ∂u/∂t and ∂v/∂t are treated as parameters)
+    u_t = autograd.grad(u.sum(), t, create_graph=True)[0]
+    v_t = autograd.grad(v.sum(), t, create_graph=True)[0]
+
+    # Compute pressure gradients
+    p_x = autograd.grad(p.sum(), x, create_graph=True)[0]
+    p_y = autograd.grad(p.sum(), y, create_graph=True)[0]
+
+    # Kinematic viscosity
+    nu = params.get("nu", 0.01)
+
+    # Continuity equation: ∇ · u = 0
+    continuity = u_x + v_y
+
+    # Momentum equations
+    momentum_x = u_t + u * u_x + v * u_y + p_x - nu * (u_xx + u_yy)
+    momentum_y = v_t + u * v_x + v * v_y + p_y - nu * (v_xx + v_yy)
+
+    return continuity, momentum_x, momentum_y
+
+
+def reaction_diffusion_residual(u, x, y, t, params):
+    """
+    Compute Reaction-Diffusion equation residual at a fixed time t
+
+    Args:
+        u: Field (output of the neural network)
+        x, y: Spatial coordinates
+        t: Time coordinate (fixed)
+        params: Dictionary containing physical parameters (D, reaction term f(u))
+    """
+    # Compute spatial derivatives
+    u_x, u_y, u_xx, u_yy = compute_spatial_derivatives_second_order(u, x, y)
+
+    # Compute time derivative (fixed time, so ∂u/∂t is treated as a parameter)
+    u_t = autograd.grad(u.sum(), t, create_graph=True)[0]
+
+    # Diffusion coefficient D and reaction term f(u)
+    D = params.get("D", 1.0)
+    f = params.get("f", lambda u: u * (1 - u))  # Default reaction term: logistic growth
+
+    # Residual of the Reaction-Diffusion equation: ∂u/∂t - D∇²u - f(u) = 0
+    residual = u_t - D * (u_xx + u_yy) - f(u)
+
+    return residual
