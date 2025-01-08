@@ -57,7 +57,7 @@ def NO_load_data_model(
     # Define additional parameters for specific cases
     additional_params = {
         "fhn": {"time": "_tf_100"},
-        "fhn_long": {"time": "_tf_200"},
+        # "fhn_long": {"time": "_tf_200"},
     }
 
     # Check if the example is valid
@@ -76,7 +76,8 @@ def NO_load_data_model(
 
     # Add additional kwargs for specific cases
     if which_example in additional_params:
-        kwargs.update(additional_params[which_example])
+        args = [additional_params[which_example]["time"]] + args
+    
 
     # Add in_size to kwargs if it is specified
     if in_size is not None:
