@@ -10,10 +10,10 @@ sys.path.append("..")
 from utilities import find_file
 
 
-#########################################
-# function to approximate the number of parameters
-#########################################
 def count_params_fno(config):
+    """
+    function to approximate the number of parameters for the FNO model and classical architecture
+    """
     hidden = config["n_layers"] * (config["width"] ** 2) * (
         config["modes"] ** config["problem_dim"]
     ) * (2 ** config["problem_dim"]) + config["n_layers"] * (
@@ -27,9 +27,6 @@ def count_params_fno(config):
     return hidden + P_Q
 
 
-#########################################
-# function to load the hyperparameters
-#########################################
 def FNO_initialize_hyperparameters(which_example: str, mode: str):
     """
     Function to initialize the hyperparameters in according to the best

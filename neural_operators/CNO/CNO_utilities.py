@@ -9,10 +9,10 @@ sys.path.append("..")
 from utilities import find_file
 
 
-#########################################
-# function to approximate the number of parameters
-#########################################
 def count_params_cno(config):
+    """
+    Function to approximate the number of parameters in the CNO model.
+    """
     latent = 64
     P_Q = (
         config["kernel_size"] ** config["problem_dim"]
@@ -38,9 +38,6 @@ def count_params_cno(config):
     return hidden + P_Q
 
 
-#########################################
-# function to load the hyperparameters
-#########################################
 def CNO_initialize_hyperparameters(which_example: str, mode: str):
     """
     Function to initialize the hyperparameters in according to the best
