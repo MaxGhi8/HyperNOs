@@ -8,6 +8,8 @@ from ray.tune.search.hyperopt import HyperOptSearch
 
 from train import train_epoch
 
+from utilities import count_params
+
 
 def tune_hyperparameters(
     config_space,
@@ -128,6 +130,9 @@ def train_model(
     scheduler = torch.optim.lr_scheduler.StepLR(
         optimizer, step_size=scheduler_step, gamma=scheduler_gamma
     )
+
+    total_params, _ = count_params(model)
+    print(f"Total Parameters: {total_params:,}")
 
     start_epoch = 0
     checkpoint = train.get_checkpoint()

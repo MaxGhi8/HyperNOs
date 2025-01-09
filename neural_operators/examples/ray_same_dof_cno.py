@@ -1,6 +1,6 @@
 """ 
-In this example I choose some parameters to tune and some to keep fixed. 
-Moreover I set the modes for the FNO in order to have comparable number of parameters across the different models.
+In this example I choose some parameters to tune and some to keep fixed fot the CNO model. 
+Moreover I set the channel_multiplier for the CNO in order to have comparable number of parameters across the different models.
 """
 
 import torch
@@ -9,11 +9,11 @@ import sys
 sys.path.append("..")
 
 from datasets import NO_load_data_model
-from FNO.FNO import FNO
-from FNO.FNO_utilities import (
-    FNO_initialize_hyperparameters,
-    count_params_fno,
-    compute_modes,
+from CNO.CNO import CNO
+from CNO.CNO_utilities import (
+    CNO_initialize_hyperparameters,
+    count_params_cno,
+    compute_channel_multiplier,
 )
 from loss_fun import loss_selector
 from ray import tune
@@ -21,14 +21,12 @@ from tune import tune_hyperparameters
 from wrappers.wrap_model import wrap_model_builder
 
 
-def ray_same_dof_fno(
-    which_example: str, mode_hyperparams: str, loss_fn_str: str, maximum: int
-):
+def ray_same_dof_cno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Load the baseline model
-    hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
+    # Load the default hyperparameters for the CNO model
+    hyperparams_train, hyperparams_arc = CNO_initialize_hyperparameters(
         which_example, mode=mode_hyperparams
     )
 
@@ -36,20 +34,23 @@ def ray_same_dof_fno(
         **hyperparams_train,
         **hyperparams_arc,
     }
-    # Approximate the total number of parameters (constant factor can be dropped)
-    total_default_params = count_params_fno(fixed_params, accurate=False)
+    total_default_params = count_params_cno(fixed_params, accurate=False)
+    print(f"Total default parameters: {total_default_params}")
 
     # Define the hyperparameter search space
     config_space = {
         "learning_rate": tune.quniform(1e-4, 1e-2, 1e-5),
         "weight_decay": tune.quniform(1e-6, 1e-3, 1e-6),
         "scheduler_gamma": tune.quniform(0.75, 0.99, 0.01),
-        "width": tune.choice([4, 8, 16, 32, 48, 64, 80, 96, 112, 128]),
-        "n_layers": tune.randint(1, 6),
-        "fun_act": tune.choice(["tanh", "relu", "gelu", "leaky_relu"]),
-        "fno_arc": tune.choice(["Classic", "Zongyi", "Residual"]),
-        "padding": tune.randint(0, 16),
+        "N_layers": tune.randint(1, 5),
+        "N_res_neck": tune.randint(1, 6),
+        "N_res": tune.randint(1, 8),
     }
+    # kernel size is different for different problem dimensions
+    if hyperparams_arc["problem_dim"] == 1:
+        config_space["kernel_size"] = tune.choice([11, 21, 31, 41, 51])
+    if hyperparams_arc["problem_dim"] == 2:
+        config_space["kernel_size"] = tune.choice([3, 5, 7])
 
     # Set all the other parameters to fixed values
     parameters_to_tune = config_space.keys()
@@ -66,21 +67,18 @@ def ray_same_dof_fno(
     ]
 
     # Define the model builders
-    model_builder = lambda config: FNO(  # noqa: E731
-        config["problem_dim"],
-        config["in_dim"],
-        config["width"],
-        config["out_dim"],
-        config["n_layers"],
-        compute_modes(total_default_params, maximum, config),
-        config["fun_act"],
-        config["weights_norm"],
-        config["fno_arc"],
-        config["RNN"],
-        config["fft_norm"],
-        config["padding"],
-        device,
-        config["retrain"],
+    model_builder = lambda config: CNO(  # noqa: E731
+        problem_dim=config["problem_dim"],
+        in_dim=config["in_dim"],
+        out_dim=config["out_dim"],
+        size=config["in_size"],
+        N_layers=config["N_layers"],
+        N_res=config["N_res"],
+        N_res_neck=config["N_res_neck"],
+        channel_multiplier=compute_channel_multiplier(total_default_params, config),
+        kernel_size=config["kernel_size"],
+        use_bn=config["bn"],
+        device=device,
     )
     # Wrap the model builder
     model_builder = wrap_model_builder(model_builder, which_example)
@@ -118,4 +116,4 @@ def ray_same_dof_fno(
 
 
 if __name__ == "__main__":
-    ray_same_dof_fno("hh", "default", "L2", 621)
+    ray_same_dof_cno("darcy", "default", "L1")

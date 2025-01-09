@@ -9,7 +9,7 @@ sys.path.append("..")
 from utilities import find_file
 
 
-def count_params_cno(config):
+def count_params_cno(config, accurate=True):
     """
     Function to approximate the number of parameters in the CNO model.
     """
@@ -35,7 +35,30 @@ def count_params_cno(config):
             - 11 / 12
         )
     )
-    return hidden + P_Q
+    if accurate:
+        return hidden + P_Q
+    else:
+        return hidden
+
+
+def compute_channel_multiplier(total_param, config):
+
+    pow4 = 4 ** (config["N_layers"] - 1)
+    sq = (pow4 - 1) / (4 - 1)
+    channel_multiplier = (
+        total_param
+        / (
+            config["kernel_size"] ** config["problem_dim"]
+            * (
+                pow4 * 2 * config["N_res_neck"]
+                + 2 * config["N_res"] * (1 / 4 + sq)
+                + (31 / 6) * pow4
+                - 11 / 12
+            )
+        )
+    ) ** (1 / 2)
+
+    return int(channel_multiplier)
 
 
 def CNO_initialize_hyperparameters(which_example: str, mode: str):
