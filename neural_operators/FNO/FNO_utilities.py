@@ -11,6 +11,23 @@ from utilities import find_file
 
 
 #########################################
+# function to approximate the number of parameters
+#########################################
+def count_params_fno(config):
+    hidden = config["n_layers"] * (config["width"] ** 2) * (
+        config["modes"] ** config["problem_dim"]
+    ) * (2 ** config["problem_dim"]) + config["n_layers"] * (
+        config["width"] ** 2 + config["width"]
+    )
+    latent = 128
+    P_Q = (
+        config["in_dim"] + 2 * config["width"] + config["out_dim"] + 2
+    ) * latent + config["width"] * config["out_dim"]
+
+    return hidden + P_Q
+
+
+#########################################
 # function to load the hyperparameters
 #########################################
 def FNO_initialize_hyperparameters(which_example: str, mode: str):

@@ -12,7 +12,7 @@ from utilities import find_file
 #########################################
 # function to approximate the number of parameters
 #########################################
-def count_params(config):
+def count_params_cno(config):
     latent = 64
     P_Q = (
         config["kernel_size"] ** config["problem_dim"]
