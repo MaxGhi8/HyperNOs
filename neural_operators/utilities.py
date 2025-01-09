@@ -40,12 +40,27 @@ def count_params(model):
     par_tot = 0
     bytes_tot = 0
     for par in model.parameters():
-        # print(par.shape)
         tmp = reduce(
             operator.mul, list(par.shape + (2,) if par.is_complex() else par.shape)
         )
         par_tot += tmp
         bytes_tot += tmp * par.data.element_size()
+
+    return par_tot, bytes_tot
+
+
+def count_weight_params(model):
+    """Count the number of parameters in a model, excluding biases."""
+    par_tot = 0
+    bytes_tot = 0
+
+    for name, par in model.named_parameters():
+        if "weight" in name:
+            tmp = reduce(
+                operator.mul, list(par.shape + (2,) if par.is_complex() else par.shape)
+            )
+            par_tot += tmp
+            bytes_tot += tmp * par.data.element_size()
 
     return par_tot, bytes_tot
 
