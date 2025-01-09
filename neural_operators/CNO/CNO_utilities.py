@@ -10,6 +10,35 @@ from utilities import find_file
 
 
 #########################################
+# function to approximate the number of parameters
+#########################################
+def count_params(config):
+    latent = 64
+    P_Q = (
+        config["kernel_size"] ** config["problem_dim"]
+        * latent
+        * (
+            config["in_dim"]
+            + config["out_dim"]
+            + (3 / 2) * config["channel_multiplier"]
+        )
+    )
+    pow4 = 4 ** (config["N_layers"] - 1)
+    sq = (pow4 - 1) / (4 - 1)
+    hidden = (
+        config["kernel_size"] ** config["problem_dim"]
+        * config["channel_multiplier"] ** 2
+        * (
+            pow4 * 2 * config["N_res_neck"]
+            + 2 * config["N_res"] * (1 / 4 + sq)
+            + (31 / 6) * pow4
+            - 11 / 12
+        )
+    )
+    return hidden + P_Q
+
+
+#########################################
 # function to load the hyperparameters
 #########################################
 def CNO_initialize_hyperparameters(which_example: str, mode: str):
