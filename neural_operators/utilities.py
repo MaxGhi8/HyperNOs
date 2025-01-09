@@ -300,6 +300,58 @@ def plot_data_hh(
 
 
 #########################################
+# Function to plot the data of the OHara-Rudy example
+#########################################
+def plot_data_ord_input(
+    example,
+    data_plot: Tensor,
+    title: str,
+    ep: int,
+    writer: SummaryWriter,
+    normalization: bool = True,
+    plotting: bool = False,
+):
+    # Denormalize the data
+    if normalization:
+        data_plot = example.dict_normalizers["I_app_dataset"].decode(data_plot)
+    # Plot the data
+    plot_data_generic_1d(
+        data_plot, 2000, title, "I_app_dataset(t)", ep, writer, plotting
+    )
+
+
+def plot_data_ord(
+    example,
+    data_plot: Tensor,
+    title: str,
+    ep: int,
+    writer: SummaryWriter,
+    normalization: bool = True,
+    plotting: bool = False,
+):
+    if normalization:
+        for i in range(data_plot.size(-1)):
+            data_plot[:, :, [i]] = example.dict_normalizers[
+                example.fields_to_concat[i]
+            ].decode(data_plot[:, :, [i]])
+
+        # phase-phield space (not for the error)
+        plot_data_phield_space(data_plot, title + " phase space", ep, writer, plotting)
+
+    # Plot the data
+    for i in range(data_plot.size(-1)):
+        plot_data_generic_1d(
+            data_plot[..., i],
+            2000,
+            title + f" {example.fields_to_concat[i]}(t)",
+            f"{example.fields_to_concat[i]}(t)",
+            ep,
+            writer,
+            plotting,
+        )
+
+
+#########################################
 # Function to plot a generic 2d data
 #########################################
 def plot_data_generic_2d(
@@ -447,6 +499,10 @@ def get_plot_function(
             if "input" in title.lower():
                 return plot_data_hh_input
             return plot_data_hh
+        case "ord":
+            if "input" in title.lower():
+                return plot_data_ord_input
+            return plot_data_ord
 
     ## 2D problem
     if which_example == "crosstruss":

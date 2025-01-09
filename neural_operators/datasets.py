@@ -51,6 +51,7 @@ def NO_load_data_model(
         "fhn": FitzHughNagumo,
         "fhn_long": FitzHughNagumo,
         "hh": HodgkinHuxley,
+        "ord": OHaraRudy,
         ###
         "crosstruss": CrossTruss,
     }
@@ -81,7 +82,7 @@ def NO_load_data_model(
 
     # Add in_size to kwargs if it is specified
     if in_size is not None:
-        if which_example in ["fhn", "fhn_long", "hh"]:
+        if which_example in ["fhn", "fhn_long", "hh", "ord"]:
             points = 5040
             stride = points // in_size
             if abs(stride - points / in_size) > 1e-3:
@@ -1979,11 +1980,13 @@ class FitzHughNagumo:
         time: str,
         network_properties,
         batch_size,
-        training_samples=3000,  # todo
+        training_samples=3000,
         s=4,
-        in_dist=True,  # todo
+        in_dist=True,
         search_path="/",
     ):
+        assert training_samples <= 3000, "Training samples must be less than 3000"
+        assert in_dist, "Out-of-distribution testing samples are not available"
         # s = 4 --> (5040)//s  = 1260 points
 
         retrain = network_properties["retrain"]
@@ -2005,9 +2008,9 @@ class FitzHughNagumo:
         )
         a, v, w = MatReader_fhn(self.TrainDataPath)
         a_train, v_train, w_train = (
-            a[:, ::s].unsqueeze(-1),
-            v[:, ::s].unsqueeze(-1),
-            w[:, ::s].unsqueeze(-1),
+            a[:training_samples, ::s].unsqueeze(-1),
+            v[:training_samples, ::s].unsqueeze(-1),
+            w[:training_samples, ::s].unsqueeze(-1),
         )
         # Compute mean and std (for gaussian point-wise normalization)
         self.a_normalizer = UnitGaussianNormalizer(a_train)
@@ -2124,11 +2127,14 @@ class HodgkinHuxley:
         self,
         network_properties,
         batch_size,
-        training_samples=3000,  # todo
+        training_samples=3000,
         s=4,
-        in_dist=True,  # todo
+        in_dist=True,
         search_path="/",
     ):
+        assert training_samples <= 3000, "Training samples must be less than 3000"
+        assert in_dist, "Out-of-distribution testing samples are not available"
+
         # s = 4 --> (5040)//s  = 1260 points
 
         retrain = network_properties["retrain"]
@@ -2150,11 +2156,11 @@ class HodgkinHuxley:
         )
         a, v, m, h, n = MatReader_hh(self.TrainDataPath)
         a_train, v_train, m_train, h_train, n_train = (
-            a[:, ::s].unsqueeze(-1),
-            v[:, ::s].unsqueeze(-1),
-            m[:, ::s].unsqueeze(-1),
-            h[:, ::s].unsqueeze(-1),
-            n[:, ::s].unsqueeze(-1),
+            a[:training_samples, ::s].unsqueeze(-1),
+            v[:training_samples, ::s].unsqueeze(-1),
+            m[:training_samples, ::s].unsqueeze(-1),
+            h[:training_samples, ::s].unsqueeze(-1),
+            n[:training_samples, ::s].unsqueeze(-1),
         )
         # Compute mean and std (for gaussian point-wise normalization)
         self.a_normalizer = UnitGaussianNormalizer(a_train)
@@ -2219,6 +2225,199 @@ class HodgkinHuxley:
             ),
             dim=2,
         )
+
+        # Change number of workers according to your preference
+        num_workers = 0
+
+        self.train_loader = DataLoader(
+            TensorDataset(a_train, u_train),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.val_loader = DataLoader(
+            TensorDataset(a_val, u_val),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.test_loader = DataLoader(
+            TensorDataset(a_test, u_test),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+
+
+# ------------------------------------------------------------------------------
+# 0D O'Hara-Rudy model data
+#   Training samples (3000)
+#   Testing samples  (375)
+#   Validation samples (375)
+
+
+def MatReader_ord(fields: list[str], file_path: str) -> dict[str, torch.Tensor]:
+    """
+    Function to read .mat files for the new dataset.
+    Returns a dictionary of tensors for each dataset field.
+    """
+    data = scipy.io.loadmat(file_path)
+    tensors = {}
+
+    # Convert each field to a tensor and store in the dictionary
+    for field in fields:
+        if field in data:
+            tensor = torch.from_numpy(data[field]).transpose(0, 1).float()
+            tensors[field] = tensor.to("cpu")
+        else:
+            raise KeyError(f"Field {field} not found in the dataset.")
+
+    return tensors
+
+
+class OHaraRudy:
+    def __init__(
+        self,
+        network_properties,
+        batch_size,
+        training_samples=3000,
+        s=4,
+        in_dist=True,
+        search_path="/",
+    ):
+        assert training_samples <= 3000, "Training samples must be less than 3000"
+        assert in_dist, "Out-of-distribution testing samples are not available"
+        # s = 4 --> (5040)//s  = 1260 points
+
+        # List of all dataset fields
+        self.fields = [
+            "CaMK_trap_dataset",
+            "Ca_i_dataset",
+            "Ca_nsr_dataset",
+            "Ca_ss_dataset",
+            "I_app_dataset",
+            "J_rel_CaMK_dataset",
+            "J_rel_NP_dataset",
+            "K_i_dataset",
+            "K_ss_dataset",
+            "Na_i_dataset",
+            "Na_ss_dataset",
+            "V_dataset",
+            "a_CaMK_dataset",
+            "a_dataset",
+            "d_dataset",
+            "f_CaMK_fast_dataset",
+            "f_Ca_CaMK_fast_dataset",
+            "f_Ca_fast_dataset",
+            "f_Ca_slow_dataset",
+            "f_fast_dataset",
+            "f_slow_dataset",
+            "h_CaMK_slow_dataset",
+            "h_L_CaMK_dataset",
+            "h_L_dataset",
+            "h_fast_dataset",
+            "h_slow_dataset",
+            "i_CaMK_fast_dataset",
+            "i_CaMK_slow_dataset",
+            "i_fast_dataset",
+            "i_slow_dataset",
+            "j_CaMK_dataset",
+            "j_Ca_dataset",
+            "j_dataset",
+            "m_L_dataset",
+            "m_dataset",
+            "n_dataset",
+            "x_k1_dataset",
+            "x_r_fast_dataset",
+            "x_r_slow_dataset",
+            "x_s1_dataset",
+            "x_s2_dataset",
+        ]
+
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
+            torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g = torch.Generator()
+            g.manual_seed(retrain)
+
+        #### Training data
+        self.TrainDataPath = find_file(
+            "Training_dataset_ORd_n_3000_points_5040_tf_2000.mat", search_path
+        )
+        dict_train = MatReader_ord(self.fields, self.TrainDataPath)
+
+        # Compute mean and std (for gaussian point-wise normalization)
+        self.dict_normalizers = {}
+        for field in self.fields:
+            dict_train[field] = dict_train[field][:training_samples, ::s].unsqueeze(
+                -1
+            )  # extraction
+            self.dict_normalizers[field] = UnitGaussianNormalizer(
+                dict_train[field]
+            )  # normalizer
+            dict_train[field] = self.dict_normalizers[field].encode(
+                dict_train[field]
+            )  # normalization
+
+        # Concatenation
+        a_train = dict_train["I_app_dataset"]
+        self.fields_to_concat = [
+            field for field in dict_train if field != "I_app_dataset"
+        ]
+        u_train = torch.cat(
+            [dict_train[field] for field in self.fields_to_concat], dim=2
+        )
+
+        #### Validation data
+        self.ValDataPath = find_file(
+            "Validation_dataset_ORd_n_375_points_5040_tf_2000.mat", search_path
+        )
+        dict_val = MatReader_ord(self.fields, self.ValDataPath)
+
+        # Compute mean and std (for gaussian point-wise normalization)
+        for field in self.fields:
+            dict_val[field] = dict_val[field][:training_samples, ::s].unsqueeze(
+                -1
+            )  # extraction
+            dict_val[field] = self.dict_normalizers[field].encode(
+                dict_val[field]
+            )  # normalization
+
+        # Concatenation
+        a_val = dict_val["I_app_dataset"]
+        u_val = torch.cat([dict_val[field] for field in self.fields_to_concat], dim=2)
+
+        #### Validation data
+        self.TestDataPath = find_file(
+            "Test_dataset_ORd_n_375_points_5040_tf_2000.mat", search_path
+        )
+        dict_test = MatReader_ord(self.fields, self.TestDataPath)
+
+        # Compute mean and std (for gaussian point-wise normalization)
+        for field in self.fields:
+            dict_test[field] = dict_test[field][:training_samples, ::s].unsqueeze(
+                -1
+            )  # extraction
+            dict_test[field] = self.dict_normalizers[field].encode(
+                dict_test[field]
+            )  # normalization
+
+        # Concatenation
+        a_test = dict_test["I_app_dataset"]
+        u_test = torch.cat([dict_test[field] for field in self.fields_to_concat], dim=2)
 
         # Change number of workers according to your preference
         num_workers = 0
