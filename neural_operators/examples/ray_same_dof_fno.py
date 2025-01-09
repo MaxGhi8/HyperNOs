@@ -3,8 +3,9 @@ In this example I choose some parameters to tune and some to keep fixed.
 Moreover I set the modes for the FNO in order to have comparable number of parameters across the different models.
 """
 
-import torch
 import sys
+
+import torch
 
 sys.path.append("..")
 
@@ -12,8 +13,8 @@ from datasets import NO_load_data_model
 from FNO.FNO import FNO
 from FNO.FNO_utilities import (
     FNO_initialize_hyperparameters,
-    count_params_fno,
     compute_modes,
+    count_params_fno,
 )
 from loss_fun import loss_selector
 from ray import tune

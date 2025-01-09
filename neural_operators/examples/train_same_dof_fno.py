@@ -3,8 +3,9 @@ In this example I fix all the hyperparameters for the FNO model and train it.
 """
 
 import os
-import torch
 import sys
+
+import torch
 
 sys.path.append("..")
 
@@ -17,7 +18,9 @@ from utilities import get_plot_function
 from wrappers.wrap_model import wrap_model_builder
 
 
-def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str, maximum:int):
+def train_fno(
+    which_example: str, mode_hyperparams: str, loss_fn_str: str, maximum: int
+):
 
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -32,7 +35,7 @@ def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str, maxim
         * hyperparams_arc["modes"] ** hyperparams_arc["problem_dim"]
     )
 
-    # Load true hyper-parameters 
+    # Load true hyper-parameters
     hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
         which_example, mode_hyperparams
     )
@@ -40,7 +43,6 @@ def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str, maxim
         **hyperparams_train,
         **hyperparams_arc,
     }
-
 
     # Define the model builders
     model_builder = lambda config: FNO(  # noqa: E731

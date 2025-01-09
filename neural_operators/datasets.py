@@ -2,10 +2,11 @@
 This file contains the necessary functions to load the data for the Fourier Neural Operator benchmarks.
 """
 
-import h5py
-import numpy as np
 import os
 import random
+
+import h5py
+import numpy as np
 import scipy
 import torch
 from beartype import beartype

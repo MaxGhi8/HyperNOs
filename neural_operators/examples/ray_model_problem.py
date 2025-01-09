@@ -2,8 +2,9 @@
 In this example I choose some parameters to tune and some to keep fixed for the FNO model. 
 """
 
-import torch
 import sys
+
+import torch
 
 sys.path.append("..")
 

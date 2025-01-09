@@ -3,18 +3,19 @@ In this example I choose some parameters to tune and some to keep fixed fot the 
 Moreover I set the channel_multiplier for the CNO in order to have comparable number of parameters across the different models.
 """
 
-import torch
 import sys
+
+import torch
 
 sys.path.append("..")
 
-from datasets import NO_load_data_model
 from CNO.CNO import CNO
 from CNO.CNO_utilities import (
     CNO_initialize_hyperparameters,
-    count_params_cno,
     compute_channel_multiplier,
+    count_params_cno,
 )
+from datasets import NO_load_data_model
 from loss_fun import loss_selector
 from ray import tune
 from tune import tune_hyperparameters

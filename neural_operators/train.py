@@ -1,9 +1,7 @@
 import json
 import os
-import torch
-from tensorboardX import SummaryWriter
-from tqdm import tqdm
 
+import torch
 from loss_fun import (
     H1relLoss,
     H1relLoss_1D,
@@ -12,6 +10,8 @@ from loss_fun import (
     LprelLoss,
     LprelLoss_multiout,
 )
+from tensorboardX import SummaryWriter
+from tqdm import tqdm
 from utilities import count_params
 
 

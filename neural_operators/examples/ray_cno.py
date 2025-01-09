@@ -2,14 +2,15 @@
 In this example I choose some parameters to tune and some to keep fixed fot the CNO model. 
 """
 
-import torch
 import sys
+
+import torch
 
 sys.path.append("..")
 
-from datasets import NO_load_data_model
 from CNO.CNO import CNO
 from CNO.CNO_utilities import CNO_initialize_hyperparameters
+from datasets import NO_load_data_model
 from loss_fun import loss_selector
 from ray import tune
 from tune import tune_hyperparameters

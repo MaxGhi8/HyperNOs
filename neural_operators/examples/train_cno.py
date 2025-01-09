@@ -3,14 +3,15 @@ In this example I fix all the hyperparameters for the CNO model and train it.
 """
 
 import os
-import torch
 import sys
+
+import torch
 
 sys.path.append("..")
 
-from datasets import NO_load_data_model
 from CNO.CNO import CNO
 from CNO.CNO_utilities import CNO_initialize_hyperparameters
+from datasets import NO_load_data_model
 from loss_fun import loss_selector
 from train import train_fixed_model
 from utilities import get_plot_function

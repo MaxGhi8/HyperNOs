@@ -3,8 +3,9 @@ In this example I fix all the hyperparameters for the FNO model and train it.
 """
 
 import os
-import torch
 import sys
+
+import torch
 
 sys.path.append("..")
 

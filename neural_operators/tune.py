@@ -1,13 +1,12 @@
 import os
 import tempfile
+
 import torch
 from ray import init, train, tune
 from ray.train import Checkpoint
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.search.hyperopt import HyperOptSearch
-
 from train import train_epoch
-
 from utilities import count_params
 
 
