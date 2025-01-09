@@ -98,4 +98,4 @@ def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    train_fno("fhn", "best_samedofs", "L2")
+    train_fno("darcy", "default", "L2")

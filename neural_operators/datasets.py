@@ -77,7 +77,6 @@ def NO_load_data_model(
     # Add additional kwargs for specific cases
     if which_example in additional_params:
         args = [additional_params[which_example]["time"]] + args
-    
 
     # Add in_size to kwargs if it is specified
     if in_size is not None:
@@ -1652,7 +1651,11 @@ class Darcy:
         num_workers = 0
 
         self.train_set = DarcyDataset(
-            "training", self.N_Fourier_F, training_samples, search_path=search_path
+            "training",
+            self.N_Fourier_F,
+            training_samples,
+            s=self.s,
+            search_path=search_path,
         )
 
         self.train_loader = DataLoader(
@@ -1668,6 +1671,7 @@ class Darcy:
                 "validation",
                 self.N_Fourier_F,
                 training_samples,
+                s=self.s,
                 search_path=search_path,
             ),
             batch_size=batch_size,
@@ -1681,7 +1685,8 @@ class Darcy:
                 "testing",
                 self.N_Fourier_F,
                 training_samples,
-                in_dist,
+                s=self.s,
+                insample=in_dist,
                 search_path=search_path,
             ),
             batch_size=batch_size,
