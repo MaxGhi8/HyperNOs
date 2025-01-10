@@ -19,7 +19,7 @@
 		"fno_arc": "Classic",
 		"fun_act": "relu",
 		"in_dim": 1,
-		"out_dim": 40,
+		"out_dim": 41,
 		"fft_norm": null,
 		"FourierF": 0,
 		"RNN": false,

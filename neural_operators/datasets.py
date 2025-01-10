@@ -2299,6 +2299,7 @@ class OHaraRudy:
         self.fields = [
             "CaMK_trap_dataset",
             "Ca_i_dataset",
+            "Ca_jsr_dataset",
             "Ca_nsr_dataset",
             "Ca_ss_dataset",
             "I_app_dataset",
