@@ -3,10 +3,13 @@ This file contains the tests for the loss functions defined in Loss_fun.py.
 """
 
 import random
+import sys
 
 import numpy as np
 import pytest
 import torch
+
+sys.path.append("..")
 from loss_fun import H1relLoss, LprelLoss
 
 
