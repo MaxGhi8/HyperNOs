@@ -93,9 +93,56 @@ class UnitGaussianNormalizer(object):
         return x
 
 
+import numpy as np
+
 #########################################
 # Fourier features
 #########################################
+import torch
+import torch.nn as nn
+
+
+class FourierFeatures1D(nn.Module):
+    """
+    Class to compute the Fourier features for 1D inputs.
+    """
+
+    def __init__(self, scale, mapping_size, device):
+        super().__init__()
+        self.mapping_size = mapping_size  # Number of Fourier features
+        self.scale = scale  # Scaling factor for the random projection
+        self.B = scale * torch.randn((self.mapping_size, 1)).to(
+            device
+        )  # Random projection matrix for 1D
+
+    def forward(self, x):
+        """
+        Forward pass for 1D Fourier features.
+
+        Args:
+            x (torch.Tensor): Input coordinates of shape (num_points, 1) or (num_points,).
+
+        Returns:
+            torch.Tensor: Fourier features of shape (num_points, 2 * mapping_size).
+        """
+        if x.dim() == 1:
+            x = x.unsqueeze(-1)  # Ensure x is 2D: (num_points, 1)
+
+        if self.scale != 0:
+            # Project input coordinates using the random matrix B
+            x_proj = torch.matmul(
+                (2.0 * np.pi * x), self.B.T
+            )  # Shape: (num_points, mapping_size)
+            # Concatenate sine and cosine of the projected values
+            inp = torch.cat(
+                [torch.sin(x_proj), torch.cos(x_proj)], dim=-1
+            )  # Shape: (num_points, 2 * mapping_size)
+            return inp
+        else:
+            # If scale is 0, return the original input
+            return x
+
+
 class FourierFeatures(nn.Module):
     """
     Class to compute the Fourier features.

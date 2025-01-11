@@ -13,7 +13,12 @@ from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, TensorDataset
-from utilities import FourierFeatures, UnitGaussianNormalizer, find_file
+from utilities import (
+    FourierFeatures,
+    FourierFeatures1D,
+    UnitGaussianNormalizer,
+    find_file,
+)
 
 
 #########################################
@@ -266,7 +271,7 @@ class ShearLayerDataset(Dataset):
     def get_grid(self):
         x = torch.linspace(0, 1, self.s)
         y = torch.linspace(0, 1, self.s)
-        x_grid, y_grid = torch.meshgrid(x, y)
+        x_grid, y_grid = torch.meshgrid(x, y, indexing="ij")
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
@@ -460,7 +465,7 @@ class SinFrequencyDataset(Dataset):
     def get_grid(self):
         x = torch.linspace(0, 1, self.s)
         y = torch.linspace(0, 1, self.s)
-        x_grid, y_grid = torch.meshgrid(x, y)
+        x_grid, y_grid = torch.meshgrid(x, y, indexing="ij")
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
@@ -667,7 +672,7 @@ class WaveEquationDataset(Dataset):
     def get_grid(self):
         x = torch.linspace(0, 1, self.s)
         y = torch.linspace(0, 1, self.s)
-        x_grid, y_grid = torch.meshgrid(x, y)
+        x_grid, y_grid = torch.meshgrid(x, y, indexing="ij")
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
@@ -863,7 +868,7 @@ class AllenCahnDataset(Dataset):
     def get_grid(self):
         x = torch.linspace(0, 1, self.s)
         y = torch.linspace(0, 1, self.s)
-        x_grid, y_grid = torch.meshgrid(x, y)
+        x_grid, y_grid = torch.meshgrid(x, y, indexing="ij")
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
@@ -1049,7 +1054,7 @@ class ContTranslationDataset(Dataset):
     def get_grid(self):
         x = torch.linspace(0, 1, self.s)
         y = torch.linspace(0, 1, self.s)
-        x_grid, y_grid = torch.meshgrid(x, y)
+        x_grid, y_grid = torch.meshgrid(x, y, indexing="ij")
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
@@ -1237,7 +1242,7 @@ class DiscContTranslationDataset(Dataset):
     def get_grid(self):
         x = torch.linspace(0, 1, self.s)
         y = torch.linspace(0, 1, self.s)
-        x_grid, y_grid = torch.meshgrid(x, y)
+        x_grid, y_grid = torch.meshgrid(x, y, indexing="ij")
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
@@ -1427,7 +1432,7 @@ class AirfoilDataset(Dataset):
     def get_grid(self):
         x = torch.linspace(0, 1, self.s)
         y = torch.linspace(0, 1, self.s)
-        x_grid, y_grid = torch.meshgrid(x, y)
+        x_grid, y_grid = torch.meshgrid(x, y, indexing="ij")
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
@@ -1618,7 +1623,7 @@ class DarcyDataset(Dataset):
     def get_grid(self):
         x = torch.linspace(0, 1, self.s)
         y = torch.linspace(0, 1, self.s)
-        x_grid, y_grid = torch.meshgrid(x, y)
+        x_grid, y_grid = torch.meshgrid(x, y, indexing="ij")
         x_grid = x_grid.unsqueeze(-1)
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
@@ -1819,6 +1824,18 @@ class Darcy_Zongyi:
         a_test = a_normalizer.encode(a_test).unsqueeze(-1)
         u_test = u_normalizer.encode(u_test).unsqueeze(-1)
 
+        self.N_Fourier_F = network_properties["FourierF"]
+        if self.N_Fourier_F > 0:
+            grid = self.get_grid(a_test.shape[1])
+            FF = FourierFeatures(1, self.N_Fourier_F, grid.device)
+            ff_grid = FF(grid).unsqueeze(0)  # (1, n_x, n_y, 2*ff)
+
+            a_train = torch.cat(
+                (a_train, ff_grid.repeat(a_train.shape[0], 1, 1, 1)), -1
+            )
+            a_val = torch.cat((a_val, ff_grid.repeat(a_val.shape[0], 1, 1, 1)), -1)
+            a_test = torch.cat((a_test, ff_grid.repeat(a_test.shape[0], 1, 1, 1)), -1)
+
         # Change number of workers according to your preference
         num_workers = 0
 
@@ -1848,6 +1865,15 @@ class Darcy_Zongyi:
         )
 
         self.s = a_test.shape[1]
+
+    def get_grid(self, res):
+        x = torch.linspace(0, 1, res)
+        y = torch.linspace(0, 1, res)
+        x_grid, y_grid = torch.meshgrid(x, y, indexing="ij")
+        x_grid = x_grid.unsqueeze(-1)
+        y_grid = y_grid.unsqueeze(-1)
+        grid = torch.cat((x_grid, y_grid), -1)
+        return grid
 
 
 # ------------------------------------------------------------------------------
@@ -1928,6 +1954,16 @@ class Burgers_Zongyi:
         a_test = a_normalizer.encode(a_test).unsqueeze(-1)
         u_test = u_normalizer.encode(u_test).unsqueeze(-1)
 
+        self.N_Fourier_F = network_properties["FourierF"]
+        if self.N_Fourier_F > 0:
+            grid = self.get_grid(a_test.shape[1])
+            FF = FourierFeatures1D(1, self.N_Fourier_F, grid.device)
+            ff_grid = FF(grid).unsqueeze(0)  # (1, n_y, 2*ff)
+
+            a_train = torch.cat((a_train, ff_grid.repeat(a_train.shape[0], 1, 1)), -1)
+            a_val = torch.cat((a_val, ff_grid.repeat(a_val.shape[0], 1, 1)), -1)
+            a_test = torch.cat((a_test, ff_grid.repeat(a_test.shape[0], 1, 1)), -1)
+
         # Change number of workers according to your preference
         num_workers = 0
 
@@ -1957,6 +1993,9 @@ class Burgers_Zongyi:
         )
 
         self.s = a_test.shape[1]
+
+    def get_grid(self, res):
+        return torch.linspace(0, 1, res).unsqueeze(-1)
 
 
 # ------------------------------------------------------------------------------
@@ -2072,6 +2111,16 @@ class FitzHughNagumo:
             (self.v_normalizer.encode(v_test), self.w_normalizer.encode(w_test)), dim=2
         )
 
+        self.N_Fourier_F = network_properties["FourierF"]
+        if self.N_Fourier_F > 0:
+            grid = self.get_grid(a_test.shape[1])
+            FF = FourierFeatures1D(1, self.N_Fourier_F, grid.device)
+            ff_grid = FF(grid).unsqueeze(0)  # (1, n_y, 2*ff)
+
+            a_train = torch.cat((a_train, ff_grid.repeat(a_train.shape[0], 1, 1)), -1)
+            a_val = torch.cat((a_val, ff_grid.repeat(a_val.shape[0], 1, 1)), -1)
+            a_test = torch.cat((a_test, ff_grid.repeat(a_test.shape[0], 1, 1)), -1)
+
         # Change number of workers according to your preference
         num_workers = 0
 
@@ -2101,6 +2150,9 @@ class FitzHughNagumo:
         )
 
         self.s = a_test.shape[1]
+
+    def get_grid(self, res):
+        return torch.linspace(0, 1, res).unsqueeze(-1)
 
 
 # ------------------------------------------------------------------------------
@@ -2248,6 +2300,16 @@ class HodgkinHuxley:
             dim=2,
         )
 
+        self.N_Fourier_F = network_properties["FourierF"]
+        if self.N_Fourier_F > 0:
+            grid = self.get_grid(a_test.shape[1])
+            FF = FourierFeatures1D(1, self.N_Fourier_F, grid.device)
+            ff_grid = FF(grid).unsqueeze(0)  # (1, n_y, 2*ff)
+
+            a_train = torch.cat((a_train, ff_grid.repeat(a_train.shape[0], 1, 1)), -1)
+            a_val = torch.cat((a_val, ff_grid.repeat(a_val.shape[0], 1, 1)), -1)
+            a_test = torch.cat((a_test, ff_grid.repeat(a_test.shape[0], 1, 1)), -1)
+
         # Change number of workers according to your preference
         num_workers = 0
 
@@ -2277,6 +2339,9 @@ class HodgkinHuxley:
         )
 
         self.s = a_test.shape[1]
+
+    def get_grid(self, res):
+        return torch.linspace(0, 1, res).unsqueeze(-1)
 
 
 # ------------------------------------------------------------------------------
@@ -2445,6 +2510,16 @@ class OHaraRudy:
         a_test = dict_test["I_app_dataset"]
         u_test = torch.cat([dict_test[field] for field in self.fields_to_concat], dim=2)
 
+        self.N_Fourier_F = network_properties["FourierF"]
+        if self.N_Fourier_F > 0:
+            grid = self.get_grid(a_test.shape[1])
+            FF = FourierFeatures1D(1, self.N_Fourier_F, grid.device)
+            ff_grid = FF(grid).unsqueeze(0)  # (1, n_y, 2*ff)
+
+            a_train = torch.cat((a_train, ff_grid.repeat(a_train.shape[0], 1, 1)), -1)
+            a_val = torch.cat((a_val, ff_grid.repeat(a_val.shape[0], 1, 1)), -1)
+            a_test = torch.cat((a_test, ff_grid.repeat(a_test.shape[0], 1, 1)), -1)
+
         # Change number of workers according to your preference
         num_workers = 0
 
@@ -2473,6 +2548,9 @@ class OHaraRudy:
             generator=g,
         )
         self.s = a_test.shape[1]
+
+    def get_grid(self, res):
+        return torch.linspace(0, 1, res).unsqueeze(-1)
 
 
 # ------------------------------------------------------------------------------
@@ -2549,6 +2627,22 @@ class CrossTruss(Dataset):
         for i in range(outputs_test.shape[-1]):
             outputs_test[:, :, :, [i]] *= inputs_test
 
+        self.N_Fourier_F = network_properties["FourierF"]
+        if self.N_Fourier_F > 0:
+            grid = self.get_grid(inputs_test.shape[1])
+            FF = FourierFeatures(1, self.N_Fourier_F, grid.device)
+            ff_grid = FF(grid).unsqueeze(0)  # (1, n_x, n_y, 2*ff)
+
+            inputs_train = torch.cat(
+                (inputs_train, ff_grid.repeat(inputs_train.shape[0], 1, 1, 1)), -1
+            )
+            inputs_val = torch.cat(
+                (inputs_val, ff_grid.repeat(inputs_val.shape[0], 1, 1, 1)), -1
+            )
+            inputs_test = torch.cat(
+                (inputs_test, ff_grid.repeat(inputs_test.shape[0], 1, 1, 1)), -1
+            )
+
         g = torch.Generator()
 
         retrain = network_properties["retrain"]
@@ -2592,3 +2686,12 @@ class CrossTruss(Dataset):
         )
 
         self.s = inputs_test.shape[1]
+
+    def get_grid(self, res):
+        x = torch.linspace(0, 1, res)
+        y = torch.linspace(0, 1, res)
+        x_grid, y_grid = torch.meshgrid(x, y, indexing="ij")
+        x_grid = x_grid.unsqueeze(-1)
+        y_grid = y_grid.unsqueeze(-1)
+        grid = torch.cat((x_grid, y_grid), -1)
+        return grid

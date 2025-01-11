@@ -28,7 +28,7 @@ random.seed(42)  # Set a seed for reproducibility
 num_test_cases = 10  # Number of test cases
 random_batch_sizes = [random.randint(1, 50) for _ in range(num_test_cases)]
 random_retrain = [random.choice([1, -1]) for _ in range(num_test_cases)]
-random_fourierf = [0 * random.randint(0, 10) for _ in range(num_test_cases)]  #!
+random_fourierf = [random.randint(0, 10) for _ in range(num_test_cases)]
 
 
 @pytest.mark.parametrize(
@@ -134,7 +134,7 @@ def test_valid_example_2d(
         batch_size,
         example.s,
         example.s,
-        1 + fourierf,
+        1 + 2 * fourierf,
     )
     assert next(iter(example.train_loader))[1].shape == (  # output
         batch_size,
@@ -148,7 +148,7 @@ def test_valid_example_2d(
 num_test_cases = 4  # Number of test cases
 random_batch_sizes = [random.randint(1, 50) for _ in range(num_test_cases)]
 random_retrain = [random.choice([1, -1]) for _ in range(num_test_cases)]
-random_fourierf = [0 * random.randint(0, 10) for _ in range(num_test_cases)]  #!
+random_fourierf = [random.randint(0, 10) for _ in range(num_test_cases)]
 
 
 @pytest.mark.parametrize(
@@ -204,7 +204,7 @@ def test_valid_example_1d(
     assert next(iter(example.train_loader))[0].shape == (  # input
         batch_size,
         example.s,
-        1 + fourierf,
+        1 + 2 * fourierf,
     )
     assert next(iter(example.train_loader))[1].shape == (  # output
         batch_size,
