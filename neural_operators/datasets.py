@@ -24,13 +24,13 @@ def NO_load_data_model(
     no_architecture,
     batch_size: int,
     training_samples: int,
-    in_size: int = None,  # Make in_size optional
-    in_dist: bool = True,  # Default value for in_dist
+    s: int = None,  # Make s optional
+    in_dist: bool = True,
     search_path: str = "/",
 ):
     """
     Function to load the data and the model.
-    If in_size is specified, it modifies the parameter "s" of the functions.
+    If s is specified, it modifies the parameter "s" of the functions.
     Otherwise, the functions maintain their default value for "s".
     """
     # Define a dictionary to map which_example to the corresponding class and its arguments
@@ -64,7 +64,7 @@ def NO_load_data_model(
 
     # Check if the example is valid
     if which_example not in example_map:
-        raise ValueError("the variable which_example is typed wrong")
+        raise ValueError("The variable which_example is typed wrong")
 
     # Get the class for the example
     example_class = example_map[which_example]
@@ -80,18 +80,18 @@ def NO_load_data_model(
     if which_example in additional_params:
         args = [additional_params[which_example]["time"]] + args
 
-    # Add in_size to kwargs if it is specified
-    if in_size is not None:
+    # Add s to kwargs if it is specified
+    if s is not None:
         if which_example in ["fhn", "fhn_long", "hh", "ord"]:
             points = 5040
-            stride = points // in_size
-            if abs(stride - points / in_size) > 1e-3:
+            stride = points // s
+            if abs(stride - points / s) > 1e-3:
                 raise ValueError(
-                    f"Invalid size, the in_size must divide the original grid size (in this example {points})"
+                    f"Invalid size, the s must divide the original grid size (in this example {points})"
                 )
             kwargs["s"] = stride
         else:
-            kwargs["s"] = in_size
+            kwargs["s"] = s
 
     # Create the example instance
     example = example_class(*args, **kwargs)
@@ -279,14 +279,16 @@ class ShearLayer:
         network_properties,
         batch_size,
         training_samples,
-        in_size=64,
+        s=64,
         in_dist=True,
         search_path="/",
     ):
-        self.in_size = in_size
-        assert self.in_size <= 128
+        self.s = s
+        assert self.s <= 128
 
         self.N_Fourier_F = network_properties["FourierF"]
+
+        g = torch.Generator()
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -298,7 +300,6 @@ class ShearLayer:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
             # torch.use_deterministic_algorithms(True)
-            g = torch.Generator()
             g.manual_seed(retrain)
 
         # Change number of workers according to your preference
@@ -308,7 +309,7 @@ class ShearLayer:
             "training",
             self.N_Fourier_F,
             training_samples,
-            self.in_size,
+            self.s,
             search_path=search_path,
         )
 
@@ -325,7 +326,7 @@ class ShearLayer:
                 "validation",
                 self.N_Fourier_F,
                 training_samples,
-                self.in_size,
+                self.s,
                 search_path=search_path,
             ),
             batch_size=batch_size,
@@ -339,7 +340,7 @@ class ShearLayer:
                 "test",
                 self.N_Fourier_F,
                 training_samples,
-                self.in_size,
+                self.s,
                 in_dist,
                 search_path=search_path,
             ),
@@ -481,6 +482,8 @@ class SinFrequency:
 
         self.N_Fourier_F = network_properties["FourierF"]
 
+        g = torch.Generator()
+
         retrain = network_properties["retrain"]
         if retrain > 0:
             os.environ["PYTHONHASHSEED"] = str(retrain)
@@ -491,7 +494,6 @@ class SinFrequency:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
             # torch.use_deterministic_algorithms(True)
-            g = torch.Generator()
             g.manual_seed(retrain)
 
         # Change number of workers according to your preference
@@ -687,6 +689,8 @@ class WaveEquation:
 
         self.N_Fourier_F = network_properties["FourierF"]
 
+        g = torch.Generator()
+
         retrain = network_properties["retrain"]
         if retrain > 0:
             os.environ["PYTHONHASHSEED"] = str(retrain)
@@ -697,7 +701,6 @@ class WaveEquation:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
             # torch.use_deterministic_algorithms(True)
-            g = torch.Generator()
             g.manual_seed(retrain)
 
         # Change number of workers according to your preference
@@ -882,6 +885,8 @@ class AllenCahn:
 
         self.N_Fourier_F = network_properties["FourierF"]
 
+        g = torch.Generator()
+
         retrain = network_properties["retrain"]
         if retrain > 0:
             os.environ["PYTHONHASHSEED"] = str(retrain)
@@ -892,7 +897,6 @@ class AllenCahn:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
             # torch.use_deterministic_algorithms(True)
-            g = torch.Generator()
             g.manual_seed(retrain)
 
         # Change number of workers according to your preference
@@ -1067,6 +1071,8 @@ class ContTranslation:
 
         self.N_Fourier_F = network_properties["FourierF"]
 
+        g = torch.Generator()
+
         retrain = network_properties["retrain"]
         if retrain > 0:
             os.environ["PYTHONHASHSEED"] = str(retrain)
@@ -1077,7 +1083,6 @@ class ContTranslation:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
             # torch.use_deterministic_algorithms(True)
-            g = torch.Generator()
             g.manual_seed(retrain)
 
         # Change number of workers according to your preference
@@ -1254,6 +1259,8 @@ class DiscContTranslation:
 
         self.N_Fourier_F = network_properties["FourierF"]
 
+        g = torch.Generator()
+
         retrain = network_properties["retrain"]
         if retrain > 0:
             os.environ["PYTHONHASHSEED"] = str(retrain)
@@ -1264,7 +1271,6 @@ class DiscContTranslation:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
             # torch.use_deterministic_algorithms(True)
-            g = torch.Generator()
             g.manual_seed(retrain)
 
         # Change number of workers according to your preference
@@ -1443,6 +1449,8 @@ class Airfoil:
 
         self.N_Fourier_F = network_properties["FourierF"]
 
+        g = torch.Generator()
+
         retrain = network_properties["retrain"]
         if retrain > 0:
             os.environ["PYTHONHASHSEED"] = str(retrain)
@@ -1453,7 +1461,6 @@ class Airfoil:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
             # torch.use_deterministic_algorithms(True)
-            g = torch.Generator()
             g.manual_seed(retrain)
 
         # Change number of workers according to your preference
@@ -1636,6 +1643,8 @@ class Darcy:
 
         self.N_Fourier_F = network_properties["FourierF"]
 
+        g = torch.Generator()
+
         retrain = network_properties["retrain"]
         if retrain > 0:
             os.environ["PYTHONHASHSEED"] = str(retrain)
@@ -1646,7 +1655,6 @@ class Darcy:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
             # torch.use_deterministic_algorithms(True)
-            g = torch.Generator()
             g.manual_seed(retrain)
 
         # Change number of workers according to your preference
@@ -1762,14 +1770,19 @@ class Darcy_Zongyi:
         ntrain=1000,
         ntest=200,
         s=5,
+        in_dist=True,
         search_path="/",
     ):
+        if not in_dist:
+            ValueError("Out-of-distribution testing samples not available")
         # s = 5 --> (421)//s + 1 = 85 points per direction
 
         self.TrainDataPath = find_file("piececonst_r421_N1024_smooth1.mat", search_path)
         a_train, u_train = MatReader_darcy(self.TrainDataPath)
         self.TestDataPath = find_file("piececonst_r421_N1024_smooth2.mat", search_path)
         a_test, u_test = MatReader_darcy(self.TestDataPath)
+
+        g = torch.Generator()
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -1781,11 +1794,9 @@ class Darcy_Zongyi:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
             # torch.use_deterministic_algorithms(True)
-            g = torch.Generator()
             g.manual_seed(retrain)
 
         # Training data
-        g = torch.Generator().manual_seed(1)
         idx_train = torch.randperm(1024, device="cpu", generator=g)[:ntrain]
         a_train, u_train = a_train[idx_train, ::s, ::s], u_train[idx_train, ::s, ::s]
         # Compute mean and std (for gaussian point-wise normalization)
@@ -1836,6 +1847,8 @@ class Darcy_Zongyi:
             generator=g,
         )
 
+        self.s = a_test.shape[1]
+
 
 # ------------------------------------------------------------------------------
 # 1D Burger's Equation data (from Zongyi Li FNO article)
@@ -1868,12 +1881,17 @@ class Burgers_Zongyi:
         ntrain=1000,
         ntest=200,
         s=8,
+        in_dist=True,
         search_path="/",
     ):
+        if not in_dist:
+            ValueError("Out-of-distribution testing samples not available")
         # s = 8 --> (8192)//s + 1 = 1025 points
 
         self.DataPath = find_file("burgers_data_R10.mat", search_path)
         a, u = MatReader_burgers(self.DataPath)
+
+        g = torch.Generator()
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -1885,11 +1903,9 @@ class Burgers_Zongyi:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
             # torch.use_deterministic_algorithms(True)
-            g = torch.Generator()
             g.manual_seed(retrain)
 
         # Training data
-        g = torch.Generator().manual_seed(1)
         idx = torch.randperm(2048, device="cpu", generator=g)
         idx_train = idx[:ntrain]
         a_train, u_train = a[idx_train, ::s], u[idx_train, ::s]
@@ -1940,6 +1956,8 @@ class Burgers_Zongyi:
             generator=g,
         )
 
+        self.s = a_test.shape[1]
+
 
 # ------------------------------------------------------------------------------
 # Navier Stokes's Equation data (from Zongyi Li FNO article)
@@ -1989,6 +2007,8 @@ class FitzHughNagumo:
         assert in_dist, "Out-of-distribution testing samples are not available"
         # s = 4 --> (5040)//s  = 1260 points
 
+        g = torch.Generator()
+
         retrain = network_properties["retrain"]
         if retrain > 0:
             os.environ["PYTHONHASHSEED"] = str(retrain)
@@ -1999,7 +2019,6 @@ class FitzHughNagumo:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
             # torch.use_deterministic_algorithms(True)
-            g = torch.Generator()
             g.manual_seed(retrain)
 
         # Training data
@@ -2081,6 +2100,8 @@ class FitzHughNagumo:
             generator=g,
         )
 
+        self.s = a_test.shape[1]
+
 
 # ------------------------------------------------------------------------------
 # 0D Hodgkin-Huxley model data
@@ -2137,6 +2158,8 @@ class HodgkinHuxley:
 
         # s = 4 --> (5040)//s  = 1260 points
 
+        g = torch.Generator()
+
         retrain = network_properties["retrain"]
         if retrain > 0:
             os.environ["PYTHONHASHSEED"] = str(retrain)
@@ -2147,7 +2170,6 @@ class HodgkinHuxley:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
             # torch.use_deterministic_algorithms(True)
-            g = torch.Generator()
             g.manual_seed(retrain)
 
         # Training data
@@ -2254,6 +2276,8 @@ class HodgkinHuxley:
             generator=g,
         )
 
+        self.s = a_test.shape[1]
+
 
 # ------------------------------------------------------------------------------
 # 0D O'Hara-Rudy model data
@@ -2341,6 +2365,8 @@ class OHaraRudy:
             "x_s2_dataset",
         ]
 
+        g = torch.Generator()
+
         retrain = network_properties["retrain"]
         if retrain > 0:
             os.environ["PYTHONHASHSEED"] = str(retrain)
@@ -2351,7 +2377,6 @@ class OHaraRudy:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
             # torch.use_deterministic_algorithms(True)
-            g = torch.Generator()
             g.manual_seed(retrain)
 
         #### Training data
@@ -2447,6 +2472,7 @@ class OHaraRudy:
             pin_memory=True,
             generator=g,
         )
+        self.s = a_test.shape[1]
 
 
 # ------------------------------------------------------------------------------
@@ -2464,9 +2490,13 @@ class CrossTruss(Dataset):
         ntrain=1000,
         ntest=250,
         s=2,
+        in_dist=True,
         search_path="/",
     ):
+        if not in_dist:
+            ValueError("Out-of-distribution testing samples not available")
         # s = 2 --> (211)//s + 1 = 105 points
+
         # Read the data
         self.file_data = find_file("elasticity_dataset_211x211_n1500.h5", search_path)
         self.reader = h5py.File(self.file_data, "r")
@@ -2519,6 +2549,8 @@ class CrossTruss(Dataset):
         for i in range(outputs_test.shape[-1]):
             outputs_test[:, :, :, [i]] *= inputs_test
 
+        g = torch.Generator()
+
         retrain = network_properties["retrain"]
         if retrain > 0:
             os.environ["PYTHONHASHSEED"] = str(retrain)
@@ -2529,7 +2561,6 @@ class CrossTruss(Dataset):
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
             # torch.use_deterministic_algorithms(True)
-            g = torch.Generator()
             g.manual_seed(retrain)
 
         # Change number of workers according to your preference
@@ -2559,3 +2590,5 @@ class CrossTruss(Dataset):
             pin_memory=True,
             generator=g,
         )
+
+        self.s = inputs_test.shape[1]
