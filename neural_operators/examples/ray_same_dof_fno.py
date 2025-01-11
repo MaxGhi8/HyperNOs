@@ -95,8 +95,6 @@ def ray_same_dof_fno(
         },
         batch_size=config["batch_size"],
         training_samples=config["training_samples"],
-        in_dist=True,
-        search_path="/",
     )
 
     # Define the loss function

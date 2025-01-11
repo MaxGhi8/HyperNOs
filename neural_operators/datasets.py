@@ -31,7 +31,7 @@ def NO_load_data_model(
     training_samples: int,
     s: int = None,  # Make s optional
     in_dist: bool = True,
-    search_path: str = "/",
+    search_path: str = os.path.abspath(__file__),
 ):
     """
     Function to load the data and the model.

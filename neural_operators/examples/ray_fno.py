@@ -85,8 +85,6 @@ def ray_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         },
         batch_size=config["batch_size"],
         training_samples=config["training_samples"],
-        in_dist=True,
-        search_path="/",
     )
 
     # Define the loss function
