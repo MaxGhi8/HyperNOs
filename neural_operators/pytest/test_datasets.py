@@ -32,7 +32,7 @@ random_fourierf = [0 * random.randint(0, 10) for _ in range(num_test_cases)]  #!
 
 
 @pytest.mark.parametrize(
-    "example_name, expected_class, batch_size, retrain, fourierf",
+    "example_name, expected_class, batch_size, retrain, fourierf, output_size",
     [
         (
             "airfoil",
@@ -40,6 +40,7 @@ random_fourierf = [0 * random.randint(0, 10) for _ in range(num_test_cases)]  #!
             random_batch_sizes[0],
             random_retrain[0],
             random_fourierf[0],
+            1,
         ),
         (
             "allen",
@@ -47,6 +48,7 @@ random_fourierf = [0 * random.randint(0, 10) for _ in range(num_test_cases)]  #!
             random_batch_sizes[1],
             random_retrain[1],
             random_fourierf[1],
+            1,
         ),
         (
             "cont_tran",
@@ -54,6 +56,7 @@ random_fourierf = [0 * random.randint(0, 10) for _ in range(num_test_cases)]  #!
             random_batch_sizes[2],
             random_retrain[2],
             random_fourierf[2],
+            1,
         ),
         (
             "crosstruss",
@@ -61,14 +64,23 @@ random_fourierf = [0 * random.randint(0, 10) for _ in range(num_test_cases)]  #!
             random_batch_sizes[3],
             random_retrain[3],
             random_fourierf[3],
+            2,
         ),
-        ("darcy", Darcy, random_batch_sizes[4], random_retrain[4], random_fourierf[4]),
+        (
+            "darcy",
+            Darcy,
+            random_batch_sizes[4],
+            random_retrain[4],
+            random_fourierf[4],
+            1,
+        ),
         (
             "darcy_zongyi",
             Darcy_Zongyi,
             random_batch_sizes[5],
             random_retrain[5],
             random_fourierf[5],
+            1,
         ),
         (
             "disc_tran",
@@ -76,6 +88,7 @@ random_fourierf = [0 * random.randint(0, 10) for _ in range(num_test_cases)]  #!
             random_batch_sizes[6],
             random_retrain[6],
             random_fourierf[6],
+            1,
         ),
         (
             "shear_layer",
@@ -83,6 +96,7 @@ random_fourierf = [0 * random.randint(0, 10) for _ in range(num_test_cases)]  #!
             random_batch_sizes[7],
             random_retrain[7],
             random_fourierf[7],
+            1,
         ),
         (
             "poisson",
@@ -90,6 +104,7 @@ random_fourierf = [0 * random.randint(0, 10) for _ in range(num_test_cases)]  #!
             random_batch_sizes[8],
             random_retrain[8],
             random_fourierf[8],
+            1,
         ),
         (
             "wave_0_5",
@@ -97,10 +112,13 @@ random_fourierf = [0 * random.randint(0, 10) for _ in range(num_test_cases)]  #!
             random_batch_sizes[9],
             random_retrain[9],
             random_fourierf[9],
+            1,
         ),
     ],
 )
-def test_valid_example_2d(example_name, expected_class, batch_size, retrain, fourierf):
+def test_valid_example_2d(
+    example_name, expected_class, batch_size, retrain, fourierf, output_size
+):
     # Test valid examples without in_size
     example = NO_load_data_model(
         which_example=example_name,
@@ -112,11 +130,17 @@ def test_valid_example_2d(example_name, expected_class, batch_size, retrain, fou
         training_samples=60,
     )
     assert isinstance(example, expected_class)
-    assert next(iter(example.train_loader))[0].shape == (
+    assert next(iter(example.train_loader))[0].shape == (  # input
         batch_size,
         example.s,
         example.s,
         1 + fourierf,
+    )
+    assert next(iter(example.train_loader))[1].shape == (  # output
+        batch_size,
+        example.s,
+        example.s,
+        output_size,
     )
 
 
@@ -128,7 +152,7 @@ random_fourierf = [0 * random.randint(0, 10) for _ in range(num_test_cases)]  #!
 
 
 @pytest.mark.parametrize(
-    "example_name, expected_class, batch_size, retrain, fourierf",
+    "example_name, expected_class, batch_size, retrain, fourierf, output_size",
     [
         (
             "burgers_zongyi",
@@ -136,6 +160,7 @@ random_fourierf = [0 * random.randint(0, 10) for _ in range(num_test_cases)]  #!
             random_batch_sizes[0],
             random_retrain[0],
             random_fourierf[0],
+            1,
         ),
         (
             "fhn",
@@ -143,6 +168,7 @@ random_fourierf = [0 * random.randint(0, 10) for _ in range(num_test_cases)]  #!
             random_batch_sizes[1],
             random_retrain[1],
             random_fourierf[1],
+            2,
         ),
         (
             "hh",
@@ -150,6 +176,7 @@ random_fourierf = [0 * random.randint(0, 10) for _ in range(num_test_cases)]  #!
             random_batch_sizes[2],
             random_retrain[2],
             random_fourierf[2],
+            4,
         ),
         (
             "ord",
@@ -157,10 +184,13 @@ random_fourierf = [0 * random.randint(0, 10) for _ in range(num_test_cases)]  #!
             random_batch_sizes[3],
             random_retrain[3],
             random_fourierf[3],
+            41,
         ),
     ],
 )
-def test_valid_example_1d(example_name, expected_class, batch_size, retrain, fourierf):
+def test_valid_example_1d(
+    example_name, expected_class, batch_size, retrain, fourierf, output_size
+):
     example = NO_load_data_model(
         which_example=example_name,
         no_architecture={
@@ -171,10 +201,15 @@ def test_valid_example_1d(example_name, expected_class, batch_size, retrain, fou
         training_samples=60,
     )
     assert isinstance(example, expected_class)
-    assert next(iter(example.train_loader))[0].shape == (
+    assert next(iter(example.train_loader))[0].shape == (  # input
         batch_size,
         example.s,
         1 + fourierf,
+    )
+    assert next(iter(example.train_loader))[1].shape == (  # output
+        batch_size,
+        example.s,
+        output_size,
     )
 
 
