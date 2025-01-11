@@ -129,7 +129,10 @@ def test_valid_example_2d(
         batch_size=batch_size,
         training_samples=60,
     )
+
     assert isinstance(example, expected_class)
+
+    # train set
     assert next(iter(example.train_loader))[0].shape == (  # input
         batch_size,
         example.s,
@@ -137,6 +140,32 @@ def test_valid_example_2d(
         1 + 2 * fourierf,
     )
     assert next(iter(example.train_loader))[1].shape == (  # output
+        batch_size,
+        example.s,
+        example.s,
+        output_size,
+    )
+    # test set
+    assert next(iter(example.test_loader))[0].shape == (  # input
+        batch_size,
+        example.s,
+        example.s,
+        1 + 2 * fourierf,
+    )
+    assert next(iter(example.test_loader))[1].shape == (  # output
+        batch_size,
+        example.s,
+        example.s,
+        output_size,
+    )
+    # validation set
+    assert next(iter(example.val_loader))[0].shape == (  # input
+        batch_size,
+        example.s,
+        example.s,
+        1 + 2 * fourierf,
+    )
+    assert next(iter(example.val_loader))[1].shape == (  # output
         batch_size,
         example.s,
         example.s,
@@ -200,7 +229,10 @@ def test_valid_example_1d(
         batch_size=batch_size,
         training_samples=60,
     )
+
     assert isinstance(example, expected_class)
+
+    # train set
     assert next(iter(example.train_loader))[0].shape == (  # input
         batch_size,
         example.s,
@@ -211,18 +243,40 @@ def test_valid_example_1d(
         example.s,
         output_size,
     )
+    # test set
+    assert next(iter(example.test_loader))[0].shape == (  # input
+        batch_size,
+        example.s,
+        1 + 2 * fourierf,
+    )
+    assert next(iter(example.test_loader))[1].shape == (  # output
+        batch_size,
+        example.s,
+        output_size,
+    )
+    # validation set
+    assert next(iter(example.val_loader))[0].shape == (  # input
+        batch_size,
+        example.s,
+        1 + 2 * fourierf,
+    )
+    assert next(iter(example.val_loader))[1].shape == (  # output
+        batch_size,
+        example.s,
+        output_size,
+    )
 
 
 #### test case with invalid name
 @pytest.mark.parametrize(
-    "example_name, expected_class",
+    "example_name",
     [
-        ("Airfoil", Airfoil),
-        ("navier", ShearLayer),
-        ("wave", WaveEquation),
+        ("Airfoil"),
+        ("navier"),
+        ("wave"),
     ],
 )
-def test_invalid_example(example_name, expected_class):
+def test_invalid_example(example_name):
     with pytest.raises(ValueError, match="The variable which_example is typed wrong"):
         NO_load_data_model(
             which_example=example_name,
@@ -232,4 +286,32 @@ def test_invalid_example(example_name, expected_class):
             },
             batch_size=32,
             training_samples=10,
+        )
+
+
+#### test case without out_dist
+@pytest.mark.parametrize(
+    "example_name",
+    [
+        ("fhn"),
+        ("hh"),
+        ("ord"),
+        ("burgers_zongyi"),
+        ("darcy_zongyi"),
+        ("crosstruss"),
+    ],
+)
+def test_invalid_out_dist(example_name):
+    with pytest.raises(
+        AssertionError, match="Out-of-distribution testing samples are not available"
+    ):
+        NO_load_data_model(
+            which_example=example_name,
+            no_architecture={
+                "FourierF": 0,
+                "retrain": -1,
+            },
+            batch_size=32,
+            training_samples=10,
+            in_dist=False,
         )

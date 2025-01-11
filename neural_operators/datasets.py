@@ -1778,8 +1778,8 @@ class Darcy_Zongyi:
         in_dist=True,
         search_path="/",
     ):
-        if not in_dist:
-            ValueError("Out-of-distribution testing samples not available")
+        assert in_dist, "Out-of-distribution testing samples are not available"
+
         # s = 5 --> (421)//s + 1 = 85 points per direction
 
         self.TrainDataPath = find_file("piececonst_r421_N1024_smooth1.mat", search_path)
@@ -1910,8 +1910,7 @@ class Burgers_Zongyi:
         in_dist=True,
         search_path="/",
     ):
-        if not in_dist:
-            ValueError("Out-of-distribution testing samples not available")
+        assert in_dist, "Out-of-distribution testing samples are not available"
         # s = 8 --> (8192)//s + 1 = 1025 points
 
         self.DataPath = find_file("burgers_data_R10.mat", search_path)
@@ -2571,8 +2570,7 @@ class CrossTruss(Dataset):
         in_dist=True,
         search_path="/",
     ):
-        if not in_dist:
-            ValueError("Out-of-distribution testing samples not available")
+        assert in_dist, "Out-of-distribution testing samples are not available"
         # s = 2 --> (211)//s + 1 = 105 points
 
         # Read the data
