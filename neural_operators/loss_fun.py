@@ -35,28 +35,78 @@ def loss_selector(loss_fn_str: str, problem_dim: int, beta: float = 1.0):
 # Smooth L1 relative loss
 #########################################
 class SmoothL1Loss_rel:
+    def __init__(self, size_mean: bool = False):
+        self.size_mean = size_mean
+
+    @jaxtyped(typechecker=beartype)
+    def Smooth_batched(
+        self,
+        x: Float[Tensor, "n_samples *n out_dim"],
+        y: Float[Tensor, "n_samples *n out_dim"],
+    ) -> Float[Tensor, "n_samples"]:
+        return torch.vmap(torch.nn.SmoothL1Loss(reduction="sum"))(x, y)
+
+    @jaxtyped(typechecker=beartype)
     def __call__(
         self,
         x: Float[Tensor, "n_samples *n out_dim"],
         y: Float[Tensor, "n_samples *n out_dim"],
-    ) -> Float[Tensor, "1"]:
-        return torch.nn.SmoothL1Loss(x, y) / torch.nn.SmoothL1Loss(
-            torch.zeros_like(y, device=y.device), y
-        )
+    ) -> Float[Tensor, "*n_samples"]:
+
+        diff_norms = self.Smooth_batched(x, y)
+        y_norms = self.Smooth_batched(torch.zeros_like(y, device=y.device), y)
+
+        # check division by zero
+        if torch.any(y_norms <= 1e-5):
+            raise ValueError("Division by zero")
+
+        if self.size_mean is True:
+            return torch.mean(diff_norms / y_norms)
+        elif self.size_mean is False:
+            return torch.sum(diff_norms / y_norms)  # sum along batchsize
+        elif self.size_mean is None:
+            return diff_norms / y_norms  # no reduction
+        else:
+            raise ValueError("size_mean must be a boolean or None")
 
 
 #########################################
 # MSE relative loss
 #########################################
 class MSELoss_rel:
+    def __init__(self, size_mean: bool = False):
+        self.size_mean = size_mean
+
+    @jaxtyped(typechecker=beartype)
+    def MSE_batched(
+        self,
+        x: Float[Tensor, "n_samples *n out_dim"],
+        y: Float[Tensor, "n_samples *n out_dim"],
+    ) -> Float[Tensor, "n_samples"]:
+        return torch.vmap(torch.nn.MSELoss(reduction="sum"))(x, y)
+
+    @jaxtyped(typechecker=beartype)
     def __call__(
         self,
         x: Float[Tensor, "n_samples *n out_dim"],
         y: Float[Tensor, "n_samples *n out_dim"],
-    ) -> Float[Tensor, "1"]:
-        return torch.nn.MSELoss(x, y) / torch.nn.MSELoss(
-            torch.zeros_like(y, device=y.device), y
-        )
+    ) -> Float[Tensor, "*n_samples"]:
+
+        diff_norms = self.MSE_batched(x, y)
+        y_norms = self.MSE_batched(torch.zeros_like(y, device=y.device), y)
+
+        # check division by zero
+        if torch.any(y_norms <= 1e-5):
+            raise ValueError("Division by zero")
+
+        if self.size_mean is True:
+            return torch.mean(diff_norms / y_norms)
+        elif self.size_mean is False:
+            return torch.sum(diff_norms / y_norms)  # sum along batchsize
+        elif self.size_mean is None:
+            return diff_norms / y_norms  # no reduction
+        else:
+            raise ValueError("size_mean must be a boolean or None")
 
 
 #########################################

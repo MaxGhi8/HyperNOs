@@ -10,7 +10,53 @@ import pytest
 import torch
 
 sys.path.append("..")
-from loss_fun import H1relLoss, LprelLoss
+from loss_fun import H1relLoss, LprelLoss, MSELoss_rel, SmoothL1Loss_rel
+
+
+def test_SmoothL1Loss_rel():
+    # test 1: test L1(x, x)
+    x = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
+    result = SmoothL1Loss_rel()(x, x)
+    assert result.item() == 0.0
+
+    # test 2: as test 1 but with a single sample
+    x = torch.rand(1, 32, 32)
+    result = SmoothL1Loss_rel()(x, x)
+    assert result.item() == 0.0
+
+    # test 3: random test 1
+    x = torch.rand(24, 32, 32)
+    result = SmoothL1Loss_rel()(x, x)
+    assert result.item() == 0.0
+
+    # test 4: test on division by zero
+    x = torch.randn(10, 3, 3)
+    y = torch.zeros(10, 3, 3)
+    with pytest.raises(ValueError, match="Division by zero"):
+        SmoothL1Loss_rel()(x, y)
+
+
+def test_MSELoss_rel():
+    # test 1: test L1(x, x)
+    x = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
+    result = MSELoss_rel()(x, x)
+    assert result.item() == 0.0
+
+    # test 2: as test 1 but with a single sample
+    x = torch.rand(1, 32, 32)
+    result = MSELoss_rel()(x, x)
+    assert result.item() == 0.0
+
+    # test 3: random test 1
+    x = torch.rand(24, 32, 32)
+    result = MSELoss_rel()(x, x)
+    assert result.item() == 0.0
+
+    # test 4: test on division by zero
+    x = torch.randn(10, 3, 3)
+    y = torch.zeros(10, 3, 3)
+    with pytest.raises(ValueError, match="Division by zero"):
+        MSELoss_rel()(x, y)
 
 
 def test_L1relLoss():
