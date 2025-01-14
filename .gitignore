@@ -16,4 +16,5 @@ neural_operators/tests/FNO/shear_layer/loss_L1_mode_default/model_FNO_2D_ShearLa
 neural_operators/tests/FNO/poisson/loss_L1_mode_best/model_FNO_2D_SinFrequency
 neural_operators/tests/FNO/disc_tran/loss_L1_mode_best/model_FNO_2D_DiscContTranslation
 neural_operators/tests/FNO/cont_tran/loss_L1_mode_best/model_FNO_2D_ContTranslation
+neural_operators/tests/FNO/shear_layer/loss_L1_mode_best/model_FNO_2D_ShearLayer
 
