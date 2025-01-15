@@ -32,7 +32,7 @@ def ray_cno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         "weight_decay": tune.quniform(1e-6, 1e-3, 1e-6),
         "scheduler_gamma": tune.quniform(0.75, 0.99, 0.01),
         "N_layers": tune.randint(1, 5),
-        "channel_multiplier": tune.choice([8, 16, 24, 32, 40, 48, 56]),
+        "channel_multiplier": tune.choice([8, 16, 24, 32, 40, 48]),
         "N_res_neck": tune.randint(1, 6),
         "N_res": tune.randint(1, 8),
     }
