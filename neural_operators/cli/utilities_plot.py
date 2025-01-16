@@ -55,7 +55,7 @@ def plot_poisson(input_tensor, output_tensor, prediction_tensor, idx):
                 im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
                 fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
-                    axs[i, j].set_ylabel("Approximated solution u")
+                    axs[i, j].set_ylabel("Approx. solution u")
 
             elif i == 3:  # error x
                 error = torch.abs(
@@ -100,7 +100,7 @@ def plot_wave_0_5(input_tensor, output_tensor, prediction_tensor, idx):
                 im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
                 fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
-                    axs[i, j].set_ylabel("Approximated solution u at final time T")
+                    axs[i, j].set_ylabel("Approx. solution u at final time T")
 
             elif i == 3:  # error x
                 error = torch.abs(
@@ -145,7 +145,7 @@ def plot_cont_tran(input_tensor, output_tensor, prediction_tensor, idx):
                 im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
                 fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
-                    axs[i, j].set_ylabel("Approximated solution u at final time T")
+                    axs[i, j].set_ylabel("Approx. solution u at final time T")
 
             elif i == 3:  # error x
                 error = torch.abs(
@@ -190,7 +190,7 @@ def plot_disc_tran(input_tensor, output_tensor, prediction_tensor, idx):
                 im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
                 fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
-                    axs[i, j].set_ylabel("Approximated solution u at final time T")
+                    axs[i, j].set_ylabel("Approx. solution u at final time T")
 
             elif i == 3:  # error x
                 error = torch.abs(
@@ -235,7 +235,7 @@ def plot_allen(input_tensor, output_tensor, prediction_tensor, idx):
                 im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
                 fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
-                    axs[i, j].set_ylabel("Approximated solution u at final time T")
+                    axs[i, j].set_ylabel("Approx. solution u at final time T")
 
             elif i == 3:  # error x
                 error = torch.abs(
@@ -280,7 +280,7 @@ def plot_shear_layer(input_tensor, output_tensor, prediction_tensor, idx):
                 im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
                 fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
-                    axs[i, j].set_ylabel("Approximated solution u at final time T")
+                    axs[i, j].set_ylabel("Approx. solution u at final time T")
 
             elif i == 3:  # error x
                 error = torch.abs(
@@ -325,7 +325,7 @@ def plot_darcy(input_tensor, output_tensor, prediction_tensor, idx):
                 im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
                 fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
-                    axs[i, j].set_ylabel("Approximated solution u")
+                    axs[i, j].set_ylabel("Approx. solution u")
 
             elif i == 3:  # error x
                 error = torch.abs(
@@ -370,7 +370,7 @@ def plot_airfoil(input_tensor, output_tensor, prediction_tensor, idx):
                 im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
                 fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
-                    axs[i, j].set_ylabel("Approximated solution u")
+                    axs[i, j].set_ylabel("Approx. solution u")
 
             elif i == 3:  # error x
                 error = torch.abs(

@@ -36,6 +36,7 @@ import time
 sys.path.append("..")
 
 import matplotlib.pyplot as plt
+import seaborn as sns
 import torch
 from beartype import beartype
 from cli.utilities_plot import test_plot_samples
@@ -486,13 +487,30 @@ match which_example:
 #########################################
 @jaxtyped(typechecker=beartype)
 def plot_histogram(error: Float[Tensor, "n_samples"], str_norm: str):
-    plt.figure(figsize=(8, 6))
-    plt.hist(error.to("cpu"), bins=100)
-    plt.xlabel("Relative error")
-    plt.ylabel("Number of samples")
-    plt.title(f"Histogram of the relative error in norm {str_norm}")
-    plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+    error_np = error.to("cpu").numpy()
+
+    # Set seaborn style for better aesthetics
+    sns.set(style="whitegrid", palette="deep")
+
+    plt.figure(figsize=(10, 6))
+    sns.histplot(error_np, bins=100, kde=True, color="skyblue", edgecolor="black")
+
+    # Add labels and title
+    plt.xlabel("Relative Error", fontsize=12)
+    plt.ylabel("Number of Samples", fontsize=12)
+    plt.title(
+        f"Histogram of the Relative Error in Norm {str_norm}", fontsize=14, pad=20
+    )
+
+    # Improve grid and layout
+    plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
+    plt.tight_layout()
+
+    # Show the plot
     plt.show()
+
+    # Resets the style to default
+    plt.style.use("default")
 
 
 # call the functions to plot histograms for errors
