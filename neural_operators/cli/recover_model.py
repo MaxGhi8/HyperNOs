@@ -513,6 +513,66 @@ def plot_histogram(error: Float[Tensor, "n_samples"], str_norm: str):
     plt.style.use("default")
 
 
+@jaxtyped(typechecker=beartype)
+def plot_overlapped_histograms(
+    error1: Float[Tensor, "n_samples"],
+    error2: Float[Tensor, "n_samples"],
+    str_norm: str,
+    label1: str = "Error 1",
+    label2: str = "Error 2",
+):
+    # Convert tensors to numpy arrays
+    error1_np = error1.to("cpu").numpy()
+    error2_np = error2.to("cpu").numpy()
+
+    # Set seaborn style for better aesthetics
+    sns.set(style="whitegrid", palette="deep")
+
+    plt.figure(figsize=(10, 6))
+
+    # Plot the first histogram
+    sns.histplot(
+        error1_np,
+        bins=100,
+        kde=True,
+        color="skyblue",
+        edgecolor="black",
+        label=label1,
+        alpha=0.6,
+    )
+
+    # Plot the second histogram
+    sns.histplot(
+        error2_np,
+        bins=100,
+        kde=True,
+        color="salmon",
+        edgecolor="black",
+        label=label2,
+        alpha=0.6,
+    )
+
+    # Add labels and title
+    plt.xlabel("Relative Error", fontsize=12)
+    plt.ylabel("Number of Samples", fontsize=12)
+    plt.title(
+        f"Histogram of the Relative Error in Norm {str_norm}", fontsize=14, pad=20
+    )
+
+    # Add a legend
+    plt.legend()
+
+    # Improve grid and layout
+    plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
+    plt.tight_layout()
+
+    # Show the plot
+    plt.show()
+
+    # Resets the style to default
+    plt.style.use("default")
+
+
 # call the functions to plot histograms for errors
 plot_histogram(test_rel_l1_tensor, "L1")
 plot_histogram(test_rel_l2_tensor, "L2")
