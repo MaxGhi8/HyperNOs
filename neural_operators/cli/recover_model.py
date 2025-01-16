@@ -30,8 +30,8 @@ This is the main file for makes test and plot the Neural Operator model.
 import argparse
 import json
 import os
-import time
 import sys
+import time
 
 sys.path.append("..")
 
@@ -39,6 +39,7 @@ import matplotlib.pyplot as plt
 import torch
 from beartype import beartype
 from cli.utilities_plot import test_plot_samples
+from datasets import NO_load_data_model
 from jaxtyping import Float, jaxtyped
 from loss_fun import (
     H1relLoss_1D_multiout,
@@ -50,8 +51,6 @@ from scipy.io import savemat
 from torch import Tensor
 from train_fun import test_fun, test_fun_tensors
 from utilities import count_params
-
-from datasets import NO_load_data_model
 
 #########################################
 # default values
@@ -136,30 +135,9 @@ in_dist = config["in_dist"]
 Norm_dict = {"L1": 0, "L2": 1, "H1": 2, "L1_SMOOTH": 3, "MSE": 4}
 
 # upload the model and the hyperparameters
-model_folder = f"../{arc}/TrainedModels/"
-description_test = "test_" + loss_fn_str
-folder = (
-    model_folder
-    + which_example
-    + "/exp_"
-    + arc
-    + "_"
-    + description_test
-    + "_"
-    + mode_str
-    + "_hyperparams"
-)
-name_model = (
-    model_folder
-    + which_example
-    + "/model_"
-    + arc
-    + "_"
-    + description_test
-    + "_"
-    + mode_str
-    + "_hyperparams"
-)
+folder = f"../tests/{arc}/{which_example}/loss_{loss_fn_str}_mode_{mode_str}/"
+files = os.listdir(folder)
+name_model = folder + [file for file in files if file.startswith("model_")][0]
 
 try:
     model = torch.load(name_model, weights_only=False)
@@ -172,59 +150,56 @@ except Exception:
 # Hyperparameters
 #########################################
 # Load `hyper-params_train` from JSON
-with open(folder + "/hyperparams_train.json", "r") as f:
-    hyperparams_train = json.load(f)
+with open(folder + "/chosed_hyperparams.json", "r") as f:
+    hyperparams = json.load(f)
 
-# Load `hyper-params_arc` from JSON
-with open(folder + "/hyperparams_arc.json", "r") as f:
-    hyperparams_arc = json.load(f)
 
 # Choose the Loss function
-hyperparams_train["loss_fn_str"] = loss_fn_str
+hyperparams["loss_fn_str"] = loss_fn_str
 
 # Training hyperparameters
-learning_rate = hyperparams_train["learning_rate"]
-weight_decay = hyperparams_train["weight_decay"]
-scheduler_step = hyperparams_train["scheduler_step"]
-scheduler_gamma = hyperparams_train["scheduler_gamma"]
-epochs = hyperparams_train["epochs"]
-batch_size = hyperparams_train["batch_size"]
-beta = hyperparams_train["beta"]
-training_samples = hyperparams_train["training_samples"]
-test_samples = hyperparams_train["test_samples"]
-val_samples = hyperparams_train["val_samples"]
+learning_rate = hyperparams["learning_rate"]
+weight_decay = hyperparams["weight_decay"]
+scheduler_step = hyperparams["scheduler_step"]
+scheduler_gamma = hyperparams["scheduler_gamma"]
+epochs = hyperparams["epochs"]
+batch_size = hyperparams["batch_size"]
+beta = hyperparams["beta"]
+training_samples = hyperparams["training_samples"]
+test_samples = hyperparams["test_samples"]
+val_samples = hyperparams["val_samples"]
 
 match arc:
     case "FNO":
         # fno architecture hyperparameters
-        in_dim = hyperparams_arc["in_dim"]
-        d_v = hyperparams_arc["width"]
-        out_dim = hyperparams_arc["out_dim"]
-        L = hyperparams_arc["n_layers"]
-        modes = hyperparams_arc["modes"]
-        fun_act = hyperparams_arc["fun_act"]
-        weights_norm = hyperparams_arc["weights_norm"]
-        arc_fno = hyperparams_arc["fno_arc"]
-        RNN = hyperparams_arc["RNN"]
-        FFTnorm = hyperparams_arc["fft_norm"]
-        padding = hyperparams_arc["padding"]
-        retrain = hyperparams_arc["retrain"]
-        FourierF = hyperparams_arc["FourierF"]
-        problem_dim = hyperparams_arc["problem_dim"]
+        in_dim = hyperparams["in_dim"]
+        d_v = hyperparams["width"]
+        out_dim = hyperparams["out_dim"]
+        L = hyperparams["n_layers"]
+        modes = hyperparams["modes"]
+        fun_act = hyperparams["fun_act"]
+        weights_norm = hyperparams["weights_norm"]
+        arc_fno = hyperparams["fno_arc"]
+        RNN = hyperparams["RNN"]
+        FFTnorm = hyperparams["fft_norm"]
+        padding = hyperparams["padding"]
+        retrain = hyperparams["retrain"]
+        FourierF = hyperparams["FourierF"]
+        problem_dim = hyperparams["problem_dim"]
 
     case "CNO":
         # cno architecture hyperparameters
-        in_dim = hyperparams_arc["in_dim"]
-        out_dim = hyperparams_arc["out_dim"]
-        size = hyperparams_arc["in_size"]
-        n_layers = hyperparams_arc["N_layers"]
-        chan_mul = hyperparams_arc["channel_multiplier"]
-        n_res_neck = hyperparams_arc["N_res_neck"]
-        n_res = hyperparams_arc["N_res"]
-        kernel_size = hyperparams_arc["kernel_size"]
-        bn = hyperparams_arc["bn"]
-        retrain = hyperparams_arc["retrain"]
-        problem_dim = hyperparams_arc["problem_dim"]
+        in_dim = hyperparams["in_dim"]
+        out_dim = hyperparams["out_dim"]
+        size = hyperparams["in_size"]
+        n_layers = hyperparams["N_layers"]
+        chan_mul = hyperparams["channel_multiplier"]
+        n_res_neck = hyperparams["N_res_neck"]
+        n_res = hyperparams["N_res"]
+        kernel_size = hyperparams["kernel_size"]
+        bn = hyperparams["bn"]
+        retrain = hyperparams["retrain"]
+        problem_dim = hyperparams["problem_dim"]
 
     case _:
         raise ValueError("This architecture is not allowed")
@@ -237,10 +212,12 @@ loss = loss_selector(loss_fn_str=loss_fn_str, problem_dim=problem_dim, beta=beta
 #########################################
 example = NO_load_data_model(
     which_example,
-    hyperparams_arc,
+    {
+        "FourierF": hyperparams["FourierF"],
+        "retrain": hyperparams["retrain"],
+    },
     batch_size,
     training_samples,
-    in_dist,
 )
 
 train_loader = example.train_loader
