@@ -95,4 +95,4 @@ def train_cno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    train_cno("hh", "best", "L2")
+    train_cno("shear_layer", "default", "L1")
