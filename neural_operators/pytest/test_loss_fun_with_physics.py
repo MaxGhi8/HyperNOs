@@ -15,8 +15,6 @@ from loss_fun_with_physics import (
     SpatialDerivativesFiniteDiff,
 )
 
-torch.set_default_dtype(torch.float64)
-
 
 #########################################
 # Derivative with torch.autograd

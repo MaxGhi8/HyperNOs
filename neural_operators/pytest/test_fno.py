@@ -8,6 +8,8 @@ from FNO.FNO import FNO
 from FNO.FNO_utilities import FNO_initialize_hyperparameters
 from wrappers.wrap_model import wrap_model
 
+torch.set_default_dtype(torch.float32)
+
 
 # Select some random params for testing fro 1D FNO
 @pytest.mark.parametrize(
