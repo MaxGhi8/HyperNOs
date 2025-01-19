@@ -39,7 +39,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import torch
 from beartype import beartype
-from cli.utilities_plot import test_plot_samples
+from cli.utilities_recover_model import test_fun, test_fun_tensors, test_plot_samples
 from datasets import NO_load_data_model
 from jaxtyping import Float, jaxtyped
 from loss_fun import (
@@ -50,7 +50,6 @@ from loss_fun import (
 )
 from scipy.io import savemat
 from torch import Tensor
-from train_fun import test_fun, test_fun_tensors
 from utilities import count_params
 
 #########################################
@@ -150,60 +149,22 @@ except Exception:
 #########################################
 # Hyperparameters
 #########################################
-# Load `hyper-params_train` from JSON
+# Load `hyperparameters` from JSON
 with open(folder + "/chosed_hyperparams.json", "r") as f:
     hyperparams = json.load(f)
-
 
 # Choose the Loss function
 hyperparams["loss_fn_str"] = loss_fn_str
 
 # Training hyperparameters
-learning_rate = hyperparams["learning_rate"]
-weight_decay = hyperparams["weight_decay"]
-scheduler_step = hyperparams["scheduler_step"]
-scheduler_gamma = hyperparams["scheduler_gamma"]
-epochs = hyperparams["epochs"]
 batch_size = hyperparams["batch_size"]
 beta = hyperparams["beta"]
-training_samples = hyperparams["training_samples"]
-test_samples = hyperparams["test_samples"]
+FourierF = hyperparams["FourierF"]
+problem_dim = hyperparams["problem_dim"]
+retrain = hyperparams["retrain"]
 val_samples = hyperparams["val_samples"]
-
-match arc:
-    case "FNO":
-        # fno architecture hyperparameters
-        in_dim = hyperparams["in_dim"]
-        d_v = hyperparams["width"]
-        out_dim = hyperparams["out_dim"]
-        L = hyperparams["n_layers"]
-        modes = hyperparams["modes"]
-        fun_act = hyperparams["fun_act"]
-        weights_norm = hyperparams["weights_norm"]
-        arc_fno = hyperparams["fno_arc"]
-        RNN = hyperparams["RNN"]
-        FFTnorm = hyperparams["fft_norm"]
-        padding = hyperparams["padding"]
-        retrain = hyperparams["retrain"]
-        FourierF = hyperparams["FourierF"]
-        problem_dim = hyperparams["problem_dim"]
-
-    case "CNO":
-        # cno architecture hyperparameters
-        in_dim = hyperparams["in_dim"]
-        out_dim = hyperparams["out_dim"]
-        size = hyperparams["in_size"]
-        n_layers = hyperparams["N_layers"]
-        chan_mul = hyperparams["channel_multiplier"]
-        n_res_neck = hyperparams["N_res_neck"]
-        n_res = hyperparams["N_res"]
-        kernel_size = hyperparams["kernel_size"]
-        bn = hyperparams["bn"]
-        retrain = hyperparams["retrain"]
-        problem_dim = hyperparams["problem_dim"]
-
-    case _:
-        raise ValueError("This architecture is not allowed")
+test_samples = hyperparams["test_samples"]
+training_samples = hyperparams["training_samples"]
 
 # Loss function
 loss = loss_selector(loss_fn_str=loss_fn_str, problem_dim=problem_dim, beta=beta)
@@ -223,7 +184,7 @@ example = NO_load_data_model(
 
 train_loader = example.train_loader
 val_loader = example.val_loader
-test_loader = example.test_loader  # for final testing
+test_loader = example.test_loader
 print(
     "Dimension of datasets are:",
     next(iter(train_loader))[0].shape,

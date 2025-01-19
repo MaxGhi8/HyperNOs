@@ -1,34 +1,305 @@
 """
+Utilities function for testing models.
 Plotting of input/output and prediction for the trained model.
-
-"which_example" can be one of the following options:
-    poisson             : Poisson equation 
-    wave_0_5            : Wave equation 
-    cont_tran           : Smooth Transport 
-    disc_tran           : Discontinuous Transport
-    allen               : Allen-Cahn equation # training_sample = 512
-    shear_layer         : Navier-Stokes equations # training_sample = 512
-    airfoil             : Compressible Euler equations 
-    darcy               : Darcy equation
-
-    burgers_zongyi       : Burgers equation
-    darcy_zongyi         : Darcy equation
-    navier_stokes_zongyi : Navier-Stokes equations
-
-    fhn                 : FitzHugh-Nagumo equations in [0, 100]
-    fhn_long            : FitzHugh-Nagumo equations in [0, 200]
-    hh                   : Hodgkin-Huxley equations
 """
 
 import sys
 
 sys.path.append("..")
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
+from loss_fun import (
+    H1relLoss,
+    H1relLoss_1D,
+    H1relLoss_1D_multiout,
+    H1relLoss_multiout,
+    LprelLoss,
+    LprelLoss_multiout,
+)
 from torch import Tensor
+
+
+#########################################
+# Test function
+#########################################
+def test_fun(
+    model,
+    test_loader,
+    train_loader,
+    loss,
+    exp_norm: str,
+    test_samples: int,
+    training_samples: int,
+    device: torch.device,
+    tepoch=None,
+    statistic=False,
+):
+    """
+    Function to test the model, this function is called at each epoch.
+    In particular, it computes the relative L^1, L^2, semi-H^1 and H^1 errors on the test set; and
+    the loss on the training set with the updated parameters.
+
+    model: the model to train
+    test_loader: the test data loader (or validation loader)
+    train_loader: the training data loader
+    loss: the loss function that have been used during training
+    exp_norm: string describing the norm used in the loss function during training
+    test_samples: number of data in the test set
+    training_samples: number of data in the training set
+    device: the device where we have to store all the things
+    which_example: the example of the PDEs that we are considering
+    tepoch: the tqdm object to print the progress
+    statistic: if True, return all the loss functions, otherwise return only the same L^2 error
+    """
+    with torch.no_grad():
+        model.eval()
+        test_relative_l1 = 0.0
+        test_relative_l2 = 0.0
+        test_relative_semih1 = 0.0
+        test_relative_h1 = 0.0
+        train_loss = 0.0  # recompute the train loss with updated parameters
+
+        ## Compute loss on the test set
+        for input_batch, output_batch in test_loader:
+            input_batch = input_batch.to(device)
+            output_batch = output_batch.to(device)
+
+            # compute the output
+            output_pred_batch = model.forward(input_batch)
+
+            # compute the relative L^1 error
+            loss_f = LprelLoss(1, False)(output_pred_batch, output_batch)
+            # loss_f = torch.mean(abs(output_pred_batch - output_batch)) / torch.mean(abs(output_batch)) #!! Mishra implementation of L1 rel loss
+            test_relative_l1 += loss_f.item()
+
+            # compute the relative L^2 error
+            test_relative_l2 += LprelLoss(2, False)(
+                output_pred_batch, output_batch
+            ).item()
+
+            # compute the relative semi-H^1 error and H^1 error
+            if model.problem_dim == 1:
+                test_relative_semih1 += H1relLoss_1D(1.0, False, 0.0)(
+                    output_pred_batch, output_batch
+                ).item()
+                test_relative_h1 += H1relLoss_1D(1.0, False)(
+                    output_pred_batch, output_batch
+                ).item()  # beta = 1.0 in test loss
+            elif model.problem_dim == 2:
+                test_relative_semih1 += H1relLoss(1.0, False, 0.0)(
+                    output_pred_batch, output_batch
+                ).item()
+                test_relative_h1 += H1relLoss(1.0, False)(
+                    output_pred_batch, output_batch
+                ).item()  # beta = 1.0 in test loss
+
+        ## Compute loss on the training set
+        for input_batch, output_batch in train_loader:
+            input_batch = input_batch.to(device)
+            output_batch = output_batch.to(device)
+            output_pred_batch = model(input_batch)
+
+            loss_f = loss(output_pred_batch, output_batch)
+            # loss_f = torch.mean(abs(output_pred_batch - output_batch)) / torch.mean(abs(output_batch)) #!! Mishra implementation of L1 rel loss
+            train_loss += loss_f.item()
+
+        test_relative_l1 /= test_samples
+        # test_relative_l1 /= len(test_loader) #!! For Mishra implementation
+        test_relative_l2 /= test_samples
+        test_relative_semih1 /= test_samples
+        test_relative_h1 /= test_samples
+        train_loss /= training_samples
+        # train_loss /= len(train_loader) #!! For Mishra implementation
+
+    # set the postfix for print
+    try:
+        tepoch.set_postfix(
+            {
+                "Train loss " + exp_norm: train_loss,
+                "Test rel. L^1 error": test_relative_l1,
+                "Test rel. L^2 error": test_relative_l2,
+                "Test rel. semi-H^1 error": test_relative_semih1,
+                "Test rel. H^1 error": test_relative_h1,
+            }
+        )
+        tepoch.close()
+    except Exception:
+        pass
+
+    if statistic:
+        return (
+            test_relative_l1,
+            test_relative_l2,
+            test_relative_semih1,
+            test_relative_h1,
+            train_loss,
+        )
+    else:
+        match exp_norm:
+            case "L1":
+                return test_relative_l1
+            case "L2":
+                return test_relative_l2
+            case "H1":
+                return test_relative_h1
+            case _:
+                raise ValueError("The norm is not implemented")
+
+
+#########################################
+# Test function with separate loss
+#########################################
+def test_fun_multiout(
+    model,
+    test_loader,
+    test_samples: int,
+    device: torch.device,
+    dim_output: int,
+):
+    """
+    As test_fun, but it returns the losses separately (one for each component of the output)
+    """
+    with torch.no_grad():
+        model.eval()
+        test_relative_l1_multiout = torch.zeros(dim_output).to(device)
+        test_relative_l2_multiout = torch.zeros(dim_output).to(device)
+        test_relative_semih1_multiout = torch.zeros(dim_output).to(device)
+        test_relative_h1_multiout = torch.zeros(dim_output).to(device)
+
+        ## Compute loss on the test set
+        for input_batch, output_batch in test_loader:
+            input_batch = input_batch.to(device)
+            output_batch = output_batch.to(device)
+
+            # compute the output
+            output_pred_batch = model.forward(input_batch)
+
+            # compute the relative L^1 error
+            loss_f = LprelLoss_multiout(1, False)(output_pred_batch, output_batch)
+            test_relative_l1_multiout += loss_f
+
+            # compute the relative L^2 error
+            test_relative_l2_multiout += LprelLoss_multiout(2, False)(
+                output_pred_batch, output_batch
+            )
+
+            # compute the relative semi-H^1 error and H^1 error
+            if model.problem_dim == 1:
+                test_relative_semih1_multiout += H1relLoss_1D_multiout(1.0, False, 0.0)(
+                    output_pred_batch, output_batch
+                )
+                test_relative_h1_multiout += H1relLoss_1D_multiout(1.0, False)(
+                    output_pred_batch, output_batch
+                )  # beta = 1.0 in test loss
+            elif model.problem_dim == 2:
+                test_relative_semih1_multiout += H1relLoss_multiout(1.0, False, 0.0)(
+                    output_pred_batch, output_batch
+                )
+                test_relative_h1_multiout += H1relLoss_multiout(1.0, False)(
+                    output_pred_batch, output_batch
+                )  # beta = 1.0 in test loss
+
+        test_relative_l1_multiout /= test_samples
+        test_relative_l2_multiout /= test_samples
+        test_relative_semih1_multiout /= test_samples
+        test_relative_h1_multiout /= test_samples
+
+    return (
+        test_relative_l1_multiout,
+        test_relative_l2_multiout,
+        test_relative_semih1_multiout,
+        test_relative_h1_multiout,
+    )
+
+
+def test_fun_tensors(
+    model, test_loader, loss, device: torch.device, which_example: str
+):
+    """As test_fun, but it returns the tensors of the loss functions"""
+    with torch.no_grad():
+        model.eval()
+        # initialize the tensors for IO
+        input_tensor = torch.tensor([]).to(device)
+        output_tensor = torch.tensor([]).to(device)
+        prediction_tensor = torch.tensor([]).to(device)
+        # initialize the tensors for losses
+        test_relative_l1_tensor = torch.tensor([]).to(device)
+        test_relative_l2_tensor = torch.tensor([]).to(device)
+        test_relative_semih1_tensor = torch.tensor([]).to(device)
+        test_relative_h1_tensor = torch.tensor([]).to(device)
+
+        ## Compute loss on the test set
+        for input_batch, output_batch in test_loader:
+            input_batch = input_batch.to(device)
+            input_tensor = torch.cat((input_tensor, input_batch), dim=0)
+
+            output_batch = output_batch.to(device)
+            output_tensor = torch.cat((output_tensor, output_batch), dim=0)
+
+            # compute the output
+            output_pred_batch = model.forward(input_batch)
+
+            prediction_tensor = torch.cat((prediction_tensor, output_pred_batch), dim=0)
+
+            # compute the relative L^1 error
+            loss_f = LprelLoss(1, None)(output_pred_batch, output_batch)
+            test_relative_l1_tensor = torch.cat(
+                (test_relative_l1_tensor, loss_f), dim=0
+            )
+
+            # compute the relative L^1 smooth error
+            # for i in range(output_pred_batch.shape[0]):
+            #     loss_f = torch.nn.SmoothL1Loss()(output_pred_batch[i], output_batch[i])
+            #     test_relative_l1_tensor = torch.cat(
+            #         (test_relative_l1_tensor, loss_f.unsqueeze(0)), dim=0
+            #     )
+
+            # compute the relative L^2 error
+            loss_f = LprelLoss(2, None)(output_pred_batch, output_batch)
+            test_relative_l2_tensor = torch.cat(
+                (test_relative_l2_tensor, loss_f), dim=0
+            )
+
+            # compute the relative semi-H^1 error and H^1 error
+            if model.problem_dim == 1:
+                loss_f = H1relLoss_1D(1.0, None, 0.0)(output_pred_batch, output_batch)
+                test_relative_semih1_tensor = torch.cat(
+                    (test_relative_semih1_tensor, loss_f), dim=0
+                )
+
+                loss_f = H1relLoss_1D(1.0, None)(
+                    output_pred_batch, output_batch
+                )  # beta = 1.0 in test loss
+                test_relative_h1_tensor = torch.cat(
+                    (test_relative_h1_tensor, loss_f), dim=0
+                )
+
+            elif model.problem_dim == 2:
+                loss_f = H1relLoss(1.0, None, 0.0)(output_pred_batch, output_batch)
+                test_relative_semih1_tensor = torch.cat(
+                    (test_relative_semih1_tensor, loss_f), dim=0
+                )
+
+                loss_f = H1relLoss(1.0, None)(
+                    output_pred_batch, output_batch
+                )  # beta = 1.0 in test loss
+                test_relative_h1_tensor = torch.cat(
+                    (test_relative_h1_tensor, loss_f), dim=0
+                )
+
+    return (
+        input_tensor,
+        output_tensor,
+        prediction_tensor,
+        test_relative_l1_tensor,
+        test_relative_l2_tensor,
+        test_relative_semih1_tensor,
+        test_relative_h1_tensor,
+    )
 
 
 #########################################
