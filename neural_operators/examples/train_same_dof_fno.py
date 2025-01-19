@@ -11,16 +11,18 @@ sys.path.append("..")
 
 from datasets import NO_load_data_model
 from FNO.FNO import FNO
-from FNO.FNO_utilities import FNO_initialize_hyperparameters
+from FNO.FNO_utilities import (
+    FNO_initialize_hyperparameters,
+    compute_modes,
+    count_params_fno,
+)
 from loss_fun import loss_selector
 from train import train_fixed_model
 from utilities import get_plot_function
 from wrappers.wrap_model import wrap_model_builder
 
 
-def train_fno(
-    which_example: str, mode_hyperparams: str, loss_fn_str: str, maximum: int
-):
+def train_fno(which_example: str, loss_fn_str: str, maximum: int):
 
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -29,15 +31,18 @@ def train_fno(
     hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
         which_example, "default"
     )
-    total_default_params = (
-        hyperparams_arc["n_layers"]
-        * hyperparams_arc["width"] ** 2
-        * hyperparams_arc["modes"] ** hyperparams_arc["problem_dim"]
+    # Approximate the total number of parameters
+    total_default_params = count_params_fno(
+        {
+            **hyperparams_train,
+            **hyperparams_arc,
+        },
+        accurate=False,
     )
 
     # Load true hyper-parameters
     hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
-        which_example, mode_hyperparams
+        which_example, "best_samedofs"
     )
     default_hyper_params = {
         **hyperparams_train,
@@ -51,16 +56,7 @@ def train_fno(
         config["width"],
         config["out_dim"],
         config["n_layers"],
-        min(
-            max(
-                int(
-                    (total_default_params / (config["n_layers"] * config["width"] ** 2))
-                    ** (1 / config["problem_dim"])
-                ),
-                1,
-            ),
-            maximum,
-        ),
+        compute_modes(total_default_params, maximum, config),
         config["fun_act"],
         config["weights_norm"],
         config["fno_arc"],
@@ -91,7 +87,7 @@ def train_fno(
         beta=default_hyper_params["beta"],
     )
 
-    experiment_name = f"FNO/{which_example}/loss_{loss_fn_str}_mode_{mode_hyperparams}"
+    experiment_name = f"FNO/{which_example}/loss_{loss_fn_str}_mode_best_samedofs"
 
     # Create the right folder if it doesn't exist
     folder = f"../tests/{experiment_name}"
@@ -117,4 +113,4 @@ def train_fno(
 
 
 if __name__ == "__main__":
-    train_fno("fhn", "best_samedofs", "L2", 621)
+    train_fno("fhn", "L2", 621)
