@@ -54,7 +54,7 @@ def train_fixed_model(
         config["weight_decay"],
         config["scheduler_step"],
         config["scheduler_gamma"],
-        loss_phys,
+        loss_phys=lambda x, y: 0.0,
     )
 
 
@@ -125,7 +125,7 @@ def train_model_without_ray(
                 device,
                 tepoch,
                 4,
-                loss_phys,
+                loss_phys=loss_phys,
             )
             if epoch == 0 and train_epoch_result is not None:
                 esempio_test, soluzione_test = train_epoch_result
@@ -144,7 +144,7 @@ def train_model_without_ray(
                 loss_fn,
                 device,
                 tepoch,
-                loss_phys,
+                loss_phys=loss_phys,
             )
 
             # save the results of train and test on tensorboard

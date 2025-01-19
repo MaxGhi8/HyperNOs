@@ -148,7 +148,13 @@ def train_model(
     for ep in range(start_epoch, max_epochs):
         # Train the model for one epoch
         train_epoch(
-            model, train_loader, optimizer, scheduler, loss_fn, device, loss_phys
+            model,
+            train_loader,
+            optimizer,
+            scheduler,
+            loss_fn,
+            device,
+            loss_phys=loss_phys,
         )
 
         # Validate the model for one epoch
