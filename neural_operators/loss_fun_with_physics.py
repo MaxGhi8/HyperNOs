@@ -37,48 +37,74 @@ class SpatialDerivativesAutograd:
 
     def get_grid_1d(self, shape: torch.Size) -> torch.Tensor:
         size_x = shape[1]
+
         # grid for x
         gridx = torch.tensor(
             np.linspace(0, 1, size_x), dtype=torch.float, requires_grad=True
         )
         gridx = gridx.reshape(size_x, 1)
+
         return gridx.unsqueeze(0)
 
     def get_grid_2d(self, shape: torch.Size) -> torch.Tensor:
         size_x, size_y = shape[1], shape[2]
+
         # grid for x
         gridx = torch.tensor(
             np.linspace(0, 1, size_x), dtype=torch.float, requires_grad=True
         )
         gridx = gridx.reshape(1, 1, size_x).repeat([1, size_y, 1])
+
         # grid for y
         gridy = torch.tensor(
             np.linspace(0, 1, size_y), dtype=torch.float, requires_grad=True
         )
         gridy = gridy.reshape(1, size_y, 1).repeat([1, 1, size_x])
+
         return gridx, gridy
 
 
 class PoissonResidualAutograd:
-    def __init__(self):
-        pass
+    def __init__(self, alpha: float = 1.0, p: int = 2, size_mean: bool = False):
+        self.alpha = alpha
+        self.p = p
+        self.size_mean = size_mean
 
     def __call__(self, u, x, y, rhs):
         """Compute Poisson equation residual with rhs varying."""
         u = u.squeeze(-1)
+        rhs = rhs.squeeze(-1)
         _, _, u_xx, u_yy = SpatialDerivativesAutograd().second_order_2d(u, x, y)
         laplacian_u = u_xx + u_yy
-        residual = laplacian_u - rhs
-        return residual
+
+        residual = laplacian_u + rhs
+
+        num_examples = u.shape[0]
+        residual_norm = torch.norm(
+            residual[:, 1:-1, 1:-1].reshape(num_examples, -1), p=self.p, dim=1
+        )
+
+        if self.size_mean is True:
+            return self.alpha * torch.mean(residual_norm)
+        elif self.size_mean is False:
+            return self.alpha * torch.sum(residual_norm)
+        elif self.size_mean is None:
+            return self.alpha * residual_norm
+        else:
+            raise ValueError("size_mean must be a boolean or None")
 
 
 class DarcyResidualAutograd:
-    def __init__(self, rhs):
+    def __init__(self, rhs, alpha: float = 1.0, p: int = 2, size_mean: bool = False):
         self.rhs = rhs
+        self.alpha = alpha
+        self.p = p
+        self.size_mean = size_mean
 
     def __call__(self, u, x, y, a):
         """Compute Darcy equation residual, with rhs fixed and diffusion coefficient varying."""
         u = u.squeeze(-1)
+        a = a.squeeze(-1)
         u_x, u_y = SpatialDerivativesAutograd().first_order_2d(u, x, y)
 
         a_grad_u_x = a * u_x
@@ -89,12 +115,27 @@ class DarcyResidualAutograd:
 
         div_a_grad_u = a_grad_u_x_x + a_grad_u_y_y
         residual = div_a_grad_u + self.rhs
-        return residual
+
+        num_examples = u.shape[0]
+        residual_norm = torch.norm(
+            residual[:, 1:-1, 1:-1].reshape(num_examples, -1), p=self.p, dim=1
+        )
+
+        if self.size_mean is True:
+            return self.alpha * torch.mean(residual_norm)
+        elif self.size_mean is False:
+            return self.alpha * torch.sum(residual_norm)
+        elif self.size_mean is None:
+            return self.alpha * residual_norm
+        else:
+            raise ValueError("size_mean must be a boolean or None")
 
 
 class HelmholtzResidualAutograd:
-    def __init__(self):
-        pass
+    def __init__(self, alpha: float = 1.0, p: int = 2, size_mean: bool = False):
+        self.alpha = alpha
+        self.p = p
+        self.size_mean = size_mean
 
     def __call__(self, u, x, y, k):
         """Compute Helmholtz equation residual with k varying."""
@@ -103,7 +144,20 @@ class HelmholtzResidualAutograd:
         laplacian_u = u_xx + u_yy
 
         residual = laplacian_u + (k**2) * u
-        return residual
+
+        num_examples = u.shape[0]
+        residual_norm = torch.norm(
+            residual[:, 1:-1, 1:-1].reshape(num_examples, -1), p=self.p, dim=1
+        )
+
+        if self.size_mean is True:
+            return self.alpha * torch.mean(residual_norm)
+        elif self.size_mean is False:
+            return self.alpha * torch.sum(residual_norm)
+        elif self.size_mean is None:
+            return self.alpha * residual_norm
+        else:
+            raise ValueError("size_mean must be a boolean or None")
 
 
 #########################################
@@ -237,25 +291,46 @@ class SpatialDerivativesFiniteDiff:
 
 
 class PoissonResidualFiniteDiff:
-    def __init__(self):
-        pass
+    def __init__(self, alpha: float = 1.0, p: int = 2, size_mean: bool = False):
+        self.alpha = alpha
+        self.p = p
+        self.size_mean = size_mean
 
     def __call__(self, u, rhs):
         """Compute Poisson equation residual with rhs varying."""
         u = u.squeeze(-1)
+        rhs = rhs.squeeze(-1)
         u_xx, u_yy = SpatialDerivativesFiniteDiff().second_order_2d(u)
         laplacian_u = u_xx + u_yy
-        residual = laplacian_u - rhs
-        return residual
+
+        residual = laplacian_u + rhs
+
+        num_examples = u.shape[0]
+        residual_norm = torch.norm(
+            residual[:, 1:-1, 1:-1].reshape(num_examples, -1), p=self.p, dim=1
+        )
+
+        if self.size_mean is True:
+            return self.alpha * torch.mean(residual_norm)
+        elif self.size_mean is False:
+            return self.alpha * torch.sum(residual_norm)
+        elif self.size_mean is None:
+            return self.alpha * residual_norm
+        else:
+            raise ValueError("size_mean must be a boolean or None")
 
 
 class DarcyResidualFiniteDiff:
-    def __init__(self, rhs):
+    def __init__(self, rhs, alpha: float = 1.0, p: int = 2, size_mean: bool = False):
         self.rhs = rhs
+        self.alpha = alpha
+        self.p = p
+        self.size_mean = size_mean
 
     def __call__(self, u, a):
         """Compute Darcy equation residual, with rhs fixed and diffusion coefficient varying."""
         u = u.squeeze(-1)
+        a = a.squeeze(-1)
         u_x, u_y = SpatialDerivativesFiniteDiff().first_order_2d(u)
 
         a_grad_u_x = a * u_x
@@ -266,12 +341,27 @@ class DarcyResidualFiniteDiff:
 
         div_a_grad_u = a_grad_u_x_x + a_grad_u_y_y
         residual = div_a_grad_u + self.rhs
-        return residual
+
+        num_examples = u.shape[0]
+        residual_norm = torch.norm(
+            residual[:, 2:-2, 2:-2].reshape(num_examples, -1), p=self.p, dim=1
+        )
+
+        if self.size_mean is True:
+            return self.alpha * torch.mean(residual_norm)
+        elif self.size_mean is False:
+            return self.alpha * torch.sum(residual_norm)
+        elif self.size_mean is None:
+            return self.alpha * residual_norm
+        else:
+            raise ValueError("size_mean must be a boolean or None")
 
 
 class HelmholtzResidualFiniteDiff:
-    def __init__(self):
-        pass
+    def __init__(self, alpha: float = 1.0, p: int = 2, size_mean: bool = False):
+        self.alpha = alpha
+        self.p = p
+        self.size_mean = size_mean
 
     def __call__(self, u, k):
         """Compute Helmholtz equation residual with k varying."""
@@ -280,4 +370,17 @@ class HelmholtzResidualFiniteDiff:
         laplacian_u = u_xx + u_yy
 
         residual = laplacian_u + (k**2) * u
-        return residual
+
+        num_examples = u.shape[0]
+        residual_norm = torch.norm(
+            residual[:, 1:-1, 1:-1].reshape(num_examples, -1), p=self.p, dim=1
+        )
+
+        if self.size_mean is True:
+            return self.alpha * torch.mean(residual_norm)
+        elif self.size_mean is False:
+            return self.alpha * torch.sum(residual_norm)
+        elif self.size_mean is None:
+            return self.alpha * residual_norm
+        else:
+            raise ValueError("size_mean must be a boolean or None")

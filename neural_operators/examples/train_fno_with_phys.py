@@ -9,23 +9,23 @@ import torch
 
 sys.path.append("..")
 
-from datasets import NO_load_data_model
+from datasets import SinFrequency
 from FNO.FNO import FNO
 from FNO.FNO_utilities import FNO_initialize_hyperparameters
 from loss_fun import loss_selector
+from loss_fun_with_physics import PoissonResidualFiniteDiff
 from train import train_fixed_model
 from utilities import get_plot_function
-from wrappers.wrap_model import wrap_model_builder
 
 
-def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
+def train_fno(mode_hyperparams: str, loss_fn_str: str, alpha_phys: float):
 
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load the default hyperparameters for the FNO model
     hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
-        which_example, mode_hyperparams
+        "poisson", mode_hyperparams
     )
 
     default_hyper_params = {
@@ -50,13 +50,10 @@ def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         device,
         config["retrain"],
     )
-    # Wrap the model builder
-    model_builder = wrap_model_builder(model_builder, which_example)
 
     # Define the dataset builder
-    dataset_builder = lambda config: NO_load_data_model(  # noqa: E731
-        which_example=which_example,
-        no_architecture={
+    dataset_builder = lambda config: SinFrequency(  # noqa: E731
+        {
             "FourierF": config["FourierF"],
             "retrain": config["retrain"],
         },
@@ -70,8 +67,9 @@ def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         problem_dim=default_hyper_params["problem_dim"],
         beta=default_hyper_params["beta"],
     )
+    loss_phys = PoissonResidualFiniteDiff(alpha=alpha_phys)
 
-    experiment_name = f"FNO/{which_example}/loss_{loss_fn_str}_mode_{mode_hyperparams}"
+    experiment_name = f"FNO/poisson/loss_{loss_fn_str}_mode_{mode_hyperparams}"
 
     # Create the right folder if it doesn't exist
     folder = f"../tests/{experiment_name}"
@@ -91,10 +89,11 @@ def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         dataset_builder,
         loss_fn,
         experiment_name,
-        get_plot_function(which_example, "input"),
-        get_plot_function(which_example, "output"),
+        get_plot_function("poisson", "input"),
+        get_plot_function("poisson", "output"),
+        loss_phys=loss_phys,
     )
 
 
 if __name__ == "__main__":
-    train_fno("wave_0_5", "best", "L1")
+    train_fno("default", "L2", 0.01)

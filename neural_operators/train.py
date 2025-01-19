@@ -23,6 +23,7 @@ def train_fixed_model(
     experiment_name,
     plot_data_input,
     plot_data_output,
+    loss_phys=lambda x, y: 0.0,
 ):
     required_keys = [
         "learning_rate",
@@ -53,6 +54,7 @@ def train_fixed_model(
         config["weight_decay"],
         config["scheduler_step"],
         config["scheduler_gamma"],
+        loss_phys,
     )
 
 
@@ -70,6 +72,7 @@ def train_model_without_ray(
     weight_decay: float = 1e-6,
     scheduler_step: int = 1,
     scheduler_gamma: float = 0.99,
+    loss_phys=lambda x, y: 0.0,
 ):
     folder = f"../tests/{experiment_name}"
     name_model = f"../tests/{experiment_name}/model_{model.__class__.__name__}_{config["problem_dim"]}D_{dataset.__class__.__name__}"
@@ -122,6 +125,7 @@ def train_model_without_ray(
                 device,
                 tepoch,
                 4,
+                loss_phys,
             )
             if epoch == 0 and train_epoch_result is not None:
                 esempio_test, soluzione_test = train_epoch_result
@@ -140,6 +144,7 @@ def train_model_without_ray(
                 loss_fn,
                 device,
                 tepoch,
+                loss_phys,
             )
 
             # save the results of train and test on tensorboard
@@ -264,6 +269,7 @@ def train_epoch(
     device: torch.device,
     tepoch=None,
     n_idx: int = -1,
+    loss_phys=lambda x, y: 0.0,
 ):
     """
     function to train the model, this function is called at each epoch.
@@ -276,6 +282,7 @@ def train_epoch(
     device: the device where we have to store all the things
     tepoch: the tqdm object to print the progress
     n_idx: the number of samples to extract from the first batch for the plot on tensorboard
+    loss_phys: the loss function that have been used during
     """
     model.train()
     train_loss = 0.0
@@ -293,7 +300,9 @@ def train_epoch(
             esempio_test = input_batch[:n_idx].cpu()
             soluzione_test = output_batch[:n_idx].cpu()
 
-        loss_f = loss(output_pred_batch, output_batch)
+        loss_f = loss(output_pred_batch, output_batch) + loss_phys(
+            output_pred_batch, input_batch
+        )
 
         # back propagation
         loss_f.backward()
@@ -326,6 +335,7 @@ def validate_epoch(
     loss,
     device: torch.device,
     tepoch,
+    loss_phys=lambda x, y: 0.0,
 ):
     """
     Function to test the model, this function is called at each epoch.
@@ -337,11 +347,9 @@ def validate_epoch(
     train_loader: the training data loader
     loss: the loss function that have been used during training
     exp_norm: string describing the norm used in the loss function during training
-    test_samples: number of data in the test set
-    training_samples: number of data in the training set
     device: the device where we have to store all the things
     tepoch: the tqdm object to print the progress
-    statistic: if True, return all the loss functions, otherwise return only the same L^2 error
+    loss_phys: the loss function that have been used during
     """
     with torch.no_grad():
         model.eval()
@@ -395,7 +403,9 @@ def validate_epoch(
             output_batch = output_batch.to(device)
             output_pred_batch = model(input_batch)
 
-            loss_f = loss(output_pred_batch, output_batch)
+            loss_f = loss(output_pred_batch, output_batch) + loss_phys(
+                output_pred_batch, input_batch
+            )
             # loss_f = torch.mean(abs(output_pred_batch - output_batch)) / torch.mean(abs(output_batch)) #!! Mishra implementation of L1 rel loss
             train_loss += loss_f.item()
 

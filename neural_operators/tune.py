@@ -23,6 +23,7 @@ def tune_hyperparameters(
     checkpoint_freq: int = 500,
     runs_per_cpu: float = 0.0,
     runs_per_gpu: float = 1.0,
+    loss_phys=lambda x, y: 0.0,
 ):
     # Check if the required keys are in the config_space
     required_keys = [
@@ -53,6 +54,7 @@ def tune_hyperparameters(
             config["scheduler_step"],
             config["scheduler_gamma"],
             checkpoint_freq=checkpoint_freq,
+            loss_phys=loss_phys,
         )
 
     # Initialize Ray
@@ -120,6 +122,7 @@ def train_model(
     scheduler_step: int = 1,
     scheduler_gamma: float = 0.99,
     checkpoint_freq: int = 500,
+    loss_phys=lambda x, y: 0.0,
 ):
     optimizer = torch.optim.AdamW(
         model.parameters(),
@@ -144,7 +147,9 @@ def train_model(
 
     for ep in range(start_epoch, max_epochs):
         # Train the model for one epoch
-        train_epoch(model, train_loader, optimizer, scheduler, loss_fn, device)
+        train_epoch(
+            model, train_loader, optimizer, scheduler, loss_fn, device, loss_phys
+        )
 
         # Validate the model for one epoch
         acc = validate_epoch(model, val_loader, loss_fn, device)
