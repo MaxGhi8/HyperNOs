@@ -54,7 +54,7 @@ def train_fixed_model(
         config["weight_decay"],
         config["scheduler_step"],
         config["scheduler_gamma"],
-        loss_phys=lambda x, y: 0.0,
+        loss_phys=loss_phys,
     )
 
 
