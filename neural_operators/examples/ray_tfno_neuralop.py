@@ -13,7 +13,6 @@ from loss_fun import loss_selector
 from neuralop.models import TFNO
 from ray import tune
 from tune import tune_hyperparameters
-from wrappers.wrap_model import wrap_model_builder
 
 
 def ray_tfno(which_example: str, loss_fn_str: str):
