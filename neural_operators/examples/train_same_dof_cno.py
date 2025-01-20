@@ -22,7 +22,7 @@ from utilities import get_plot_function
 from wrappers.wrap_model import wrap_model_builder
 
 
-def train_cno(which_example: str, loss_fn_str: str):
+def train_samedofs_cno(which_example: str, loss_fn_str: str):
 
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -109,4 +109,4 @@ def train_cno(which_example: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    train_cno("poisson", "L1")
+    train_samedofs_cno("cont_tran", "L1")
