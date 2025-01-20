@@ -44,7 +44,8 @@ def train_fixed_model(
         config,
         model,
         dataset,
-        model.device,
+        # model.device, # todo
+        torch.device("cuda" if torch.cuda.is_available() else "cpu"),
         loss_fn,
         experiment_name,
         plot_data_input,
@@ -142,6 +143,7 @@ def train_model_without_ray(
                 dataset.test_loader,
                 dataset.train_loader,
                 loss_fn,
+                config["problem_dim"],
                 device,
                 tepoch,
                 loss_phys=loss_phys,
@@ -172,6 +174,7 @@ def train_model_without_ray(
                     dataset.test_loader,
                     device,
                     config["out_dim"],
+                    config["problem_dim"],
                 )
                 for i in range(config["out_dim"]):
                     writer.add_scalars(
@@ -333,6 +336,7 @@ def validate_epoch(
     test_loader,
     train_loader,
     loss,
+    problem_dim: int,
     device: torch.device,
     tepoch,
     loss_phys=lambda x, y: 0.0,
@@ -381,14 +385,14 @@ def validate_epoch(
             ).item()
 
             # compute the relative semi-H^1 error and H^1 error
-            if model.problem_dim == 1:
+            if problem_dim == 1:
                 test_relative_semih1 += H1relLoss_1D(1.0, False, 0.0)(
                     output_pred_batch, output_batch
                 ).item()
                 test_relative_h1 += H1relLoss_1D(1.0, False)(
                     output_pred_batch, output_batch
                 ).item()  # beta = 1.0 in test loss
-            elif model.problem_dim == 2:
+            elif problem_dim == 2:
                 test_relative_semih1 += H1relLoss(1.0, False, 0.0)(
                     output_pred_batch, output_batch
                 ).item()
@@ -443,6 +447,7 @@ def test_fun_multiout(
     test_loader,
     device: torch.device,
     dim_output: int,
+    problem_dim: int,
 ):
     """
     As test_fun, but it returns the losses separately (one for each component of the output)
@@ -474,14 +479,14 @@ def test_fun_multiout(
             )
 
             # compute the relative semi-H^1 error and H^1 error
-            if model.problem_dim == 1:
+            if problem_dim == 1:
                 test_relative_semih1_multiout += H1relLoss_1D_multiout(1.0, False, 0.0)(
                     output_pred_batch, output_batch
                 )
                 test_relative_h1_multiout += H1relLoss_1D_multiout(1.0, False)(
                     output_pred_batch, output_batch
                 )  # beta = 1.0 in test loss
-            elif model.problem_dim == 2:
+            elif problem_dim == 2:
                 test_relative_semih1_multiout += H1relLoss_multiout(1.0, False, 0.0)(
                     output_pred_batch, output_batch
                 )
