@@ -18,3 +18,4 @@ neural_operators/tests/FNO/disc_tran/loss_L1_mode_best/model_FNO_2D_DiscContTran
 neural_operators/tests/FNO/cont_tran/loss_L1_mode_best/model_FNO_2D_ContTranslation
 neural_operators/tests/FNO/shear_layer/loss_L1_mode_best/model_FNO_2D_ShearLayer
 neural_operators/tests/CNO/shear_layer/loss_L1_mode_best/model_CNO_2D_ShearLayer
+neural_operators/tests/FNO/darcy/loss_L1_mode_best/model_FNO_2D_Darcy
