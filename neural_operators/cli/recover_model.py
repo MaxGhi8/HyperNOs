@@ -105,7 +105,7 @@ def parse_arguments():
     parser.add_argument(
         "mode",
         type=str,
-        choices=["best", "default"],
+        choices=["best", "default", "best_samedofs", "best_linear"],
         help="Select the hyper-params to use for define the architecture and the training, we have implemented the 'best' and 'default' options.",
     )
     parser.add_argument(
