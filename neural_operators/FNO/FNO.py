@@ -356,10 +356,7 @@ class FNO(nn.Module):
         self.device = device
 
         ## Lifting
-        # if self.problem_dim == 1:
-        #     self.p = torch.nn.Conv1d(self.in_dim, self.d_v, 1)
-        # elif self.problem_dim == 2:
-        #     self.p = torch.nn.Conv2d(self.in_dim, self.d_v, 1)
+        # self.p = torch.nn.Linear(self.in_dim, self.d_v)
         self.p = MLP(self.problem_dim, self.in_dim, self.d_v, 128, self.fun_act)
 
         ## Fourier layer
@@ -504,6 +501,7 @@ class FNO(nn.Module):
                 )
 
         ## Projection
+        # self.q = torch.nn.Linear(self.d_v, self.out_dim)
         self.q = MLP(self.problem_dim, self.d_v, self.out_dim, 128, self.fun_act)
 
         ## Move to device
