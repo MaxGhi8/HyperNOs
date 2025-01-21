@@ -85,6 +85,7 @@ def parse_arguments():
             "fhn",
             "fhn_long",
             "hh",
+            "ord",
             "crosstruss",
         ],
         help="Select the example to run.",
@@ -213,7 +214,7 @@ print(f"Total Model Size: {total_bytes:,} bytes ({total_mb:.2f} MB)")
     val_loader,
     train_loader,
     loss,
-    config["problem_dim"],
+    problem_dim,
     loss_fn_str,
     val_samples,
     training_samples,
@@ -239,7 +240,7 @@ print("")
     test_loader,
     train_loader,
     loss,
-    config["problem_dim"],
+    problem_dim,
     loss_fn_str,
     test_samples,
     training_samples,
@@ -441,6 +442,19 @@ match which_example:
         pass
         # TODO burgers and navier
 
+    case "ord":
+        input_tensor = example.dict_normalizers["I_app_dataset"].decode(input_tensor)
+
+        for i in range(output_tensor.size(-1)):
+            output_tensor[:, :, [i]] = example.dict_normalizers[
+                example.fields_to_concat[i]
+            ].decode(output_tensor[:, :, [i]])
+
+        for i in range(prediction_tensor.size(-1)):
+            prediction_tensor[:, :, [i]] = example.dict_normalizers[
+                example.fields_to_concat[i]
+            ].decode(prediction_tensor[:, :, [i]])
+
     case _:
         raise ValueError("The example chosen is not allowed")
 
@@ -551,7 +565,7 @@ test_plot_samples(
     output_tensor,
     prediction_tensor,
     test_rel_l1_tensor,
-    "worst",
+    "random",
     which_example,
     ntest=100,
     str_norm=loss_fn_str,
@@ -564,6 +578,7 @@ def save_tensor(
 ):
     # Prepare data for saving
     flag = True
+    print(flag, which_example)
     match which_example:
         case "fhn" | "fhn_long":
             data_to_save = {
@@ -587,11 +602,18 @@ def save_tensor(
                 "n_pred": prediction_tensor[:, :, 3].numpy().squeeze(),
             }
 
+        case "ord":
+            data_to_save = {
+                "input": input_tensor.numpy().squeeze(),
+                "V_exact": output_tensor[:, :, 11].squeeze(),
+                "V_pred": prediction_tensor[:, :, 11].squeeze(),
+            }
+
         case _:
             flag = False
 
     if flag:
-        directory = f"../data/{which_example}/"
+        directory = f"../../data/{which_example}/"
         os.makedirs(
             directory, exist_ok=True
         )  # Create the directory if it doesn't exist
@@ -599,7 +621,8 @@ def save_tensor(
         savemat(str_file, data_to_save)
         print(f"Data saved in {str_file}")
     else:
-        raise ValueError("The example chosen is not allowed")
+        # raise ValueError("The example chosen is not allowed")
+        pass
 
 
 # call the function to save tensors

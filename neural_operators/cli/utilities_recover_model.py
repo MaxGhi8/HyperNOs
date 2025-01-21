@@ -844,6 +844,49 @@ def plot_hh(input_tensor, output_tensor, prediction_tensor, idx):
 
 
 #########################################
+# Plotting OHaraRudy example
+#########################################
+def plot_ord(input_tensor, output_tensor, prediction_tensor, idx):
+    n_points = input_tensor.shape[1]
+    x_grid = torch.linspace(0, 2000, n_points).to("cpu")
+
+    # Plot the input, output and prediction for the selected samples
+    fig, axs = plt.subplots(2, len(idx), figsize=(12, 8))
+    for i in range(2):
+        for j in range(idx.shape[0]):
+            if i == 0:  # input
+                axs[i, j].plot(
+                    x_grid,
+                    input_tensor[idx[j], :, :].squeeze(),
+                    label="Input (I_app)",
+                )
+                if j == 0:
+                    axs[i, j].set_ylabel("$I_app$(t)")
+
+            elif i == 1:  # v approximation
+                axs[i, j].plot(
+                    x_grid, output_tensor[idx[j], :, 11].squeeze(), label="sol"
+                )
+                axs[i, j].plot(
+                    x_grid,
+                    prediction_tensor[idx[j], :, 11].squeeze(),
+                    "r",
+                    label="FNO",
+                )
+                if j == 0:
+                    axs[i, j].set_ylabel("$v$(t)")
+
+            axs[i, j].set_xlabel("t")
+            axs[i, j].grid()
+            axs[i, j].legend(loc="upper right")
+
+    plt.suptitle("OHaraRudy equations")  # title
+    plt.tight_layout()
+    plt.show()
+    plt.savefig("figure.png")
+
+
+#########################################
 # Plotting crosstruss example
 #########################################
 def plot_crosstruss(input_tensor, output_tensor, prediction_tensor, idx):
@@ -973,5 +1016,7 @@ def test_plot_samples(
             plot_fhn(input_tensor, output_tensor, prediction_tensor, idx)
         case "hh":
             plot_hh(input_tensor, output_tensor, prediction_tensor, idx)
+        case "ord":
+            plot_ord(input_tensor, output_tensor, prediction_tensor, idx)
         case _:
             raise ValueError(f"Unsupported example type: {which_example}.")
