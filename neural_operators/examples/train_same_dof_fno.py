@@ -48,6 +48,11 @@ def train_fno(which_example: str, loss_fn_str: str, maximum: int):
         **hyperparams_arc,
     }
 
+    print(
+        "The number of modes is:",
+        compute_modes(total_default_params, maximum, default_hyper_params),
+    )
+
     # Define the model builders
     model_builder = lambda config: FNO(  # noqa: E731
         config["problem_dim"],
@@ -112,4 +117,4 @@ def train_fno(which_example: str, loss_fn_str: str, maximum: int):
 
 
 if __name__ == "__main__":
-    train_fno("fhn", "L2", 621)
+    train_fno("cont_tran", "L1", 32)
