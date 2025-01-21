@@ -627,3 +627,21 @@ def save_tensor(
 
 # call the function to save tensors
 save_tensor(input_tensor, output_tensor, prediction_tensor, which_example, loss_fn_str)
+
+
+#########################################
+# Example 3: Plot the weight matrix
+#########################################
+def print_matrix(model, name_param):
+    for name, par in model.named_parameters():
+        if name == name_param:
+            print(name, par.shape)
+            fig = plt.imshow(torch.abs(par[:, :, 0, 0]).detach().cpu().numpy())
+            plt.colorbar(fig)
+
+            plt.savefig("output_figure.png", dpi=300, bbox_inches="tight")
+
+            # plt.show()
+
+
+print_matrix(model, "integrals.0.weights1")
