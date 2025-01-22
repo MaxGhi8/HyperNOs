@@ -216,8 +216,6 @@ print(f"Total Model Size: {total_bytes:,} bytes ({total_mb:.2f} MB)")
     loss,
     problem_dim,
     loss_fn_str,
-    val_samples,
-    training_samples,
     device,
     statistic=True,
 )
@@ -242,8 +240,6 @@ print("")
     loss,
     problem_dim,
     loss_fn_str,
-    test_samples,
-    training_samples,
     device,
     statistic=True,
 )
@@ -565,7 +561,7 @@ test_plot_samples(
     output_tensor,
     prediction_tensor,
     test_rel_l1_tensor,
-    "random",
+    "worst",
     which_example,
     ntest=100,
     str_norm=loss_fn_str,

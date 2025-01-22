@@ -33,8 +33,6 @@ def test_fun(
     loss,
     problem_dim: int,
     exp_norm: str,
-    test_samples: int,
-    training_samples: int,
     device: torch.device,
     tepoch=None,
     statistic=False,
@@ -49,8 +47,6 @@ def test_fun(
     train_loader: the training data loader
     loss: the loss function that have been used during training
     exp_norm: string describing the norm used in the loss function during training
-    test_samples: number of data in the test set
-    training_samples: number of data in the training set
     device: the device where we have to store all the things
     which_example: the example of the PDEs that we are considering
     tepoch: the tqdm object to print the progress
@@ -65,8 +61,10 @@ def test_fun(
         train_loss = 0.0  # recompute the train loss with updated parameters
 
         ## Compute loss on the test set
+        test_samples = 0
         for input_batch, output_batch in test_loader:
             input_batch = input_batch.to(device)
+            test_samples += input_batch.shape[0]
             output_batch = output_batch.to(device)
 
             # compute the output
@@ -99,8 +97,10 @@ def test_fun(
                 ).item()  # beta = 1.0 in test loss
 
         ## Compute loss on the training set
+        training_samples = 0
         for input_batch, output_batch in train_loader:
             input_batch = input_batch.to(device)
+            training_samples += input_batch.shape[0]
             output_batch = output_batch.to(device)
             output_pred_batch = model(input_batch)
 
