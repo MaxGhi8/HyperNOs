@@ -2452,15 +2452,12 @@ class OHaraRudy:
         # Compute mean and std (for gaussian point-wise normalization)
         self.dict_normalizers = {}
         for field in self.fields:
-            dict_train[field] = dict_train[field][:training_samples, ::s].unsqueeze(
-                -1
-            )  # extraction
-            self.dict_normalizers[field] = UnitGaussianNormalizer(
-                dict_train[field]
-            )  # normalizer
-            dict_train[field] = self.dict_normalizers[field].encode(
-                dict_train[field]
-            )  # normalization
+            # extraction
+            dict_train[field] = dict_train[field][:training_samples, ::s].unsqueeze(-1)
+            # normalizer
+            self.dict_normalizers[field] = UnitGaussianNormalizer(dict_train[field])
+            # normalization
+            dict_train[field] = self.dict_normalizers[field].encode(dict_train[field])
 
         # Concatenation
         a_train = dict_train["I_app_dataset"]
@@ -2479,12 +2476,10 @@ class OHaraRudy:
 
         # Compute mean and std (for gaussian point-wise normalization)
         for field in self.fields:
-            dict_val[field] = dict_val[field][:training_samples, ::s].unsqueeze(
-                -1
-            )  # extraction
-            dict_val[field] = self.dict_normalizers[field].encode(
-                dict_val[field]
-            )  # normalization
+            # extraction
+            dict_val[field] = dict_val[field][:training_samples, ::s].unsqueeze(-1)
+            # normalization
+            dict_val[field] = self.dict_normalizers[field].encode(dict_val[field])
 
         # Concatenation
         a_val = dict_val["I_app_dataset"]
@@ -2498,12 +2493,10 @@ class OHaraRudy:
 
         # Compute mean and std (for gaussian point-wise normalization)
         for field in self.fields:
-            dict_test[field] = dict_test[field][:training_samples, ::s].unsqueeze(
-                -1
-            )  # extraction
-            dict_test[field] = self.dict_normalizers[field].encode(
-                dict_test[field]
-            )  # normalization
+            # extraction
+            dict_test[field] = dict_test[field][:training_samples, ::s].unsqueeze(-1)
+            # normalization
+            dict_test[field] = self.dict_normalizers[field].encode(dict_test[field])
 
         # Concatenation
         a_test = dict_test["I_app_dataset"]
