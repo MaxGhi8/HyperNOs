@@ -76,8 +76,8 @@ def test_L1relLoss():
     assert result.item() == 0.0
 
     # test 4: hands on test
-    x = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
-    y = torch.tensor([[[0.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
+    x = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]).unsqueeze(-1)
+    y = torch.tensor([[[0.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]).unsqueeze(-1)
     result = LprelLoss(1, False)(x, y)
     assert np.abs(result.item() - 1 / 9) < 1e-6  # single precision
 
@@ -133,8 +133,8 @@ def test_L2relLoss():
     assert result.item() == 0.0
 
     # test 4: hands on test
-    x = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
-    y = torch.tensor([[[0.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]])
+    x = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]).unsqueeze(-1)
+    y = torch.tensor([[[0.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]).unsqueeze(-1)
     result = LprelLoss(2, False)(x, y)
     assert np.abs(result.item() - 1 / (np.sqrt(29))) < 1e-6  # single precision
 
