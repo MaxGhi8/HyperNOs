@@ -39,12 +39,15 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import torch
 from beartype import beartype
-from cli.utilities_recover_model import test_fun, test_fun_tensors, test_plot_samples
+from cli.utilities_recover_model import get_tensors, test_fun, test_plot_samples
 from datasets import NO_load_data_model
 from jaxtyping import Float, jaxtyped
 from loss_fun import (
+    H1relLoss,
+    H1relLoss_1D,
     H1relLoss_1D_multiout,
     H1relLoss_multiout,
+    LprelLoss,
     LprelLoss_multiout,
     loss_selector,
 )
@@ -187,10 +190,16 @@ train_loader = example.train_loader
 val_loader = example.val_loader
 test_loader = example.test_loader
 print(
-    "Dimension of datasets are:",
+    "Dimension of datasets inputs are:",
     next(iter(train_loader))[0].shape,
     next(iter(val_loader))[0].shape,
     next(iter(test_loader))[0].shape,
+)
+print(
+    "Dimension of datasets outputs are:",
+    next(iter(train_loader))[1].shape,
+    next(iter(val_loader))[1].shape,
+    next(iter(test_loader))[1].shape,
 )
 print("")
 
@@ -201,7 +210,7 @@ print(f"Total Parameters: {total_params:,}")
 print(f"Total Model Size: {total_bytes:,} bytes ({total_mb:.2f} MB)")
 
 #########################################
-# Compute mean error and print it
+# Compute train error and print it
 #########################################
 (
     val_relative_l1,
@@ -227,59 +236,163 @@ print("Validation mean relative semi h1 norm: ", val_relative_semih1)
 print("Validation mean relative h1 norm: ", val_relative_h1)
 print("")
 
-(
-    test_relative_l1,
-    test_relative_l2,
-    test_relative_semih1,
-    test_relative_h1,
-    train_loss,
-) = test_fun(
-    model,
-    test_loader,
-    train_loader,
-    loss,
-    problem_dim,
-    loss_fn_str,
-    device,
-    statistic=True,
-)
-
-print("Test mean relative l1 norm: ", test_relative_l1)
-print("Test mean relative l2 norm: ", test_relative_l2)
-print("Test mean relative semi h1 norm: ", test_relative_semih1)
-print("Test mean relative h1 norm: ", test_relative_h1)
-print("")
-
-
 #########################################
-# Compute median error and print it
+# Denormalize tensors to make it physical
 #########################################
 (
     input_tensor,
     output_tensor,
     prediction_tensor,
-    test_rel_l1_tensor,
-    test_rel_l2_tensor,
-    test_rel_semih1_tensor,
-    test_rel_h1_tensor,
-) = test_fun_tensors(model, test_loader, loss, device, which_example)
+) = get_tensors(model, test_loader, device)
 
-# compute median error
-test_median_rel_l1 = torch.median(test_rel_l1_tensor).item()
-test_median_rel_l2 = torch.median(test_rel_l2_tensor).item()
-test_median_rel_semih1 = torch.median(test_rel_semih1_tensor).item()
-test_median_rel_h1 = torch.median(test_rel_h1_tensor).item()
+match which_example:
+    case "fhn" | "fhn_long":
+        input_tensor = example.a_normalizer.decode(input_tensor)
+        output_tensor[:, :, [0]] = example.v_normalizer.decode(output_tensor[:, :, [0]])
+        output_tensor[:, :, [1]] = example.w_normalizer.decode(output_tensor[:, :, [1]])
+        prediction_tensor[:, :, [0]] = example.v_normalizer.decode(
+            prediction_tensor[:, :, [0]]
+        )
+        prediction_tensor[:, :, [1]] = example.w_normalizer.decode(
+            prediction_tensor[:, :, [1]]
+        )
 
-print("Test median relative l1 norm: ", test_median_rel_l1)
-print("Test median relative l2 norm: ", test_median_rel_l2)
-print("Test median relative semi h1 norm: ", test_median_rel_semih1)
-print("Test median relative h1 norm: ", test_median_rel_h1)
+    case "hh":
+        input_tensor = example.a_normalizer.decode(input_tensor)
+        output_tensor[:, :, [0]] = example.v_normalizer.decode(output_tensor[:, :, [0]])
+        output_tensor[:, :, [1]] = example.m_normalizer.decode(output_tensor[:, :, [1]])
+        output_tensor[:, :, [2]] = example.h_normalizer.decode(output_tensor[:, :, [2]])
+        output_tensor[:, :, [3]] = example.n_normalizer.decode(output_tensor[:, :, [3]])
+        prediction_tensor[:, :, [0]] = example.v_normalizer.decode(
+            prediction_tensor[:, :, [0]]
+        )
+        prediction_tensor[:, :, [1]] = example.m_normalizer.decode(
+            prediction_tensor[:, :, [1]]
+        )
+        prediction_tensor[:, :, [2]] = example.h_normalizer.decode(
+            prediction_tensor[:, :, [2]]
+        )
+        prediction_tensor[:, :, [3]] = example.n_normalizer.decode(
+            prediction_tensor[:, :, [3]]
+        )
+
+    case "crosstruss":
+        # denormalize
+        output_tensor[:, :, :, 0] = (example.max_x - example.min_x) * output_tensor[
+            :, :, :, 0
+        ] + example.min_x
+        output_tensor[:, :, :, 1] = (example.max_y - example.min_y) * output_tensor[
+            :, :, :, 1
+        ] + example.min_y
+        prediction_tensor[:, :, :, 0] = (
+            example.max_x - example.min_x
+        ) * prediction_tensor[:, :, :, 0] + example.min_x
+        prediction_tensor[:, :, :, 1] = (
+            example.max_y - example.min_y
+        ) * prediction_tensor[:, :, :, 1] + example.min_y
+        # multiplication for domain
+        output_tensor[:, :, :, [0]] = (
+            output_tensor[:, :, :, [0]] * input_tensor[:, :, :]
+        )
+        output_tensor[:, :, :, [1]] = (
+            output_tensor[:, :, :, [1]] * input_tensor[:, :, :]
+        )
+        prediction_tensor[:, :, :, [0]] = (
+            prediction_tensor[:, :, :, [0]] * input_tensor[:, :, :]
+        )
+        prediction_tensor[:, :, :, [1]] = (
+            prediction_tensor[:, :, :, [1]] * input_tensor[:, :, :]
+        )
+
+    case (
+        "poisson"
+        | "wave_0_5"
+        | "cont_tran"
+        | "disc_tran"
+        | "allen"
+        | "shear_layer"
+        | "airfoil"
+        | "darcy"
+    ):
+        # output_tensor = (
+        #     example.max_model - example.min_model
+        # ) * output_tensor + example.min_model
+        # prediction_tensor = (
+        #     example.max_model - example.min_model
+        # ) * prediction_tensor + example.min_model
+        pass
+
+    case "darcy_zongyi":
+        input_tensor = example.a_normalizer.decode(input_tensor)
+        output_tensor = example.u_normalizer.decode(output_tensor)
+        prediction_tensor = example.u_normalizer.decode(prediction_tensor)
+
+    case "burgers_zongyi" | "navier_stokes_zongyi":
+        pass
+        # TODO burgers and navier
+
+    case "ord":
+        input_tensor = example.dict_normalizers["I_app_dataset"].decode(input_tensor)
+
+        for i in range(output_tensor.size(-1)):
+            output_tensor[:, :, [i]] = example.dict_normalizers[
+                example.fields_to_concat[i]
+            ].decode(output_tensor[:, :, [i]])
+
+        for i in range(prediction_tensor.size(-1)):
+            prediction_tensor[:, :, [i]] = example.dict_normalizers[
+                example.fields_to_concat[i]
+            ].decode(prediction_tensor[:, :, [i]])
+
+    case _:
+        raise ValueError("The example chosen is not allowed")
+
+
+#########################################
+# Compute mean error and print it
+#########################################
+# Error tensors
+test_relative_l1_tensor = LprelLoss(1, None)(output_tensor, prediction_tensor)
+test_relative_l2_tensor = LprelLoss(2, None)(output_tensor, prediction_tensor)
+if problem_dim == 1:
+    test_relative_semih1_tensor = H1relLoss_1D(1.0, None, 0.0)(
+        output_tensor, prediction_tensor
+    )
+    test_relative_h1_tensor = H1relLoss_1D(1.0, None)(output_tensor, prediction_tensor)
+elif problem_dim == 2:
+    test_relative_semih1_tensor = H1relLoss(1.0, None, 0.0)(
+        output_tensor, prediction_tensor
+    )
+    test_relative_h1_tensor = H1relLoss(1.0, None)(output_tensor, prediction_tensor)
+
+# Error mean
+test_mean_l1 = test_relative_l1_tensor.mean().item()
+test_mean_l2 = test_relative_l2_tensor.mean().item()
+test_mean_semih1 = test_relative_semih1_tensor.mean().item()
+test_mean_h1 = test_relative_h1_tensor.mean().item()
+
+# Error median
+test_median_l1 = torch.median(test_relative_l1_tensor).item()
+test_median_l2 = torch.median(test_relative_l2_tensor).item()
+test_median_semih1 = torch.median(test_relative_semih1_tensor).item()
+test_median_h1 = torch.median(test_relative_h1_tensor).item()
+
+print("Test mean relative l1 norm: ", test_mean_l1)
+print("Test mean relative l2 norm: ", test_mean_l2)
+print("Test mean relative semi h1 norm: ", test_mean_semih1)
+print("Test mean relative h1 norm: ", test_mean_h1)
+print("")
+
+print("Test median relative l1 norm: ", test_median_l1)
+print("Test median relative l2 norm: ", test_median_l2)
+print("Test median relative semi h1 norm: ", test_median_semih1)
+print("Test median relative h1 norm: ", test_median_h1)
 print("")
 
 #########################################
 # Compute mean error component per component
 #########################################
-if which_example in ["fhn", "fhn_long", "hh"]:
+if which_example in ["fhn", "fhn_long", "hh", "ord"]:
     test_rel_l1_componentwise = LprelLoss_multiout(1, True)(
         output_tensor, prediction_tensor
     )
@@ -346,118 +459,14 @@ print("")
 
 
 #########################################
-# Prepare data for plotting
+# Example 1: Plot the histogram
 #########################################
 # move tensors to cpu for plotting
 input_tensor = input_tensor.to("cpu")
 output_tensor = output_tensor.to("cpu")
 prediction_tensor = prediction_tensor.to("cpu")
 
-# de-normalize tensors to make it physical and the plot
-match which_example:
-    case "fhn" | "fhn_long":
-        input_tensor = example.a_normalizer.decode(input_tensor)
-        output_tensor[:, :, [0]] = example.v_normalizer.decode(output_tensor[:, :, [0]])
-        output_tensor[:, :, [1]] = example.w_normalizer.decode(output_tensor[:, :, [1]])
-        prediction_tensor[:, :, [0]] = example.v_normalizer.decode(
-            prediction_tensor[:, :, [0]]
-        )
-        prediction_tensor[:, :, [1]] = example.w_normalizer.decode(
-            prediction_tensor[:, :, [1]]
-        )
 
-    case "hh":
-        input_tensor = example.a_normalizer.decode(input_tensor)
-        output_tensor[:, :, [0]] = example.v_normalizer.decode(output_tensor[:, :, [0]])
-        output_tensor[:, :, [1]] = example.m_normalizer.decode(output_tensor[:, :, [1]])
-        output_tensor[:, :, [2]] = example.h_normalizer.decode(output_tensor[:, :, [2]])
-        output_tensor[:, :, [3]] = example.n_normalizer.decode(output_tensor[:, :, [3]])
-        prediction_tensor[:, :, [0]] = example.v_normalizer.decode(
-            prediction_tensor[:, :, [0]]
-        )
-        prediction_tensor[:, :, [1]] = example.m_normalizer.decode(
-            prediction_tensor[:, :, [1]]
-        )
-        prediction_tensor[:, :, [2]] = example.h_normalizer.decode(
-            prediction_tensor[:, :, [2]]
-        )
-        prediction_tensor[:, :, [3]] = example.n_normalizer.decode(
-            prediction_tensor[:, :, [3]]
-        )
-
-    case "crosstruss":
-        # denormalize
-        output_tensor[:, :, :, 0] = (example.max_x - example.min_x) * output_tensor[
-            :, :, :, 0
-        ] + example.min_x
-        output_tensor[:, :, :, 1] = (example.max_y - example.min_y) * output_tensor[
-            :, :, :, 1
-        ] + example.min_y
-        prediction_tensor[:, :, :, 0] = (
-            example.max_x - example.min_x
-        ) * prediction_tensor[:, :, :, 0] + example.min_x
-        prediction_tensor[:, :, :, 1] = (
-            example.max_y - example.min_y
-        ) * prediction_tensor[:, :, :, 1] + example.min_y
-        # multiplication for domain
-        output_tensor[:, :, :, [0]] = (
-            output_tensor[:, :, :, [0]] * input_tensor[:, :, :]
-        )
-        output_tensor[:, :, :, [1]] = (
-            output_tensor[:, :, :, [1]] * input_tensor[:, :, :]
-        )
-        prediction_tensor[:, :, :, [0]] = (
-            prediction_tensor[:, :, :, [0]] * input_tensor[:, :, :]
-        )
-        prediction_tensor[:, :, :, [1]] = (
-            prediction_tensor[:, :, :, [1]] * input_tensor[:, :, :]
-        )
-    case (
-        "poisson"
-        | "wave_0_5"
-        | "cont_tran"
-        | "disc_tran"
-        | "allen"
-        | "shear_layer"
-        | "airfoil"
-        | "darcy"
-    ):
-        output_tensor = (
-            example.max_model - example.min_model
-        ) * output_tensor + example.min_model
-        prediction_tensor = (
-            example.max_model - example.min_model
-        ) * prediction_tensor + example.min_model
-
-    case "darcy_zongyi":
-        input_tensor = example.a_normalizer.decode(input_tensor)
-        output_tensor = example.u_normalizer.decode(output_tensor)
-        prediction_tensor = example.u_normalizer.decode(prediction_tensor)
-
-    case "burgers_zongyi" | "navier_stokes_zongyi":
-        pass
-        # TODO burgers and navier
-
-    case "ord":
-        input_tensor = example.dict_normalizers["I_app_dataset"].decode(input_tensor)
-
-        for i in range(output_tensor.size(-1)):
-            output_tensor[:, :, [i]] = example.dict_normalizers[
-                example.fields_to_concat[i]
-            ].decode(output_tensor[:, :, [i]])
-
-        for i in range(prediction_tensor.size(-1)):
-            prediction_tensor[:, :, [i]] = example.dict_normalizers[
-                example.fields_to_concat[i]
-            ].decode(prediction_tensor[:, :, [i]])
-
-    case _:
-        raise ValueError("The example chosen is not allowed")
-
-
-#########################################
-# Example 1: Plot the histogram
-#########################################
 @jaxtyped(typechecker=beartype)
 def plot_histogram(error: Float[Tensor, "n_samples"], str_norm: str):
     error_np = error.to("cpu").numpy()
@@ -547,10 +556,10 @@ def plot_overlapped_histograms(
 
 
 # call the functions to plot histograms for errors
-plot_histogram(test_rel_l1_tensor, "L1")
-plot_histogram(test_rel_l2_tensor, "L2")
-plot_histogram(test_rel_semih1_tensor, "semi H1")
-plot_histogram(test_rel_h1_tensor, "H1")
+plot_histogram(test_relative_l1_tensor, "L1")
+plot_histogram(test_relative_l2_tensor, "L2")
+plot_histogram(test_relative_semih1_tensor, "Semi H1")
+plot_histogram(test_relative_h1_tensor, "H1")
 
 #########################################
 # Example 2: Plot the worst and best samples
@@ -560,7 +569,7 @@ test_plot_samples(
     input_tensor,
     output_tensor,
     prediction_tensor,
-    test_rel_l1_tensor,
+    test_relative_l1_tensor,
     "worst",
     which_example,
     ntest=100,

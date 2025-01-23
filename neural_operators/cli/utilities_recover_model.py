@@ -218,6 +218,34 @@ def test_fun_multiout(
     )
 
 
+def get_tensors(model, test_loader, device: torch.device):
+    """As test_fun, but it returns the tensors of the loss functions"""
+    with torch.no_grad():
+        model.eval()
+        # initialize the tensors for IO
+        input_tensor = torch.tensor([]).to(device)
+        output_tensor = torch.tensor([]).to(device)
+        prediction_tensor = torch.tensor([]).to(device)
+
+        ## Compute loss on the test set
+        for input_batch, output_batch in test_loader:
+            input_batch = input_batch.to(device)
+            input_tensor = torch.cat((input_tensor, input_batch), dim=0)
+
+            output_batch = output_batch.to(device)
+            output_tensor = torch.cat((output_tensor, output_batch), dim=0)
+
+            # compute the output
+            output_pred_batch = model.forward(input_batch)
+            prediction_tensor = torch.cat((prediction_tensor, output_pred_batch), dim=0)
+
+    return (
+        input_tensor,
+        output_tensor,
+        prediction_tensor,
+    )
+
+
 def test_fun_tensors(
     model, test_loader, loss, device: torch.device, which_example: str
 ):
