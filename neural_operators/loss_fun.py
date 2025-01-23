@@ -128,8 +128,8 @@ class LprelLoss:
     @jaxtyped(typechecker=beartype)
     def rel(
         self,
-        x: Float[Tensor, "n_samples *n out_dim"],
-        y: Float[Tensor, "n_samples *n out_dim"],
+        x: Float[Tensor, "n_samples *n {1}"],
+        y: Float[Tensor, "n_samples *n {1}"],
     ) -> Float[Tensor, "*n_samples"]:
         num_examples = x.size(0)
 
@@ -157,7 +157,12 @@ class LprelLoss:
         x: Float[Tensor, "n_samples *n out_dim"],
         y: Float[Tensor, "n_samples *n out_dim"],
     ) -> Float[Tensor, "*n_samples"]:
-        return self.rel(x, y)
+
+        out_dim = x.size(-1)
+        acc = 0
+        for i in range(out_dim):
+            acc += self.rel(x[..., [i]], y[..., [i]])
+        return acc / out_dim
 
 
 #########################################
