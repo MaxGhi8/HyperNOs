@@ -1,5 +1,6 @@
 from wrappers.AirfoilWrapper import AirfoilWrapper
 from wrappers.CrossTrussWrapper import CrossTrussWrapper
+from wrappers.StiffnessMatrixWrapper import StiffnessMatrixWrapper
 
 
 def wrap_model(model, which_example):
@@ -10,6 +11,8 @@ def wrap_model(model, which_example):
             return AirfoilWrapper(model)
         case "crosstruss":
             return CrossTrussWrapper(model)
+        case "stiffness_matrix":
+            return StiffnessMatrixWrapper(model)
         case _:
             return model
 

@@ -2687,3 +2687,130 @@ class CrossTruss(Dataset):
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
         return grid
+
+
+# ------------------------------------------------------------------------------
+# Stiffness matrix data
+# Training samples (1500)
+# Testing samples (250)
+# Validation samples (250)
+
+
+class CrossTruss(Dataset):
+    def __init__(
+        self,
+        network_properties,
+        batch_size,
+        ntrain=1500,
+        ntest=250,
+        s=1,
+        in_dist=True,
+        search_path="/",
+    ):
+        assert in_dist, "Out-of-distribution testing samples are not available"
+        # s = 1 --> we have 100x100 points in input and 8x8 points in output
+
+        # Read the data
+        self.file_data = find_file(
+            "domain_100x100_stiffness_matrix_8x8_n2000.h5", search_path
+        )
+        self.reader = h5py.File(self.file_data, "r")
+        inputs = torch.from_numpy(self.reader["domain"][:]).type(torch.float32)
+        outputs = torch.from_numpy(self.reader["stiffness_matrix"][:]).type(
+            torch.float32
+        )
+        # Train set
+        inputs_train = inputs[:ntrain, ::s, ::s].unsqueeze(-1)
+        outputs_train = outputs[:ntrain, ::s, ::s].unsqueeze(-1)
+        # Validation set
+        inputs_val = inputs[ntrain : ntrain + ntest, ::s, ::s].unsqueeze(-1)
+        outputs_val = outputs[ntrain : ntrain + ntest, ::s, ::s].unsqueeze(-1)
+        # Test set
+        inputs_test = inputs[ntrain + ntest : ntrain + 2 * ntest, ::s, ::s].unsqueeze(
+            -1
+        )
+        outputs_test = outputs[ntrain + ntest : ntrain + 2 * ntest, ::s, ::s].unsqueeze(
+            -1
+        )
+
+        # Normalize the outputs (min-max normalization), the inputs are already normalized in {0,1}
+        self.min_x = torch.min(outputs_train[:, :, :, 0])
+        self.max_x = torch.max(outputs_train[:, :, :, 0])
+        outputs_train[:, :, :, 0] = (outputs_train[:, :, :, 0] - self.min_x) / (
+            self.max_x - self.min_x
+        )
+        outputs_val[:, :, :, 0] = (outputs_val[:, :, :, 0] - self.min_x) / (
+            self.max_x - self.min_x
+        )
+        outputs_test[:, :, :, 0] = (outputs_test[:, :, :, 0] - self.min_x) / (
+            self.max_x - self.min_x
+        )
+
+        self.N_Fourier_F = network_properties["FourierF"]
+        if self.N_Fourier_F > 0:
+            grid = self.get_grid(inputs_test.shape[1])
+            FF = FourierFeatures(1, self.N_Fourier_F, grid.device)
+            ff_grid = FF(grid).unsqueeze(0)  # (1, n_x, n_y, 2*ff)
+
+            inputs_train = torch.cat(
+                (inputs_train, ff_grid.repeat(inputs_train.shape[0], 1, 1, 1)), -1
+            )
+            inputs_val = torch.cat(
+                (inputs_val, ff_grid.repeat(inputs_val.shape[0], 1, 1, 1)), -1
+            )
+            inputs_test = torch.cat(
+                (inputs_test, ff_grid.repeat(inputs_test.shape[0], 1, 1, 1)), -1
+            )
+
+        g = torch.Generator()
+
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
+            torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g.manual_seed(retrain)
+
+        # Change number of workers according to your preference
+        num_workers = 0
+
+        self.train_loader = DataLoader(
+            TensorDataset(inputs_train, outputs_train),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.val_loader = DataLoader(
+            TensorDataset(inputs_val, outputs_val),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.test_loader = DataLoader(
+            TensorDataset(inputs_test, outputs_test),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+
+        self.s = inputs_test.shape[1]
+
+    def get_grid(self, res):
+        x = torch.linspace(0, 1, res)
+        y = torch.linspace(0, 1, res)
+        x_grid, y_grid = torch.meshgrid(x, y, indexing="ij")
+        x_grid = x_grid.unsqueeze(-1)
+        y_grid = y_grid.unsqueeze(-1)
+        grid = torch.cat((x_grid, y_grid), -1)
+        return grid
