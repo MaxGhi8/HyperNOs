@@ -47,6 +47,10 @@ def train_samedofs_cno(which_example: str, loss_fn_str: str):
         **hyperparams_train,
         **hyperparams_arc,
     }
+    print(
+        "Channel multiplier: ",
+        compute_channel_multiplier(total_default_params, default_hyper_params),
+    )
 
     # Define the model builders
     model_builder = lambda config: CNO(  # noqa: E731
@@ -109,4 +113,4 @@ def train_samedofs_cno(which_example: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    train_samedofs_cno("cont_tran", "L1")
+    train_samedofs_cno("shear_layer", "L1")
