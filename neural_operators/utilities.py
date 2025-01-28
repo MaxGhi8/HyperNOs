@@ -530,6 +530,40 @@ def plot_data_crosstruss(
     writer.add_figure(title, fig, ep)
 
 
+#########################################
+# Function to plot stiff matrix example
+#########################################
+def plot_data_stiffness_matrix(
+    example,
+    data_plot: Tensor,
+    title: str,
+    ep: int,
+    writer: SummaryWriter,
+    normalization: bool = True,
+    plotting: bool = False,
+):
+    if normalization:
+        data_plot[:, :, :, 0] = (example.max_x - example.min_x) * data_plot[
+            :, :, :, 0
+        ] + example.min_x
+
+    n_idx = data_plot.size(0)
+
+    fig, ax = plt.subplots(1, n_idx, figsize=(18, 10))
+    fig.suptitle(title)
+    ax[0, 0].set(ylabel="Stiffness matrix")
+    for j in range(n_idx):
+        ax[0, j].set_yticklabels([])
+        ax[0, j].set_xticklabels([])
+        ax[0, j].set(xlabel="x")
+        im = ax[0, j].imshow(data_plot[j, ..., 0].squeeze())
+        fig.colorbar(im, ax=ax[0, j])
+
+    if plotting:
+        plt.show()
+    writer.add_figure(title, fig, ep)
+
+
 def get_plot_function(
     which_example: str,
     title: str,
@@ -538,26 +572,33 @@ def get_plot_function(
     match which_example:
         case "fhn_long":
             return None  # TODO
+
         case "fhn":
             if "input" in title.lower():
                 return plot_data_fhn_input
             return plot_data_fhn
+
         case "hh":
             if "input" in title.lower():
                 return plot_data_hh_input
             return plot_data_hh
+
         case "ord":
             if "input" in title.lower():
                 return plot_data_ord_input
             return plot_data_ord
 
-    ## 2D problem
-    if which_example == "crosstruss":
-        if "input" in title.lower():
-            return plot_data_crosstruss_input
-        return plot_data_crosstruss
+        case "crosstruss":
+            if "input" in title.lower():
+                return plot_data_crosstruss_input
+            return plot_data_crosstruss
 
-    elif which_example in [
+        case "stiffness_matrix":
+            if "input" in title.lower():
+                return plot_data_crosstruss_input
+            return plot_data_stiffness_matrix
+
+    if which_example in [
         "poisson",
         "wave_0_5",
         "cont_tran",

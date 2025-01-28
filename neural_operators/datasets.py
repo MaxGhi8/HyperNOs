@@ -59,6 +59,7 @@ def NO_load_data_model(
         "ord": OHaraRudy,
         ###
         "crosstruss": CrossTruss,
+        "stiffness_matrix": StiffnessMatrix,
     }
 
     # Define additional parameters for specific cases
@@ -95,6 +96,25 @@ def NO_load_data_model(
                     f"Invalid size, the s must divide the original grid size (in this example {points})"
                 )
             kwargs["s"] = stride
+
+        elif which_example == "crosstruss":
+            points = 210
+            stride = points // s
+            if abs(stride - points / s) > 1e-3:
+                raise ValueError(
+                    f"Invalid size, the s must divide the original grid size (in this example {points})"
+                )
+            kwargs["s"] = stride
+
+        elif which_example == "stiffness_matrix":
+            points = 100
+            stride = points // s
+            if abs(stride - points / s) > 1e-3:
+                raise ValueError(
+                    f"Invalid size, the s must divide the original grid size (in this example {points})"
+                )
+            kwargs["s"] = stride
+
         else:
             kwargs["s"] = s
 
@@ -2696,7 +2716,7 @@ class CrossTruss(Dataset):
 # Validation samples (250)
 
 
-class CrossTruss(Dataset):
+class StiffnessMatrix(Dataset):
     def __init__(
         self,
         network_properties,

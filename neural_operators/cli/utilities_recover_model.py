@@ -985,6 +985,54 @@ def plot_crosstruss(input_tensor, output_tensor, prediction_tensor, idx):
     plt.savefig("figure.png")
 
 
+#########################################
+# Plot for the stiffness matrix example
+#########################################
+def plot_stiffness_matrix(input_tensor, output_tensor, prediction_tensor, idx):
+    fig, axs = plt.subplots(7, len(idx), figsize=(16, 16))
+
+    for i in range(4):
+        for j in range(idx.shape[0]):
+            if i == 0:  # input
+                im = axs[i, j].imshow(input_tensor[idx[j], :, :].squeeze())
+                colorbar = fig.colorbar(im, ax=axs[i, j])
+                colorbar.set_ticks([0, 1])
+                if j == 0:
+                    axs[i, j].set_ylabel("Domain input")
+
+            elif i == 1:  # output x
+                im = axs[i, j].imshow(output_tensor[idx[j], :, :, 0].squeeze())
+                colorbar = fig.colorbar(im, ax=axs[i, j])
+                colorbar.set_ticks([-0.005, 0.005])
+                if j == 0:
+                    axs[i, j].set_ylabel("Stiff matrix")
+
+            elif i == 2:  # predicted x
+                im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
+                colorbar = fig.colorbar(im, ax=axs[i, j])
+                colorbar.set_ticks([-0.005, 0.005])
+                if j == 0:
+                    axs[i, j].set_ylabel("Approx. stiff matrix")
+
+            elif i == 3:  # error x
+                error = torch.abs(
+                    output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
+                )
+                im = axs[i, j].imshow(error.squeeze())
+                colorbar = fig.colorbar(im, ax=axs[i, j])
+                if j == 0:
+                    axs[i, j].set_ylabel("Error")
+
+            axs[i, j].set_yticklabels([])
+            axs[i, j].set_xticklabels([])
+            # axs[i, j].set_xlabel('x')
+
+    plt.suptitle("Stiffness matrix")  # title
+    plt.tight_layout()
+    plt.show()
+    plt.savefig("figure.png")
+
+
 @jaxtyped(typechecker=beartype)
 def test_plot_samples(
     input_tensor: Float[Tensor, "n_samples *n in_dim"],
@@ -1038,6 +1086,8 @@ def test_plot_samples(
             plot_darcy(input_tensor, output_tensor, prediction_tensor, idx)
         case "crosstruss":
             plot_crosstruss(input_tensor, output_tensor, prediction_tensor, idx)
+        case "stiffness_matrix":
+            plot_stiffness_matrix(input_tensor, output_tensor, prediction_tensor, idx)
         case "fhn":
             plot_fhn(input_tensor, output_tensor, prediction_tensor, idx)
         case "fhn_long":
