@@ -224,8 +224,9 @@ class H1relLoss_1D:
         y_norms = torch.norm(y.reshape(num_examples, -1), p=2, dim=1)
 
         # check division by zero
-        if torch.any(y_norms <= 1e-5):
-            raise ValueError("Division by zero")
+        #!
+        # if torch.any(y_norms <= 1e-5):
+        #     raise ValueError("Division by zero")
 
         if self.size_mean is True:
             return torch.mean(diff_norms / y_norms)
@@ -328,8 +329,8 @@ class H1relLoss:
         y_norms = torch.norm(y.reshape(num_examples, -1), p=2, dim=1)
 
         # check division by zero
-        if torch.any(y_norms <= 1e-5):
-            raise ValueError("Division by zero")
+        # if torch.any(y_norms <= 1e-5):
+        #     raise ValueError("Division by zero")
 
         if self.size_mean is True:
             return torch.mean(diff_norms / y_norms)

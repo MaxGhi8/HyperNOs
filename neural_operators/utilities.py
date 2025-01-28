@@ -551,13 +551,13 @@ def plot_data_stiffness_matrix(
 
     fig, ax = plt.subplots(1, n_idx, figsize=(18, 10))
     fig.suptitle(title)
-    ax[0, 0].set(ylabel="Stiffness matrix")
+    ax[0].set(ylabel="Stiffness matrix")
     for j in range(n_idx):
-        ax[0, j].set_yticklabels([])
-        ax[0, j].set_xticklabels([])
-        ax[0, j].set(xlabel="x")
-        im = ax[0, j].imshow(data_plot[j, ..., 0].squeeze())
-        fig.colorbar(im, ax=ax[0, j])
+        ax[j].set_yticklabels([])
+        ax[j].set_xticklabels([])
+        ax[j].set(xlabel="x")
+        im = ax[j].imshow(data_plot[j, ..., 0].squeeze())
+        fig.colorbar(im, ax=ax[j])
 
     if plotting:
         plt.show()

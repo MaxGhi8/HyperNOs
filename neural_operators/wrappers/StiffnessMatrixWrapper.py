@@ -9,7 +9,7 @@ class StiffnessMatrixWrapper(nn.Module):
     def forward(self, input_batch):
         output_batch = self.model(input_batch)
         # we get only the central 8x8 block of the output
-        output_batch = output_batch[:, 46:55, 46:55, :]
+        output_batch = output_batch[:, 46:54, 46:54, :]
 
         return output_batch
 
