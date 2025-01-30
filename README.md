@@ -26,3 +26,9 @@ To set up the HyperNOs project, follow these steps:
    ```bash
    .download_data.py 
    ```
+
+4. If you want to download our trained model for each datasets you can clone our dedicated repository:
+   ```bash
+    git clone git@github.com:MaxGhi8/tests.git
+   ```
+
