@@ -117,4 +117,4 @@ def train_fno(which_example: str, loss_fn_str: str, maximum: int):
 
 
 if __name__ == "__main__":
-    train_fno("cont_tran", "L1", 32)
+    train_fno("stiffness_matrix", "L2", 50)
