@@ -1,16 +1,5 @@
 data/
-plots/*.png
-*.jpeg
-data/*.jpg
 .python-version
 __pycache__/
-*.aux
-*.log
-*.out
-*.synctex.gz
-*.synctex(busy)
-*.fdb_latexmk
-*.fls
-*.tdo
 
 tests/
