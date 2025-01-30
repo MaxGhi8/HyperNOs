@@ -1,2 +1,0 @@
-Norm used during the training:
-L1
