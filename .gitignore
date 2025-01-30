@@ -1,5 +1,5 @@
-data/
 .python-version
 __pycache__/
 
+data/
 tests/
