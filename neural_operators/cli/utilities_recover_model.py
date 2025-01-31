@@ -879,7 +879,7 @@ def plot_ord(input_tensor, output_tensor, prediction_tensor, idx):
     x_grid = torch.linspace(0, 2000, n_points).to("cpu")
 
     # Plot the input, output and prediction for the selected samples
-    fig, axs = plt.subplots(2, len(idx), figsize=(12, 8))
+    fig, axs = plt.subplots(2, len(idx), figsize=(20, 8))
     for i in range(2):
         for j in range(idx.shape[0]):
             if i == 0:  # input

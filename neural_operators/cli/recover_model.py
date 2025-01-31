@@ -332,17 +332,18 @@ match which_example:
         # TODO burgers and navier
 
     case "ord":
-        input_tensor = example.dict_normalizers["I_app_dataset"].decode(input_tensor)
+        pass
+        # input_tensor = example.dict_normalizers["I_app_dataset"].decode(input_tensor)
 
-        for i in range(output_tensor.size(-1)):
-            output_tensor[:, :, [i]] = example.dict_normalizers[
-                example.fields_to_concat[i]
-            ].decode(output_tensor[:, :, [i]])
+        # for i in range(output_tensor.size(-1)):
+        #     output_tensor[:, :, [i]] = example.dict_normalizers[
+        #         example.fields_to_concat[i]
+        #     ].decode(output_tensor[:, :, [i]])
 
-        for i in range(prediction_tensor.size(-1)):
-            prediction_tensor[:, :, [i]] = example.dict_normalizers[
-                example.fields_to_concat[i]
-            ].decode(prediction_tensor[:, :, [i]])
+        # for i in range(prediction_tensor.size(-1)):
+        #     prediction_tensor[:, :, [i]] = example.dict_normalizers[
+        #         example.fields_to_concat[i]
+        #     ].decode(prediction_tensor[:, :, [i]])
 
     case _:
         raise ValueError("The example chosen is not allowed")
@@ -564,6 +565,18 @@ plot_histogram(test_relative_h1_tensor, "H1")
 #########################################
 # Example 2: Plot the worst and best samples
 #########################################
+input_tensor = example.dict_normalizers["I_app_dataset"].decode(input_tensor)
+
+for i in range(output_tensor.size(-1)):
+    output_tensor[:, :, [i]] = example.dict_normalizers[
+        example.fields_to_concat[i]
+    ].decode(output_tensor[:, :, [i]])
+
+for i in range(prediction_tensor.size(-1)):
+    prediction_tensor[:, :, [i]] = example.dict_normalizers[
+        example.fields_to_concat[i]
+    ].decode(prediction_tensor[:, :, [i]])
+
 # call the function to plot data
 test_plot_samples(
     input_tensor,
@@ -574,7 +587,7 @@ test_plot_samples(
     which_example,
     ntest=100,
     str_norm=loss_fn_str,
-    n_idx=5,
+    n_idx=10,
 )
 
 
