@@ -113,4 +113,4 @@ def train_samedofs_cno(which_example: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    train_samedofs_cno("shear_layer", "L1")
+    train_samedofs_cno("poisson", "L1")
