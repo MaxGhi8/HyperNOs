@@ -13,7 +13,7 @@
 	},
 	"fno_architecture": {
 		"width": 8,
-		"modes": 16,
+		"modes": 32,
 		"n_layers": 1,
 		"padding": 2,
 		"fno_arc": "Classic",
