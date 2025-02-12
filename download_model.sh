@@ -53,18 +53,18 @@ done
 loss="L1" 
 
 # Get link and folder for the selected model
-download_link="https://zenodo.org/uploads/14860202/${test_to_modelname[$selected_test]}_${mode_available[$selected_mode]}"
+download_link="https://zenodo.org/uploads/14860202/${test_to_modelname[$selected_test]}_${mode_available[$selected_mode]}_${model_available[$selected_model]}"
 
 # Define the destination folder
-dest_folder="neural_operators/tests/${model_available[$selected_model]}/${test_to_modelname[$selected_test]}/loss_$loss_mode_${mode_available[$selected_mode]}"
-mkdir -p "$dest_folder"
-echo "Destination folder: $dest_folder"
+dest_folder="neural_operators/tests/${model_available[$selected_model]}/$selected_test/loss_${loss}_mode_${mode_available[$selected_mode]}"
+# mkdir -p "$dest_folder"
+printf "\nDestination folder: $dest_folder\n"
 
 # Get filename from the download link (you can customize this)
 filename=${test_to_modelname[$selected_test]}
 
 # Download the file using curl
-echo "Downloading model..."
+printf "\nDownloading model...\n"
 curl --output "${dest_folder}/${filename}" "$download_link"
 
 if [ $? -eq 0 ]; then
