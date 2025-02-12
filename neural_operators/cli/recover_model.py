@@ -108,7 +108,15 @@ def parse_arguments():
     parser.add_argument(
         "mode",
         type=str,
-        choices=["best", "default", "best_samedofs", "best_linear"],
+        choices=[
+            "best",
+            "default",
+            "best_samedofs",
+            "best_linear",
+            "best_50M",  # for the cont_tran FNO tests
+            "best_150M",  # for the cont_tran FNO tests
+            "best_500k",  # for the cont_tran FNO tests
+        ],
         help="Select the hyper-params to use for define the architecture and the training, we have implemented the 'best' and 'default' options.",
     )
     parser.add_argument(
@@ -124,7 +132,7 @@ def parse_arguments():
         "example": args.example.lower(),
         "architecture": args.architecture.upper(),
         "loss_fn_str": args.loss_fn_str.upper(),
-        "mode": args.mode.lower(),
+        "mode": args.mode,
         "in_dist": args.in_dist,
     }
 
