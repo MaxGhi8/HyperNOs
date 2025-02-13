@@ -80,12 +80,16 @@ class UnitGaussianNormalizer(object):
         self.eps = torch.tensor(eps).to(x.device)
 
     @jaxtyped(typechecker=beartype)
-    def encode(self, x: Float[Tensor, "n_samples *n"]) -> Float[Tensor, "n_samples *n"]:
+    def encode(
+        self, x: Float[Tensor, "n_samples *n"]  # noqa: F821
+    ) -> Float[Tensor, "n_samples *n"]:  # noqa: F821
         x = (x - self.mean) / (self.std + self.eps)
         return x
 
     @jaxtyped(typechecker=beartype)
-    def decode(self, x: Float[Tensor, "n_samples *n"]) -> Float[Tensor, "n_samples *n"]:
+    def decode(
+        self, x: Float[Tensor, "n_samples *n"]  # noqa: F821
+    ) -> Float[Tensor, "n_samples *n"]:  # noqa: F821
         mean = self.mean.to(x.device)
         std = self.std.to(x.device)
         eps = self.eps.to(x.device)
@@ -93,13 +97,9 @@ class UnitGaussianNormalizer(object):
         return x
 
 
-import numpy as np
-
 #########################################
 # Fourier features
 #########################################
-import torch
-import torch.nn as nn
 
 
 class FourierFeatures1D(nn.Module):

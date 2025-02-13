@@ -2466,7 +2466,7 @@ class OHaraRudy:
 
         #### Training data
         self.TrainDataPath = find_file(
-            "Training_dataset_ORd_n_3000_points_10080_tf_500_7d.mat", search_path
+            "Training_dataset_ORd_n_3000_points_10080_tf_1000_7d.mat", search_path
         )
         dict_train = MatReader_ord(self.fields, self.TrainDataPath)
 
@@ -2491,7 +2491,7 @@ class OHaraRudy:
 
         #### Validation data
         self.ValDataPath = find_file(
-            "Validation_dataset_ORd_n_375_points_10080_tf_500_7d.mat", search_path
+            "Validation_dataset_ORd_n_375_points_10080_tf_1000_7d.mat", search_path
         )
         dict_val = MatReader_ord(self.fields, self.ValDataPath)
 
@@ -2508,7 +2508,7 @@ class OHaraRudy:
 
         #### Validation data
         self.TestDataPath = find_file(
-            "Test_dataset_ORd_n_375_points_10080_tf_500_7d.mat", search_path
+            "Test_dataset_ORd_n_375_points_10080_tf_1000_7d.mat", search_path
         )
         dict_test = MatReader_ord(self.fields, self.TestDataPath)
 
