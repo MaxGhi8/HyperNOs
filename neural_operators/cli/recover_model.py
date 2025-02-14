@@ -631,9 +631,12 @@ def save_tensor(
         case "ord":
             data_to_save = {
                 "input": input_tensor.numpy().squeeze(),
-                "V_exact": output_tensor[:, :, 11].squeeze(),
-                "V_pred": prediction_tensor[:, :, 11].squeeze(),
             }
+            for idx, field in enumerate(example.fields_to_concat):
+                key_exact = field + "_exact"
+                key_pred = field + "_pred"
+                data_to_save[key_exact] = output_tensor[:, :, idx].numpy().squeeze()
+                data_to_save[key_pred] = prediction_tensor[:, :, idx].numpy().squeeze()
 
         case _:
             flag = False

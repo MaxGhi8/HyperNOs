@@ -2483,7 +2483,7 @@ class OHaraRudy:
         # Concatenation
         a_train = dict_train["I_app_dataset"]
         self.fields_to_concat = [
-            field for field in dict_train if field != "I_app_dataset"
+            field for field in self.fields if field != "I_app_dataset"
         ]
         u_train = torch.cat(
             [dict_train[field] for field in self.fields_to_concat], dim=2
