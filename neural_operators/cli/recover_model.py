@@ -245,117 +245,13 @@ print("Validation mean relative h1 norm: ", val_relative_h1)
 print("")
 
 #########################################
-# Denormalize tensors to make it physical
+# Get the tensors
 #########################################
 (
     input_tensor,
     output_tensor,
     prediction_tensor,
 ) = get_tensors(model, test_loader, device)
-
-match which_example:
-    case "fhn" | "fhn_long":
-        input_tensor = example.a_normalizer.decode(input_tensor)
-        output_tensor[:, :, [0]] = example.v_normalizer.decode(output_tensor[:, :, [0]])
-        output_tensor[:, :, [1]] = example.w_normalizer.decode(output_tensor[:, :, [1]])
-        prediction_tensor[:, :, [0]] = example.v_normalizer.decode(
-            prediction_tensor[:, :, [0]]
-        )
-        prediction_tensor[:, :, [1]] = example.w_normalizer.decode(
-            prediction_tensor[:, :, [1]]
-        )
-
-    case "hh":
-        input_tensor = example.a_normalizer.decode(input_tensor)
-        output_tensor[:, :, [0]] = example.v_normalizer.decode(output_tensor[:, :, [0]])
-        output_tensor[:, :, [1]] = example.m_normalizer.decode(output_tensor[:, :, [1]])
-        output_tensor[:, :, [2]] = example.h_normalizer.decode(output_tensor[:, :, [2]])
-        output_tensor[:, :, [3]] = example.n_normalizer.decode(output_tensor[:, :, [3]])
-        prediction_tensor[:, :, [0]] = example.v_normalizer.decode(
-            prediction_tensor[:, :, [0]]
-        )
-        prediction_tensor[:, :, [1]] = example.m_normalizer.decode(
-            prediction_tensor[:, :, [1]]
-        )
-        prediction_tensor[:, :, [2]] = example.h_normalizer.decode(
-            prediction_tensor[:, :, [2]]
-        )
-        prediction_tensor[:, :, [3]] = example.n_normalizer.decode(
-            prediction_tensor[:, :, [3]]
-        )
-
-    case "crosstruss":
-        # denormalize
-        output_tensor[:, :, :, 0] = (example.max_x - example.min_x) * output_tensor[
-            :, :, :, 0
-        ] + example.min_x
-        output_tensor[:, :, :, 1] = (example.max_y - example.min_y) * output_tensor[
-            :, :, :, 1
-        ] + example.min_y
-        prediction_tensor[:, :, :, 0] = (
-            example.max_x - example.min_x
-        ) * prediction_tensor[:, :, :, 0] + example.min_x
-        prediction_tensor[:, :, :, 1] = (
-            example.max_y - example.min_y
-        ) * prediction_tensor[:, :, :, 1] + example.min_y
-        # multiplication for domain
-        output_tensor[:, :, :, [0]] = (
-            output_tensor[:, :, :, [0]] * input_tensor[:, :, :]
-        )
-        output_tensor[:, :, :, [1]] = (
-            output_tensor[:, :, :, [1]] * input_tensor[:, :, :]
-        )
-        prediction_tensor[:, :, :, [0]] = (
-            prediction_tensor[:, :, :, [0]] * input_tensor[:, :, :]
-        )
-        prediction_tensor[:, :, :, [1]] = (
-            prediction_tensor[:, :, :, [1]] * input_tensor[:, :, :]
-        )
-
-    case (
-        "poisson"
-        | "wave_0_5"
-        | "cont_tran"
-        | "disc_tran"
-        | "allen"
-        | "shear_layer"
-        | "airfoil"
-        | "darcy"
-    ):
-        # output_tensor = (
-        #     example.max_model - example.min_model
-        # ) * output_tensor + example.min_model
-        # prediction_tensor = (
-        #     example.max_model - example.min_model
-        # ) * prediction_tensor + example.min_model
-        pass
-
-    case "darcy_zongyi":
-        input_tensor = example.a_normalizer.decode(input_tensor)
-        output_tensor = example.u_normalizer.decode(output_tensor)
-        prediction_tensor = example.u_normalizer.decode(prediction_tensor)
-
-    case "burgers_zongyi" | "navier_stokes_zongyi":
-        pass
-        # TODO burgers and navier
-
-    case "ord":
-        pass
-        # input_tensor = example.dict_normalizers["I_app_dataset"].decode(input_tensor)
-
-        # for i in range(output_tensor.size(-1)):
-        #     output_tensor[:, :, [i]] = example.dict_normalizers[
-        #         example.fields_to_concat[i]
-        #     ].decode(output_tensor[:, :, [i]])
-
-        # for i in range(prediction_tensor.size(-1)):
-        #     prediction_tensor[:, :, [i]] = example.dict_normalizers[
-        #         example.fields_to_concat[i]
-        #     ].decode(prediction_tensor[:, :, [i]])
-
-    case _:
-        raise ValueError("The example chosen is not allowed")
-
 
 #########################################
 # Compute mean error and print it
@@ -475,6 +371,110 @@ input_tensor = input_tensor.to("cpu")
 output_tensor = output_tensor.to("cpu")
 prediction_tensor = prediction_tensor.to("cpu")
 
+# Denormalize the tensors for plotting
+match which_example:
+    case "fhn" | "fhn_long":
+        input_tensor = example.a_normalizer.decode(input_tensor)
+        output_tensor[:, :, [0]] = example.v_normalizer.decode(output_tensor[:, :, [0]])
+        output_tensor[:, :, [1]] = example.w_normalizer.decode(output_tensor[:, :, [1]])
+        prediction_tensor[:, :, [0]] = example.v_normalizer.decode(
+            prediction_tensor[:, :, [0]]
+        )
+        prediction_tensor[:, :, [1]] = example.w_normalizer.decode(
+            prediction_tensor[:, :, [1]]
+        )
+
+    case "hh":
+        input_tensor = example.a_normalizer.decode(input_tensor)
+        output_tensor[:, :, [0]] = example.v_normalizer.decode(output_tensor[:, :, [0]])
+        output_tensor[:, :, [1]] = example.m_normalizer.decode(output_tensor[:, :, [1]])
+        output_tensor[:, :, [2]] = example.h_normalizer.decode(output_tensor[:, :, [2]])
+        output_tensor[:, :, [3]] = example.n_normalizer.decode(output_tensor[:, :, [3]])
+        prediction_tensor[:, :, [0]] = example.v_normalizer.decode(
+            prediction_tensor[:, :, [0]]
+        )
+        prediction_tensor[:, :, [1]] = example.m_normalizer.decode(
+            prediction_tensor[:, :, [1]]
+        )
+        prediction_tensor[:, :, [2]] = example.h_normalizer.decode(
+            prediction_tensor[:, :, [2]]
+        )
+        prediction_tensor[:, :, [3]] = example.n_normalizer.decode(
+            prediction_tensor[:, :, [3]]
+        )
+
+    case "crosstruss":
+        # denormalize
+        output_tensor[:, :, :, 0] = (example.max_x - example.min_x) * output_tensor[
+            :, :, :, 0
+        ] + example.min_x
+        output_tensor[:, :, :, 1] = (example.max_y - example.min_y) * output_tensor[
+            :, :, :, 1
+        ] + example.min_y
+        prediction_tensor[:, :, :, 0] = (
+            example.max_x - example.min_x
+        ) * prediction_tensor[:, :, :, 0] + example.min_x
+        prediction_tensor[:, :, :, 1] = (
+            example.max_y - example.min_y
+        ) * prediction_tensor[:, :, :, 1] + example.min_y
+        # multiplication for domain
+        output_tensor[:, :, :, [0]] = (
+            output_tensor[:, :, :, [0]] * input_tensor[:, :, :]
+        )
+        output_tensor[:, :, :, [1]] = (
+            output_tensor[:, :, :, [1]] * input_tensor[:, :, :]
+        )
+        prediction_tensor[:, :, :, [0]] = (
+            prediction_tensor[:, :, :, [0]] * input_tensor[:, :, :]
+        )
+        prediction_tensor[:, :, :, [1]] = (
+            prediction_tensor[:, :, :, [1]] * input_tensor[:, :, :]
+        )
+
+    case (
+        "poisson"
+        | "wave_0_5"
+        | "cont_tran"
+        | "disc_tran"
+        | "allen"
+        | "shear_layer"
+        | "airfoil"
+        | "darcy"
+    ):
+        # output_tensor = (
+        #     example.max_model - example.min_model
+        # ) * output_tensor + example.min_model
+        # prediction_tensor = (
+        #     example.max_model - example.min_model
+        # ) * prediction_tensor + example.min_model
+        pass
+
+    case "darcy_zongyi":
+        input_tensor = example.a_normalizer.decode(input_tensor)
+        output_tensor = example.u_normalizer.decode(output_tensor)
+        prediction_tensor = example.u_normalizer.decode(prediction_tensor)
+
+    case "burgers_zongyi" | "navier_stokes_zongyi":
+        pass
+        # TODO burgers and navier
+
+    case "ord":
+        pass
+        input_tensor = example.dict_normalizers["I_app_dataset"].decode(input_tensor)
+
+        for i in range(output_tensor.size(-1)):
+            output_tensor[:, :, [i]] = example.dict_normalizers[
+                example.fields_to_concat[i]
+            ].decode(output_tensor[:, :, [i]])
+
+        for i in range(prediction_tensor.size(-1)):
+            prediction_tensor[:, :, [i]] = example.dict_normalizers[
+                example.fields_to_concat[i]
+            ].decode(prediction_tensor[:, :, [i]])
+
+    case _:
+        raise ValueError("The example chosen is not allowed")
+
 
 @jaxtyped(typechecker=beartype)
 def plot_histogram(error: Float[Tensor, "n_samples"], str_norm: str):
@@ -573,17 +573,6 @@ plot_histogram(test_relative_h1_tensor, "H1")
 #########################################
 # Example 2: Plot the worst and best samples
 #########################################
-input_tensor = example.dict_normalizers["I_app_dataset"].decode(input_tensor)
-
-for i in range(output_tensor.size(-1)):
-    output_tensor[:, :, [i]] = example.dict_normalizers[
-        example.fields_to_concat[i]
-    ].decode(output_tensor[:, :, [i]])
-
-for i in range(prediction_tensor.size(-1)):
-    prediction_tensor[:, :, [i]] = example.dict_normalizers[
-        example.fields_to_concat[i]
-    ].decode(prediction_tensor[:, :, [i]])
 
 # call the function to plot data
 test_plot_samples(
@@ -653,7 +642,7 @@ def save_tensor(
         os.makedirs(
             directory, exist_ok=True
         )  # Create the directory if it doesn't exist
-        str_file = f"{directory}{which_example}_train{norm_str}_n_{output_tensor.shape[0]}_points_{output_tensor.shape[1]}_tf_{tf}.mat"
+        str_file = f"{directory}{which_example}_train{norm_str}_n_{output_tensor.shape[0]}_points_{output_tensor.shape[1]}_tf_{tf}_{mode_str}.mat"
         savemat(str_file, data_to_save)
         print(f"Data saved in {str_file}")
     else:
