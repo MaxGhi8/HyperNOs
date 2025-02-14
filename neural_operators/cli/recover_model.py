@@ -607,6 +607,11 @@ def save_tensor(
     print(flag, which_example)
     match which_example:
         case "fhn" | "fhn_long":
+            if which_example == "fhn":
+                tf = 100
+            else:
+                tf = 200
+
             data_to_save = {
                 "input": input_tensor.numpy().squeeze(),
                 "V_exact": output_tensor[:, :, 0].numpy().squeeze(),
@@ -616,6 +621,7 @@ def save_tensor(
             }
 
         case "hh":
+            tf = 100
             data_to_save = {
                 "input": input_tensor.numpy().squeeze(),
                 "V_exact": output_tensor[:, :, 0].numpy().squeeze(),
@@ -629,6 +635,7 @@ def save_tensor(
             }
 
         case "ord":
+            tf = 1000
             data_to_save = {
                 "input": input_tensor.numpy().squeeze(),
             }
@@ -646,7 +653,7 @@ def save_tensor(
         os.makedirs(
             directory, exist_ok=True
         )  # Create the directory if it doesn't exist
-        str_file = f"{directory}{which_example}_train{norm_str}_n_{output_tensor.shape[0]}_points_{output_tensor.shape[1]}_tf_{'200' if 'long' in which_example else '100'}.mat"
+        str_file = f"{directory}{which_example}_train{norm_str}_n_{output_tensor.shape[0]}_points_{output_tensor.shape[1]}_tf_{tf}.mat"
         savemat(str_file, data_to_save)
         print(f"Data saved in {str_file}")
     else:
