@@ -2395,14 +2395,13 @@ class OHaraRudy:
         network_properties,
         batch_size,
         training_samples=3000,
-        s=4,
+        s=3,
         in_dist=True,
         search_path="/",
     ):
         assert training_samples <= 3000, "Training samples must be less than 3000"
         assert in_dist, "Out-of-distribution testing samples are not available"
-        # s = 4 --> (5040)//s  = 1260 points
-        s = 1
+        s = 3
 
         # List of all dataset fields
         self.fields = [
