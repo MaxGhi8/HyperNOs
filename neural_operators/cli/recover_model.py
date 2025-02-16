@@ -153,6 +153,7 @@ name_model = folder + [file for file in files if file.startswith("model_")][0]
 
 try:
     model = torch.load(name_model, weights_only=False)
+    # torch.save(model.state_dict(), name_model + "_state_dict")
 except Exception:
     raise ValueError(
         "The model is not found, please check the hyperparameters passed trhow the CLI."
