@@ -385,6 +385,15 @@ match which_example:
             prediction_tensor[:, :, [1]]
         )
 
+        stats_to_save = {
+            "mean_input": example.a_normalizer.mean,
+            "std_input": example.a_normalizer.std,
+            "mean_V": example.v_normalizer.mean,
+            "std_V": example.v_normalizer.std,
+            "mean_w": example.w_normalizer.mean,
+            "std_w": example.w_normalizer.std,
+        }
+
     case "hh":
         input_tensor = example.a_normalizer.decode(input_tensor)
         output_tensor[:, :, [0]] = example.v_normalizer.decode(output_tensor[:, :, [0]])
@@ -403,6 +412,19 @@ match which_example:
         prediction_tensor[:, :, [3]] = example.n_normalizer.decode(
             prediction_tensor[:, :, [3]]
         )
+
+        stats_to_save = {
+            "mean_input": example.a_normalizer.mean,
+            "std_input": example.a_normalizer.std,
+            "mean_V": example.v_normalizer.mean,
+            "std_V": example.v_normalizer.std,
+            "mean_m": example.m_normalizer.mean,
+            "std_m": example.m_normalizer.std,
+            "mean_h": example.h_normalizer.mean,
+            "std_h": example.h_normalizer.std,
+            "mean_n": example.n_normalizer.mean,
+            "std_n": example.n_normalizer.std,
+        }
 
     case "crosstruss":
         # denormalize
@@ -473,8 +495,27 @@ match which_example:
                 example.fields_to_concat[i]
             ].decode(prediction_tensor[:, :, [i]])
 
+        stats_to_save = {
+            "mean_input": example.dict_normalizers["I_app_dataset"].mean,
+            "std_input": example.dict_normalizers["I_app_dataset"].std,
+        }
+        for i in range(output_tensor.size(-1)):
+            stats_to_save[f"mean_{example.fields_to_concat[i]}"] = (
+                example.dict_normalizers[example.fields_to_concat[i]].mean
+            )
+            stats_to_save[f"std_{example.fields_to_concat[i]}"] = (
+                example.dict_normalizers[example.fields_to_concat[i]].std
+            )
+
     case _:
         raise ValueError("The example chosen is not allowed")
+
+if stats_to_save:
+    directory = f"../../data/{which_example}/"
+    os.makedirs(directory, exist_ok=True)  # Create the directory if it doesn't exist
+    str_file = f"{directory}{which_example}_stats_n_points_{output_tensor.shape[1]}.mat"
+    savemat(str_file, stats_to_save)
+    print(f"Data saved in {str_file}")
 
 
 @jaxtyped(typechecker=beartype)
