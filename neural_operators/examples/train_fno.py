@@ -97,4 +97,4 @@ def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    train_fno("stiffness_matrix", "default", "L2")
+    train_fno("ord", "best", "L2")

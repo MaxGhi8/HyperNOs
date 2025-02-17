@@ -2401,7 +2401,7 @@ class OHaraRudy:
     ):
         assert training_samples <= 3000, "Training samples must be less than 3000"
         assert in_dist, "Out-of-distribution testing samples are not available"
-        s = 3
+        s = 1
 
         # List of all dataset fields
         self.fields = [
