@@ -22,7 +22,7 @@ from utilities import get_plot_function
 from wrappers.wrap_model import wrap_model_builder
 
 
-def train_fno(which_example: str, loss_fn_str: str, maximum: int):
+def train_same_dofs_fno(which_example: str, loss_fn_str: str, maximum: int):
 
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -117,4 +117,4 @@ def train_fno(which_example: str, loss_fn_str: str, maximum: int):
 
 
 if __name__ == "__main__":
-    train_fno("stiffness_matrix", "L2", 50)
+    train_same_dofs_fno("ord", "L2", 590)
