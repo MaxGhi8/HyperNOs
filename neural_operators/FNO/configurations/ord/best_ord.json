@@ -25,7 +25,7 @@
 		"RNN": false,
 		"include_grid": 1,
 		"weights_norm": "Kaiming",
-		"retrain": 1,
+		"retrain": 4,
 		"problem_dim": 1
 	}
 }
