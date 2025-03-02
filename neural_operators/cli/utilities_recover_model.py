@@ -1090,8 +1090,6 @@ def test_plot_samples(
             plot_stiffness_matrix(input_tensor, output_tensor, prediction_tensor, idx)
         case "fhn":
             plot_fhn(input_tensor, output_tensor, prediction_tensor, idx)
-        case "fhn_long":
-            plot_fhn(input_tensor, output_tensor, prediction_tensor, idx)
         case "hh":
             plot_hh(input_tensor, output_tensor, prediction_tensor, idx)
         case "ord":

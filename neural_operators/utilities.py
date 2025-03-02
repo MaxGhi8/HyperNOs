@@ -570,9 +570,6 @@ def get_plot_function(
 ):
     ## 1D problem
     match which_example:
-        case "fhn_long":
-            return None  # TODO
-
         case "fhn":
             if "input" in title.lower():
                 return plot_data_fhn_input

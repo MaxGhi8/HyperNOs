@@ -16,7 +16,6 @@ This is the main file for hyperparameter search of the Neural Operator with the 
     navier_stokes_zongyi: Navier-Stokes equations
 
     fhn                 : FitzHugh-Nagumo equations in [0, 100]
-    fhn_long            : FitzHugh-Nagumo equations in [0, 200]
     hh                  : Hodgkin-Huxley equation
 
     crosstruss          : Cross-shaped truss structure
@@ -38,8 +37,8 @@ import sys
 
 sys.path.append("..")
 
-from examples.ray_fno import ray_fno
 from examples.ray_cno import ray_cno
+from examples.ray_fno import ray_fno
 
 
 # Choose the example to run from CLI
@@ -63,7 +62,6 @@ def parse_arguments():
             "burgers_zongyi",
             "darcy_zongyi",
             "fhn",
-            "fhn_long",
             "hh",
             "crosstruss",
         ],

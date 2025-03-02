@@ -16,7 +16,6 @@ This is the main file for makes test and plot the Neural Operator model.
     navier_stokes_zongyi : Navier-Stokes equations
 
     fhn                 : FitzHugh-Nagumo equations in [0, 100]
-    fhn_long            : FitzHugh-Nagumo equations in [0, 200]
     hh                   : Hodgkin-Huxley equations
 
 "loss_fn_str" can be one of the following options:
@@ -86,7 +85,6 @@ def parse_arguments():
             "burgers_zongyi",
             "darcy_zongyi",
             "fhn",
-            "fhn_long",
             "hh",
             "ord",
             "crosstruss",
@@ -298,7 +296,7 @@ print("")
 #########################################
 # Compute mean error component per component
 #########################################
-if which_example in ["fhn", "fhn_long", "hh", "ord"]:
+if which_example in ["fhn", "hh", "ord"]:
     test_rel_l1_componentwise = LprelLoss_multiout(1, True)(
         output_tensor, prediction_tensor
     )
@@ -374,7 +372,7 @@ prediction_tensor = prediction_tensor.to("cpu")
 
 # Denormalize the tensors for plotting
 match which_example:
-    case "fhn" | "fhn_long":
+    case "fhn":
         input_tensor = example.a_normalizer.decode(input_tensor)
         output_tensor[:, :, [0]] = example.v_normalizer.decode(output_tensor[:, :, [0]])
         output_tensor[:, :, [1]] = example.w_normalizer.decode(output_tensor[:, :, [1]])
@@ -637,11 +635,8 @@ def save_tensor(
     flag = True
     print(flag, which_example)
     match which_example:
-        case "fhn" | "fhn_long":
-            if which_example == "fhn":
-                tf = 100
-            else:
-                tf = 200
+        case "fhn":
+            tf = 100
 
             data_to_save = {
                 "input": input_tensor.numpy().squeeze(),

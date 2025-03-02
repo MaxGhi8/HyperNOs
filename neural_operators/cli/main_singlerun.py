@@ -16,7 +16,6 @@ This is the main file for training the Neural Operator with the FNO architecture
     navier_stokes_zongyi: Navier-Stokes equations
 
     fhn                 : FitzHugh-Nagumo equations in [0, 100]
-    fhn_long            : FitzHugh-Nagumo equations in [0, 200]
     hh                  : Hodgkin-Huxley equations
 
     crosstruss          : Cross-shaped truss structure
@@ -41,7 +40,6 @@ sys.path.append("..")
 import torch
 from examples.train_cno import train_cno
 from examples.train_fno import train_fno
-
 
 #########################################
 # default values
@@ -74,7 +72,6 @@ def parse_arguments():
             "burgers_zongyi",
             "darcy_zongyi",
             "fhn",
-            "fhn_long",
             "hh",
             "crosstruss",
         ],

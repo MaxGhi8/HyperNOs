@@ -54,7 +54,6 @@ def NO_load_data_model(
         # "navier_stokes_zongyi" #todo
         ###
         "fhn": FitzHughNagumo,
-        "fhn_long": FitzHughNagumo,
         "hh": HodgkinHuxley,
         "ord": OHaraRudy,
         ###
@@ -65,7 +64,6 @@ def NO_load_data_model(
     # Define additional parameters for specific cases
     additional_params = {
         "fhn": {"time": "_tf_100"},
-        # "fhn_long": {"time": "_tf_200"},
     }
 
     # Check if the example is valid
@@ -88,7 +86,7 @@ def NO_load_data_model(
 
     # Add s to kwargs if it is specified
     if s is not None:
-        if which_example in ["fhn", "fhn_long", "hh", "ord"]:
+        if which_example in ["fhn", "hh", "ord"]:
             points = 5040
             stride = points // s
             if abs(stride - points / s) > 1e-3:
