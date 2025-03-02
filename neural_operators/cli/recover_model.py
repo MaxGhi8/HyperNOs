@@ -668,13 +668,15 @@ def save_tensor(
         case "ord":
             tf = 1000
             data_to_save = {
-                "input": input_tensor.numpy().squeeze(),
+                "input": input_tensor[:, ::4, :].numpy().squeeze(),
             }
             for idx, field in enumerate(example.fields_to_concat):
                 key_exact = field + "_exact"
                 key_pred = field + "_pred"
-                data_to_save[key_exact] = output_tensor[:, :, idx].numpy().squeeze()
-                data_to_save[key_pred] = prediction_tensor[:, :, idx].numpy().squeeze()
+                data_to_save[key_exact] = output_tensor[:, ::4, idx].numpy().squeeze()
+                data_to_save[key_pred] = (
+                    prediction_tensor[:, ::4, idx].numpy().squeeze()
+                )
 
         case _:
             flag = False
@@ -684,7 +686,7 @@ def save_tensor(
         os.makedirs(
             directory, exist_ok=True
         )  # Create the directory if it doesn't exist
-        str_file = f"{directory}{which_example}_train{norm_str}_n_{output_tensor.shape[0]}_points_{output_tensor.shape[1]}_tf_{tf}_{mode_str}.mat"
+        str_file = f"{directory}{which_example}_train{norm_str}_n_{output_tensor.shape[0]}_points_{output_tensor[:, ::4, idx].shape[1]}_tf_{tf}_{mode_str}.mat"
         savemat(str_file, data_to_save)
         print(f"Data saved in {str_file}")
     else:

@@ -129,11 +129,11 @@ def plot_loss_curves(
 
 if __name__ == "__main__":
 
-    example = "fhn"  # select the example
-    mode = "best_500k"  # select the mode of the test
-    example2name = {"fhn": "FitzHughNagumo", "hh": "HodgkinHuxley"}
-    example2min = {"fhn": 2e-3, "hh": 8e-3}
-    example2max = {"fhn": 1.5, "hh": 1.5}
+    example = "ord"  # select the example
+    mode = "best"  # select the mode of the test
+    example2name = {"fhn": "FitzHughNagumo", "hh": "HodgkinHuxley", "ord": "OHaraRudy"}
+    example2min = {"fhn": 2e-3, "hh": 8e-3, "ord": 5e-2}
+    example2max = {"fhn": 1.5, "hh": 1.5, "ord": 1.5}
 
     train_files = [
         f"train_loss/{example}_{mode}/0/FNO_1D_{example2name[example]}_Train loss.csv",
