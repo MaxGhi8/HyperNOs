@@ -37,10 +37,13 @@ declare -A mode_available=(
     ["model with default hyperameter configuration"]="default"
     ["model with our best hyperparameter configuration"]="best"
     ["model with our best hyperparameter configuration, same number of parameters as default"]="best_samedofs"
-    ["Best continuous transport for FNO with 500k parameters"]="best_500k"
-    ["Best continuous transport for FNO with 50M parameters"]="best_50M"
-    ["Best continuous transport for FNO with 150M parameters"]="best_150M"
 )
+
+if ["$selected_test" = "cont_tran" && "$selected_model" = "Fourier Neural Operator"]; then
+    mode_available["Best continuous transport for FNO with 500k parameters"]="best_500k"
+    mode_available["Best continuous transport for FNO with 50M parameters"]="best_50M"
+    mode_available["Best continuous transport for FNO with 150M parameters"]="best_150M"
+fi
 
 # Get user desired architecture
 printf "\nDigit the mode of the architecture you want to download the model for and then press enter. Available modality:\n"
