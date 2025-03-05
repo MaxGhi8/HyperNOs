@@ -22,7 +22,7 @@
 		"kernel_size": 3,
 		"bn": true,
 		"FourierF": 0,
-		"retrain": 1,
+		"retrain": 4,
 		"problem_dim": 2
 	}
 }
