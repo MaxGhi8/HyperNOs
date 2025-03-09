@@ -49,7 +49,7 @@ def create_wall_time_plot(
     fig.autofmt_xdate()  # Auto-rotate date labels for better readability
     plt.xlabel("Wall Time (mm-dd hh)", fontsize=14)
 
-    plt.ylabel("$L^2$ rel. loss", fontsize=14)
+    plt.ylabel("$L^1$ rel. loss", fontsize=14)
     plt.yscale("log")
     plt.ylim(3 * 1e-4, 2 * 1e-1)
     plt.grid(True, which="both", ls="-", alpha=0.1, color="black")
