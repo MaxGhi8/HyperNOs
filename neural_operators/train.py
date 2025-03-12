@@ -76,7 +76,7 @@ def train_model_without_ray(
     loss_phys=lambda x, y: 0.0,
 ):
     folder = f"../tests/{experiment_name}"
-    name_model = f"../tests/{experiment_name}/model_{model.__class__.__name__}_{config["problem_dim"]}D_{dataset.__class__.__name__}"
+    name_model = f"../tests/{experiment_name}/model_{model.__class__.__name__}_{dataset.__class__.__name__}"
 
     # Create the right folder if it doesn't exist
     if not os.path.isdir(folder):

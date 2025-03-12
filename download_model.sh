@@ -64,7 +64,7 @@ dest_folder="neural_operators/tests/${model_available[$selected_model]}/$selecte
 printf "\nDestination folder: $dest_folder\n"
 
 # Get filename from the download link (you can customize this)
-filename=${test_to_modelname[$selected_test]}
+filename=model_${model_available[$selected_model]}_${test_to_modelname[$selected_test]}
 
 # Download the file using curl
 printf "\nDownloading model...\n"
