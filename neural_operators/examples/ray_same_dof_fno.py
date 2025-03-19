@@ -1,5 +1,5 @@
-""" 
-In this example I choose some parameters to tune and some to keep fixed. 
+"""
+In this example I choose some parameters to tune and some to keep fixed.
 Moreover I set the modes for the FNO in order to have comparable number of parameters across the different models.
 """
 
@@ -117,4 +117,4 @@ def ray_same_dof_fno(
 
 
 if __name__ == "__main__":
-    ray_same_dof_fno("hh", "default", "L2", 621)
+    ray_same_dof_fno("poisson", "default", "L2", 621)

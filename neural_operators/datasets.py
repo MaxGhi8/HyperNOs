@@ -2393,7 +2393,7 @@ class OHaraRudy:
         network_properties,
         batch_size,
         training_samples=3000,
-        s=3,
+        s=1,
         in_dist=True,
         search_path="/",
     ):

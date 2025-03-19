@@ -1,4 +1,4 @@
-""" 
+"""
 In this example I fix all the hyperparameters for the FNO model and train it.
 """
 
@@ -117,4 +117,4 @@ def train_same_dofs_fno(which_example: str, loss_fn_str: str, maximum: int):
 
 
 if __name__ == "__main__":
-    train_same_dofs_fno("ord", "L2", 590)
+    train_same_dofs_fno("poisson", "L2", 33)

@@ -8,7 +8,7 @@ HyperNOs is a Python project focused on the implementation of completely automat
 To set up the HyperNOs project, follow these steps:
 1. Clone the repository:
    ```bash
-   git clone https://github.com/MaxGhi8/HyperNOs.git
+   git clone --depth=1 https://github.com/MaxGhi8/HyperNOs.git
    cd HyperNOs
    ```
 2. Install the required dependencies. It is recommended to create a virtual environment before installing the dependencies; I personally use `pyenv` and Python version `3.12.7` for this purpose:
@@ -22,13 +22,13 @@ To set up the HyperNOs project, follow these steps:
    pip install .
     ```
 
-3. Download the dataset using the `download_data.py` script:
+3. Download the dataset using the `download_data.sh` script:
    ```bash
-   .download_data.py 
+   ./download_data.sh
    ```
 
 4. If you want to download our trained model for each datasets you can clone our dedicated repository:
    ```bash
-    git clone git@github.com:MaxGhi8/tests.git
+    git clone --depth=1 git@github.com:MaxGhi8/tests.git
    ```
 
