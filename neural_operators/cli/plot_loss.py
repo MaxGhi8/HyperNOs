@@ -12,6 +12,8 @@ def plot_loss_curves(
     path: str = None,
     y_min: float = None,
     y_max: float = None,
+    title: str = None,
+    fontsize: int = 16,
 ):
     """
     Create a plot of training and test loss curves from multiple CSV files,
@@ -25,6 +27,7 @@ def plot_loss_curves(
     path (str): Path to save the plot
     y_min (float): Minimum value for the y-axis
     y_max (float): Maximum value for the y-axis
+    title (str): Title of the image
     """
     train_dfs = []
     test_dfs = []
@@ -68,7 +71,7 @@ def plot_loss_curves(
 
     # Plotting
     sns.set(style="white", palette="deep")
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=(8, 6), layout="constrained")
     plt.rcParams["text.usetex"] = True
 
     plt.plot(x, L1_mean, label=r"Test loss (relative $L^1$)", color="#2ca02c")
@@ -112,14 +115,17 @@ def plot_loss_curves(
     )
 
     plt.yscale("log")
-    plt.xlabel(r"Epochs")
-    plt.ylabel(r"Value of the loss function")
+    plt.xlabel(r"Epochs", fontsize=fontsize)
+    plt.ylabel(r"Value of the loss function", fontsize=fontsize)
     plt.grid(True, which="both", ls="-", alpha=0.1, color="black")
     plt.legend()
+    if title:
+        plt.title(title, fontsize=fontsize)
     if y_min and y_max:
         plt.ylim(y_min, y_max)
 
-    plt.tight_layout()
+    plt.xticks(fontsize=fontsize)
+    plt.yticks(fontsize=fontsize)
 
     if path:
         plt.savefig(path)
@@ -129,8 +135,10 @@ def plot_loss_curves(
 
 if __name__ == "__main__":
 
-    example = "ord"  # select the example
-    mode = "best"  # select the mode of the test
+    example = "hh"  # select the example
+    mode = "best_500k"  # select the mode of the test (best or best_500k)
+    title = "Unconstrained optimization"  # select the title of the figure
+    fontsize = 14
     example2name = {"fhn": "FitzHughNagumo", "hh": "HodgkinHuxley", "ord": "OHaraRudy"}
     example2min = {"fhn": 2e-3, "hh": 8e-3, "ord": 5e-2}
     example2max = {"fhn": 1.5, "hh": 1.5, "ord": 1.5}
@@ -172,4 +180,6 @@ if __name__ == "__main__":
         f"train_loss/loss_function_{example.upper()}_{mode}.png",
         example2min[example],
         example2max[example],
+        title,
+        fontsize,
     )
