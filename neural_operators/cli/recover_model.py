@@ -365,12 +365,52 @@ print("")
 #########################################
 # Example 1: Plot the histogram
 #########################################
+
+
+@jaxtyped(typechecker=beartype)
+def plot_histogram(error: Float[Tensor, "n_samples"], str_norm: str):
+    error_np = error.to("cpu").numpy()
+
+    # Set seaborn style for better aesthetics
+    sns.set(style="whitegrid", palette="deep")
+
+    plt.figure(figsize=(10, 6))
+    sns.histplot(error_np, bins=100, kde=True, color="skyblue", edgecolor="black")
+
+    # Add labels and title
+    plt.xlabel("Relative Error", fontsize=12)
+    plt.ylabel("Number of Samples", fontsize=12)
+    plt.title(
+        f"Histogram of the Relative Error in Norm {str_norm}", fontsize=14, pad=20
+    )
+
+    # Improve grid and layout
+    plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
+    plt.tight_layout()
+
+    # Show the plot
+    plt.show()
+
+    # Resets the style to default
+    plt.style.use("default")
+
+
+# call the functions to plot histograms for errors
+plot_histogram(test_relative_l1_tensor, "L1")
+plot_histogram(test_relative_l2_tensor, "L2")
+plot_histogram(test_relative_semih1_tensor, "Semi H1")
+plot_histogram(test_relative_h1_tensor, "H1")
+
+#########################################
+# Example 2: Plot the worst and best samples
+#########################################
 # move tensors to cpu for plotting
 input_tensor = input_tensor.to("cpu")
 output_tensor = output_tensor.to("cpu")
 prediction_tensor = prediction_tensor.to("cpu")
 
 # Denormalize the tensors for plotting
+stats_to_save = None  # default value
 match which_example:
     case "fhn":
         input_tensor = example.a_normalizer.decode(input_tensor)
@@ -452,22 +492,22 @@ match which_example:
             prediction_tensor[:, :, :, [1]] * input_tensor[:, :, :]
         )
 
-    case (
-        "poisson"
-        | "wave_0_5"
-        | "cont_tran"
-        | "disc_tran"
-        | "allen"
-        | "shear_layer"
-        | "airfoil"
-        | "darcy"
-    ):
-        # output_tensor = (
-        #     example.max_model - example.min_model
-        # ) * output_tensor + example.min_model
-        # prediction_tensor = (
-        #     example.max_model - example.min_model
-        # ) * prediction_tensor + example.min_model
+    case "poisson" | "wave_0_5" | "allen" | "shear_layer" | "darcy":
+        # denormalize input
+        input_tensor = (
+            input_tensor * (example.max_data - example.min_data) + example.min_data
+        )
+        # denormalize outputs
+        output_tensor = (
+            example.max_model - example.min_model
+        ) * output_tensor + example.min_model
+
+        prediction_tensor = (
+            example.max_model - example.min_model
+        ) * prediction_tensor + example.min_model
+
+    case "cont_tran" | "disc_tran" | "airfoil":
+        # data does not need to be normalized
         pass
 
     case "darcy_zongyi":
@@ -508,111 +548,12 @@ match which_example:
     case _:
         raise ValueError("The example chosen is not allowed")
 
-# if stats_to_save:
-#     directory = f"../../data/{which_example}/"
-#     os.makedirs(directory, exist_ok=True)  # Create the directory if it doesn't exist
-#     str_file = f"{directory}{which_example}_stats_n_points_{output_tensor.shape[1]}.mat"
-#     savemat(str_file, stats_to_save)
-#     print(f"Data saved in {str_file}")
-
-
-@jaxtyped(typechecker=beartype)
-def plot_histogram(error: Float[Tensor, "n_samples"], str_norm: str):
-    error_np = error.to("cpu").numpy()
-
-    # Set seaborn style for better aesthetics
-    sns.set(style="whitegrid", palette="deep")
-
-    plt.figure(figsize=(10, 6))
-    sns.histplot(error_np, bins=100, kde=True, color="skyblue", edgecolor="black")
-
-    # Add labels and title
-    plt.xlabel("Relative Error", fontsize=12)
-    plt.ylabel("Number of Samples", fontsize=12)
-    plt.title(
-        f"Histogram of the Relative Error in Norm {str_norm}", fontsize=14, pad=20
-    )
-
-    # Improve grid and layout
-    plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
-    plt.tight_layout()
-
-    # Show the plot
-    plt.show()
-
-    # Resets the style to default
-    plt.style.use("default")
-
-
-@jaxtyped(typechecker=beartype)
-def plot_overlapped_histograms(
-    error1: Float[Tensor, "n_samples"],
-    error2: Float[Tensor, "n_samples"],
-    str_norm: str,
-    label1: str = "Error 1",
-    label2: str = "Error 2",
-):
-    # Convert tensors to numpy arrays
-    error1_np = error1.to("cpu").numpy()
-    error2_np = error2.to("cpu").numpy()
-
-    # Set seaborn style for better aesthetics
-    sns.set(style="whitegrid", palette="deep")
-
-    plt.figure(figsize=(10, 6))
-
-    # Plot the first histogram
-    sns.histplot(
-        error1_np,
-        bins=100,
-        kde=True,
-        color="skyblue",
-        edgecolor="black",
-        label=label1,
-        alpha=0.6,
-    )
-
-    # Plot the second histogram
-    sns.histplot(
-        error2_np,
-        bins=100,
-        kde=True,
-        color="salmon",
-        edgecolor="black",
-        label=label2,
-        alpha=0.6,
-    )
-
-    # Add labels and title
-    plt.xlabel("Relative Error", fontsize=12)
-    plt.ylabel("Number of Samples", fontsize=12)
-    plt.title(
-        f"Histogram of the Relative Error in Norm {str_norm}", fontsize=14, pad=20
-    )
-
-    # Add a legend
-    plt.legend()
-
-    # Improve grid and layout
-    plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
-    plt.tight_layout()
-
-    # Show the plot
-    plt.show()
-
-    # Resets the style to default
-    plt.style.use("default")
-
-
-# call the functions to plot histograms for errors
-plot_histogram(test_relative_l1_tensor, "L1")
-plot_histogram(test_relative_l2_tensor, "L2")
-plot_histogram(test_relative_semih1_tensor, "Semi H1")
-plot_histogram(test_relative_h1_tensor, "H1")
-
-#########################################
-# Example 2: Plot the worst and best samples
-#########################################
+if stats_to_save:
+    directory = f"../../data/{which_example}/"
+    os.makedirs(directory, exist_ok=True)  # Create the directory if it doesn't exist
+    str_file = f"{directory}{which_example}_stats_n_points_{output_tensor.shape[1]}.mat"
+    savemat(str_file, stats_to_save)
+    print(f"Data saved in {str_file}")
 
 # call the function to plot data
 test_plot_samples(
@@ -628,6 +569,27 @@ test_plot_samples(
 )
 
 
+#########################################
+# Example 3: Plot the weight matrix
+#########################################
+def print_matrix(model, name_param):
+    for name, par in model.named_parameters():
+        if name == name_param:
+            print(name, par.shape)
+            fig = plt.imshow(torch.abs(par[:, :, 0, 0]).detach().cpu().numpy())
+            plt.colorbar(fig)
+
+            plt.savefig("output_figure.png", dpi=300, bbox_inches="tight")
+
+            # plt.show()
+
+
+# print_matrix(model, "integrals.0.weights1")
+
+
+#########################################
+# Example 4: save input, output and prediction tensor
+#########################################
 def save_tensor(
     input_tensor, output_tensor, prediction_tensor, which_example: str, norm_str: str
 ):
@@ -694,18 +656,63 @@ save_tensor(input_tensor, output_tensor, prediction_tensor, which_example, loss_
 
 
 #########################################
-# Example 3: Plot the weight matrix
+# Example 5: overlapped histograms
 #########################################
-def print_matrix(model, name_param):
-    for name, par in model.named_parameters():
-        if name == name_param:
-            print(name, par.shape)
-            fig = plt.imshow(torch.abs(par[:, :, 0, 0]).detach().cpu().numpy())
-            plt.colorbar(fig)
+@jaxtyped(typechecker=beartype)
+def plot_overlapped_histograms(
+    error1: Float[Tensor, "n_samples"],
+    error2: Float[Tensor, "n_samples"],
+    str_norm: str,
+    label1: str = "Error 1",
+    label2: str = "Error 2",
+):
+    # Convert tensors to numpy arrays
+    error1_np = error1.to("cpu").numpy()
+    error2_np = error2.to("cpu").numpy()
 
-            plt.savefig("output_figure.png", dpi=300, bbox_inches="tight")
+    # Set seaborn style for better aesthetics
+    sns.set(style="whitegrid", palette="deep")
 
-            # plt.show()
+    plt.figure(figsize=(10, 6))
 
+    # Plot the first histogram
+    sns.histplot(
+        error1_np,
+        bins=100,
+        kde=True,
+        color="skyblue",
+        edgecolor="black",
+        label=label1,
+        alpha=0.6,
+    )
 
-# print_matrix(model, "integrals.0.weights1")
+    # Plot the second histogram
+    sns.histplot(
+        error2_np,
+        bins=100,
+        kde=True,
+        color="salmon",
+        edgecolor="black",
+        label=label2,
+        alpha=0.6,
+    )
+
+    # Add labels and title
+    plt.xlabel("Relative Error", fontsize=12)
+    plt.ylabel("Number of Samples", fontsize=12)
+    plt.title(
+        f"Histogram of the Relative Error in Norm {str_norm}", fontsize=14, pad=20
+    )
+
+    # Add a legend
+    plt.legend()
+
+    # Improve grid and layout
+    plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
+    plt.tight_layout()
+
+    # Show the plot
+    plt.show()
+
+    # Resets the style to default
+    plt.style.use("default")
