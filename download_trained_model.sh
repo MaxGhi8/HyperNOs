@@ -61,17 +61,18 @@ loss="L1"
 #########################################
 
 # Define the download link
-filename = "model_${model_available[$selected_model]}_${test_to_modelname[$selected_test]}_${mode_available[$selected_mode]}"
-download_link="https://zenodo.org/records/15055547/files/$filename"
+download_link="https://zenodo.org/records/15055547/files/model_${model_available[$selected_model]}_${mode_available[$selected_mode]}_${test_to_modelname[$selected_test]}"
 
 # Define the destination folder
-dest_folder="neural_operators/tests/${model_available[$selected_model]}/$selected_test/loss_${loss}_mode_${mode_available[$selected_mode]}"
-# mkdir -p "$dest_folder"
+dest_folder="neural_operators/tests/${model_available[$selected_model]}/$selected_test/loss_${loss}mode${mode_available[$selected_mode]}"
+mkdir -p "$dest_folder"
 printf "\nDestination folder: $dest_folder\n"
 
 # Download the file using curl
 printf "\nDownloading model...\n"
-curl --output "${dest_folder}/${filename}" "$download_link"
+printf "\nDownload link: $download_link\n"
+curl --output "${dest_folder}/model_${model_available[$selected_model]}${mode_available[$selected_mode]}${test_to_modelname[$selected_test]}" "$download_link"
+
 
 if [ $? -eq 0 ]; then
     echo "Download completed successfully."

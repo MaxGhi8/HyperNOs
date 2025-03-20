@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Check if unzip is installed
+if ! command -v unzip &> /dev/null; then
+    echo "Error: The 'unzip' program is not installed on this system."
+    echo "Please install unzip and try again."
+    exit 1
+fi
+
+# Download data
 wget https://zenodo.org/record/10406879/files/data.zip
 
 if [ -d "data" ]; then
@@ -16,4 +24,5 @@ else
 fi
 
 rm -rf data.zip
+rm -rf __MACOSX
 echo "Process completed."

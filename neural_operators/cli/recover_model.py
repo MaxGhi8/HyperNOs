@@ -2,13 +2,13 @@
 This is the main file for makes test and plot the Neural Operator model.
 
 "which_example" can be one of the following options:
-    poisson             : Poisson equation 
-    wave_0_5            : Wave equation 
-    cont_tran           : Smooth Transport 
+    poisson             : Poisson equation
+    wave_0_5            : Wave equation
+    cont_tran           : Smooth Transport
     disc_tran           : Discontinuous Transport
     allen               : Allen-Cahn equation # training_sample = 512
     shear_layer         : Navier-Stokes equations # training_sample = 512
-    airfoil             : Compressible Euler equations 
+    airfoil             : Compressible Euler equations
     darcy               : Darcy equation
 
     burgers_zongyi       : Burgers equation
@@ -150,7 +150,7 @@ files = os.listdir(folder)
 name_model = folder + [file for file in files if file.startswith("model_")][0]
 
 try:
-    model = torch.load(name_model, weights_only=False)
+    model = torch.load(name_model, weights_only=False, map_location=device)
     # torch.save(model.state_dict(), name_model + "_state_dict")
 except Exception:
     raise ValueError(
@@ -508,12 +508,12 @@ match which_example:
     case _:
         raise ValueError("The example chosen is not allowed")
 
-if stats_to_save:
-    directory = f"../../data/{which_example}/"
-    os.makedirs(directory, exist_ok=True)  # Create the directory if it doesn't exist
-    str_file = f"{directory}{which_example}_stats_n_points_{output_tensor.shape[1]}.mat"
-    savemat(str_file, stats_to_save)
-    print(f"Data saved in {str_file}")
+# if stats_to_save:
+#     directory = f"../../data/{which_example}/"
+#     os.makedirs(directory, exist_ok=True)  # Create the directory if it doesn't exist
+#     str_file = f"{directory}{which_example}_stats_n_points_{output_tensor.shape[1]}.mat"
+#     savemat(str_file, stats_to_save)
+#     print(f"Data saved in {str_file}")
 
 
 @jaxtyped(typechecker=beartype)
