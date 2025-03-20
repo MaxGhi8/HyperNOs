@@ -1,51 +1,52 @@
 #!/bin/bash
 
-# Associate the name of the test to the name of the model file
-declare -A test_to_modelname=(
-    ["airfoil"]="model_AirfoilWrapper_2D_Airfoil"
-    ["allen"]="model_FNO_2D_AllenCahn"
-    ["cont_tran"]="model_FNO_2D_ContTranslation"
-    ["darcy"]="model_FNO_2D_Darcy"
-    ["disc_tran"]="model_FNO_2D_DiscContTranslation"
-    ["poisson"]="model_FNO_2D_SinFrequency"
-    ["shear_layer"]="todo"
-    ["wave_0_5"]="model_FNO_2D_WaveEquation"
-)
+#########################################
+# Get user input
+#########################################
 
 # Get user desired test
+declare -A test_to_modelname=(
+    ["airfoil"]="AirfoilWrapper_2D_Airfoil"
+    ["allen"]="2D_AllenCahn"
+    ["cont_tran"]="2D_ContTranslation"
+    ["darcy"]="2D_Darcy"
+    ["disc_tran"]="2D_DiscContTranslation"
+    ["poisson"]="2D_SinFrequency"
+    ["shear_layer"]="2D_ShearLayer"
+    ["wave_0_5"]="2D_WaveEquation"
+)
+
 printf "\nDigit the number of the test you want to download the model for and then press enter. Available models:\n"
 select selected_test in "${!test_to_modelname[@]}"; do
     echo "selected: $selected_test"
     break
 done
 
-# Select the name of the model
+# Get user desired architecture
 declare -A model_available=(
     ["Fourier Neural Operator"]="FNO"
     ["Convolutional Neural Operator"]="CNO"
 )
 
-# Get user desired architecture
 printf "\nDigit the number of the architecture you want to download the model for and then press enter. Available architectures:\n"
 select selected_model in "${!model_available[@]}"; do
     echo "selected: $selected_model"
     break
 done
 
-# Select the mode for the model
+# Get user desired mode for the model
 declare -A mode_available=(
     ["model with default hyperameter configuration"]="default"
     ["model with our best hyperparameter configuration"]="best"
-    ["model with our best hyperparameter configuration, same number of parameters as default"]="best_samedofs"
+    ["model with our best hyperparameter configuration, same number of parameters as default"]="bestsamedofs"
 )
 
 if ["$selected_test" = "cont_tran" && "$selected_model" = "Fourier Neural Operator"]; then
-    mode_available["Best continuous transport for FNO with 500k parameters"]="best_500k"
-    mode_available["Best continuous transport for FNO with 50M parameters"]="best_50M"
-    mode_available["Best continuous transport for FNO with 150M parameters"]="best_150M"
+    mode_available["Best continuous transport for FNO with 500k parameters"]="best500k"
+    mode_available["Best continuous transport for FNO with 50M parameters"]="best50M"
+    mode_available["Best continuous transport for FNO with 150M parameters"]="best150M"
 fi
 
-# Get user desired architecture
 printf "\nDigit the mode of the architecture you want to download the model for and then press enter. Available modality:\n"
 select selected_mode in "${!mode_available[@]}"; do
     echo "selected: $selected_mode"
@@ -55,16 +56,18 @@ done
 # For the moment all the tests are with the L1 norm
 loss="L1" 
 
-# Get link and folder for the selected model
-download_link="https://zenodo.org/uploads/14860202/${test_to_modelname[$selected_test]}_${mode_available[$selected_mode]}_${model_available[$selected_model]}"
+#########################################
+# Download process
+#########################################
+
+# Define the download link
+filename = "model_${model_available[$selected_model]}_${test_to_modelname[$selected_test]}_${mode_available[$selected_mode]}"
+download_link="https://zenodo.org/records/15055547/files/$filename"
 
 # Define the destination folder
 dest_folder="neural_operators/tests/${model_available[$selected_model]}/$selected_test/loss_${loss}_mode_${mode_available[$selected_mode]}"
 # mkdir -p "$dest_folder"
 printf "\nDestination folder: $dest_folder\n"
-
-# Get filename from the download link (you can customize this)
-filename=model_${model_available[$selected_model]}_${test_to_modelname[$selected_test]}
 
 # Download the file using curl
 printf "\nDownloading model...\n"
