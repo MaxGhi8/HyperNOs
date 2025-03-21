@@ -117,4 +117,4 @@ def ray_same_dof_fno(
 
 
 if __name__ == "__main__":
-    ray_same_dof_fno("poisson", "default", "L2", 621)
+    ray_same_dof_fno("poisson", "default", "L2", 33)

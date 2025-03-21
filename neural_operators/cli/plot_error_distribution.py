@@ -55,7 +55,7 @@ def plot_errors_swarmplot(
     labels: list[str] = None,
 ):
     sns.set(style="whitegrid", palette="deep")
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(8, 6))
 
     if labels is None:
         labels = [f"Error {i+1}" for i in range(len(errors))]
