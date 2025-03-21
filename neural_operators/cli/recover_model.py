@@ -597,6 +597,23 @@ def save_tensor(
     flag = True
     print(flag, which_example)
     match which_example:
+
+        case (
+            "poisson"
+            | "wave_0_5"
+            | "allen"
+            | "shear_layer"
+            | "darcy"
+            | "cont_tran"
+            | "disc_tran"
+            | "airfoil"
+        ):
+            data_to_save = {
+                "input": input_tensor.numpy().squeeze(),
+                "output": output_tensor.numpy().squeeze(),
+                "prediction": prediction_tensor.numpy().squeeze(),
+            }
+
         case "fhn":
             tf = 100
 
@@ -639,80 +656,45 @@ def save_tensor(
             flag = False
 
     if flag:
-        directory = f"../../data/{which_example}/"
-        os.makedirs(
-            directory, exist_ok=True
-        )  # Create the directory if it doesn't exist
-        str_file = f"{directory}{which_example}_train{norm_str}_n_{output_tensor.shape[0]}_points_{output_tensor[:, ::4, idx].shape[1]}_tf_{tf}_{mode_str}.mat"
+        if which_example in ["hh", "fhn", "ord"]:
+            directory = f"../../data/{which_example}/"
+            os.makedirs(directory, exist_ok=True)
+        elif which_example in [
+            "poisson",
+            "wave_0_5",
+            "allen",
+            "shear_layer",
+            "darcy",
+            "cont_tran",
+            "disc_tran",
+            "airfoil",
+        ]:
+            directory = f"../../data/mishra/outputs_for_website/"
+            os.makedirs(directory, exist_ok=True)
+
+        if which_example == "ord":
+            str_file = f"{directory}{which_example}_train{norm_str}_n_{output_tensor.shape[0]}_points_{output_tensor[:, ::4, idx].shape[1]}_tf_{tf}_{mode_str}.mat"
+        elif which_example in ["hh", "fhn"]:
+            str_file = f"{directory}{which_example}_train{norm_str}_n_{output_tensor.shape[0]}_points_{output_tensor[:, :, idx].shape[1]}_tf_{tf}_{mode_str}.mat"
+        elif which_example in [
+            "poisson",
+            "wave_0_5",
+            "allen",
+            "shear_layer",
+            "darcy",
+            "cont_tran",
+            "disc_tran",
+            "airfoil",
+        ]:
+            str_file = f"{directory}{which_example}_{arc}_train{norm_str}_{mode_str.replace('_', '')}.mat"
+
         savemat(str_file, data_to_save)
         print(f"Data saved in {str_file}")
+
     else:
         # raise ValueError("The example chosen is not allowed")
         pass
 
 
 # call the function to save tensors
-save_tensor(input_tensor, output_tensor, prediction_tensor, which_example, loss_fn_str)
-
-
-#########################################
-# Example 5: overlapped histograms
-#########################################
-@jaxtyped(typechecker=beartype)
-def plot_overlapped_histograms(
-    error1: Float[Tensor, "n_samples"],
-    error2: Float[Tensor, "n_samples"],
-    str_norm: str,
-    label1: str = "Error 1",
-    label2: str = "Error 2",
-):
-    # Convert tensors to numpy arrays
-    error1_np = error1.to("cpu").numpy()
-    error2_np = error2.to("cpu").numpy()
-
-    # Set seaborn style for better aesthetics
-    sns.set(style="whitegrid", palette="deep")
-
-    plt.figure(figsize=(10, 6))
-
-    # Plot the first histogram
-    sns.histplot(
-        error1_np,
-        bins=100,
-        kde=True,
-        color="skyblue",
-        edgecolor="black",
-        label=label1,
-        alpha=0.6,
-    )
-
-    # Plot the second histogram
-    sns.histplot(
-        error2_np,
-        bins=100,
-        kde=True,
-        color="salmon",
-        edgecolor="black",
-        label=label2,
-        alpha=0.6,
-    )
-
-    # Add labels and title
-    plt.xlabel("Relative Error", fontsize=12)
-    plt.ylabel("Number of Samples", fontsize=12)
-    plt.title(
-        f"Histogram of the Relative Error in Norm {str_norm}", fontsize=14, pad=20
-    )
-
-    # Add a legend
-    plt.legend()
-
-    # Improve grid and layout
-    plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
-    plt.tight_layout()
-
-    # Show the plot
-    plt.show()
-
-    # Resets the style to default
-    plt.style.use("default")
+# save_tensor(input_tensor, output_tensor, prediction_tensor, which_example, loss_fn_str)
