@@ -38,8 +38,7 @@ def plot_overlapped_histograms(
     plt.legend()
     plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
     plt.tight_layout()
-    plt.show()
-
+    # plt.show()
     plt.savefig(f"figures/histogram_{str_norm}.png")
 
     # Resets the style to default
@@ -94,8 +93,7 @@ def plot_errors_swarmplot(
     plt.title("Swarmplot of the Relative Error", fontsize=14, pad=20)
     plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
     plt.tight_layout()
-    plt.show()
-
+    # plt.show()
     plt.savefig(f"figures/swarmplot_{str_norm}.png")
 
     # Resets the style to default
