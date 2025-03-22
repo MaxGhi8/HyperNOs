@@ -38,6 +38,7 @@ def train_same_dofs_fno(which_example: str, loss_fn_str: str, maximum: int):
         },
         accurate=False,
     )
+    # total_default_params = 500000
 
     # Load true hyper-parameters
     hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(

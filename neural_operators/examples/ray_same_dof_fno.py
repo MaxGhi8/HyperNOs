@@ -39,6 +39,7 @@ def ray_same_dof_fno(
     }
     # Approximate the total number of parameters (constant factor can be dropped)
     total_default_params = count_params_fno(fixed_params, accurate=False)
+    # total_default_params = 500000
 
     # Define the hyperparameter search space
     config_space = {
