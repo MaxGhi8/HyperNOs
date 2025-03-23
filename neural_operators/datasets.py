@@ -87,7 +87,7 @@ def NO_load_data_model(
     # Add s to kwargs if it is specified
     if s is not None:
         if which_example in ["fhn", "hh", "ord"]:
-            points = 5040
+            points = 10080 if which_example == "ord" else 5040
             stride = points // s
             if abs(stride - points / s) > 1e-3:
                 raise ValueError(
