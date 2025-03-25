@@ -52,3 +52,19 @@ To set up the HyperNOs project, follow these steps:
    ```
 > [!WARNING]
 > As before, for **Windows**, if you are on WSL and get the error `/bin/bash^M: bad interpreter. No such file or directory` try to run `sed -i -e 's/\r$//' download_trained_model.sh` and then rerun the script `./download_trained_model.sh`.
+
+## Citation
+
+If you use our library please consider citing our paper:
+
+```bibtex
+@misc{ghiotto2025hypernosautomatedparallellibrary,
+      title={HyperNOs: Automated and Parallel Library for Neural Operators Research}, 
+      author={Massimiliano Ghiotto},
+      year={2025},
+      eprint={2503.18087},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2503.18087}, 
+}
+```
