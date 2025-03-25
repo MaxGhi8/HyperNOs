@@ -2566,6 +2566,143 @@ class OHaraRudy:
 
 
 # ------------------------------------------------------------------------------
+# AF-FETI data
+# Training samples (1500)
+# Testing samples (250)
+# Validation samples (250)
+@jaxtyped(typechecker=beartype)
+def MatReader_affeti(
+    file_path: str,
+) -> tuple[
+    Float[Tensor, "n_samples n_x"],
+    Float[Tensor, "n_samples n_x"],
+]:
+    """
+    Function to read .mat files for the AF-FETI
+    """
+    data = scipy.io.loadmat(file_path)
+
+    input = data["input"]
+    input = torch.from_numpy(input).float()
+
+    output = data["output"]
+    output = torch.from_numpy(output).float()
+
+    return input.to("cpu"), output.to("cpu")
+
+
+class AFFETI:
+    def __init__(
+        self,
+        time: str,
+        network_properties,
+        batch_size,
+        training_samples=1500,
+        s=1,
+        in_dist=True,
+        search_path="/",
+    ):
+        assert training_samples <= 1500, "Training samples must be less than 3000"
+        assert in_dist, "Out-of-distribution testing samples are not available"
+        assert s == 1, "Sampling rate must be 1, no subsampling allowed in this example"
+
+        g = torch.Generator()
+
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
+            torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g.manual_seed(retrain)
+
+        # Training data
+        self.TrainDataPath = find_file("poisson_square_neumann.mat", search_path)
+        input, output = MatReader_affeti(self.TrainDataPath)
+        input_train, output_train = (
+            input[:training_samples, ::s],
+            output[:training_samples, ::s],
+        )
+
+        # Compute mean and std (for gaussian point-wise normalization)
+        self.input_normalizer = UnitGaussianNormalizer(input_train)
+        self.output_normalizer = UnitGaussianNormalizer(output_train)
+
+        # Normalize
+        input_train = self.input_normalizer.encode(input_train)
+        output_train = self.output_normalizer.encode(output_train)
+
+        # Validation data
+        input_val, output_val = (
+            input[training_samples : training_samples + 250, ::s],
+            output[training_samples : training_samples + 250, ::s],
+        )
+        input_val = self.input_normalizer.encode(input_val)
+        output_val = self.output_normalizer.encode(output_val)
+
+        # Test data
+        input_test, output_test = (
+            input[training_samples + 250 :, ::s],
+            output[training_samples + 250 :, ::s],
+        )
+        input_test = self.input_normalizer.encode(input_test)
+        output_test = self.output_normalizer.encode(output_test)
+
+        self.N_Fourier_F = network_properties["FourierF"]
+        if self.N_Fourier_F > 0:
+            grid = self.get_grid(input_test.shape[1])
+            FF = FourierFeatures1D(1, self.N_Fourier_F, grid.device)
+            ff_grid = FF(grid).unsqueeze(0)  # (1, n_y, 2*ff)
+
+            input_train = torch.cat(
+                (input_train, ff_grid.repeat(input_train.shape[0], 1, 1)), -1
+            )
+            input_val = torch.cat(
+                (input_val, ff_grid.repeat(input_val.shape[0], 1, 1)), -1
+            )
+            input_test = torch.cat(
+                (input_test, ff_grid.repeat(input_test.shape[0], 1, 1)), -1
+            )
+
+        # Change number of workers according to your preference
+        num_workers = 0
+
+        self.train_loader = DataLoader(
+            TensorDataset(input_train, output_train),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.val_loader = DataLoader(
+            TensorDataset(input_val, output_val),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.test_loader = DataLoader(
+            TensorDataset(input_test, output_test),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+
+        self.s = input_test.shape[1]
+
+    def get_grid(self, res):
+        return torch.linspace(0, 1, res).unsqueeze(-1)
+
+
+# ------------------------------------------------------------------------------
 # Cross truss data
 # Training samples (1000)
 # Testing samples (250)
