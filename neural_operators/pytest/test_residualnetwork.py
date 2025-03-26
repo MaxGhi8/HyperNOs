@@ -8,8 +8,9 @@ from ResNet.ResidualNetwork import (
     centered_softmax,
     zero_mean_imposition,
 )
+from datasets import NO_load_data_model
 
-torch.set_default_dtype(torch.float32)
+torch.set_default_dtype(torch.float64)
 
 
 def test_centered_softmax():
@@ -54,4 +55,42 @@ def test_residualnetwork():
     output = model.forward(input)
     assert output.shape[-1] == out_channels
     assert output.shape[0] == batch_size
+    assert torch.allclose(output.sum(dim=1), torch.zeros(batch_size), atol=1e-6)
+
+
+def test_residual_normalization():
+    batch_size = 100
+    training_samples = 1500
+    example = NO_load_data_model(
+        which_example="affeti",
+        no_architecture={
+            "FourierF": 0,
+            "retrain": -1,
+        },
+        batch_size=batch_size,
+        training_samples=training_samples,
+        in_dist=True,
+    )
+
+    in_channels = example.s_in
+    out_channels = example.s_out
+    hidden_channels = [5, 5, 5]
+    n_blocks = 2
+    activation_str = "relu"
+    model = ResidualNetwork(
+        in_channels,
+        out_channels,
+        hidden_channels,
+        activation_str,
+        n_blocks,
+        zero_mean=True,
+        input_normalizer=lambda x: example.input_normalizer.encode(x),
+        output_denormalizer=lambda x: example.output_normalizer.decode(x),
+    )
+
+    input = torch.rand(batch_size, in_channels)
+    output = model.forward(input)
+    assert output.shape[-1] == out_channels
+    assert output.shape[0] == batch_size
+    # Test zero mean
     assert torch.allclose(output.sum(dim=1), torch.zeros(batch_size), atol=1e-6)

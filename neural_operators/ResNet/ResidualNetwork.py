@@ -103,6 +103,8 @@ class ResidualNetwork(nn.Module):
         activation_str: str,
         n_blocks: int,
         zero_mean: bool = False,
+        input_normalizer=nn.Identity(),
+        output_denormalizer=nn.Identity(),
     ) -> None:
         super(ResidualNetwork, self).__init__()
 
@@ -114,6 +116,8 @@ class ResidualNetwork(nn.Module):
         ), "The input and output dimensions must be the same for being concatenated"
         assert n_blocks >= 0, "Number of layers must be greater or equal to 0"
 
+        self.input_normalizer = lambda x: input_normalizer(x)
+
         self.input_layer = nn.Sequential(
             nn.Linear(in_channels, hidden_channels[0]), activation_fun(activation_str)
         )
@@ -121,10 +125,12 @@ class ResidualNetwork(nn.Module):
         self.residual_blocks = nn.ModuleList(
             [ResidualBlock(hidden_channels, activation_str) for _ in range(n_blocks)]
         )
-        
+
         self.output_layer = nn.Sequential(
             nn.Linear(hidden_channels[-1], out_channels), activation_fun(activation_str)
         )
+
+        self.output_denormalizer = lambda x: output_denormalizer(x)
 
         self.post_processing = zero_mean_imposition if zero_mean else nn.Identity
 
@@ -133,11 +139,11 @@ class ResidualNetwork(nn.Module):
         self, x: Float[Tensor, "n_samples {self.in_channels}"]
     ) -> Float[Tensor, "n_samples {self.out_channels}"]:
 
-        x = self.input_layer(x)
+        x = self.input_layer(self.input_normalizer(x))
 
         for res_block in self.residual_blocks:
             x = x + res_block(x)
 
         x = self.output_layer(x)
 
-        return zero_mean_imposition(x)
+        return zero_mean_imposition(self.output_denormalizer(x))

@@ -58,6 +58,8 @@ def NO_load_data_model(
         "hh": HodgkinHuxley,
         "ord": OHaraRudy,
         ###
+        "affeti": AFFETI,
+        ###
         "crosstruss": CrossTruss,
         "stiffness_matrix": StiffnessMatrix,
     }
@@ -2570,31 +2572,11 @@ class OHaraRudy:
 # Training samples (1500)
 # Testing samples (250)
 # Validation samples (250)
-@jaxtyped(typechecker=beartype)
-def MatReader_affeti(
-    file_path: str,
-) -> tuple[
-    Float[Tensor, "n_samples n_x"],
-    Float[Tensor, "n_samples n_x"],
-]:
-    """
-    Function to read .mat files for the AF-FETI
-    """
-    data = scipy.io.loadmat(file_path)
-
-    input = data["input"]
-    input = torch.from_numpy(input).float()
-
-    output = data["output"]
-    output = torch.from_numpy(output).float()
-
-    return input.to("cpu"), output.to("cpu")
 
 
 class AFFETI:
     def __init__(
         self,
-        time: str,
         network_properties,
         batch_size,
         training_samples=1500,
@@ -2620,37 +2602,40 @@ class AFFETI:
             # torch.use_deterministic_algorithms(True)
             g.manual_seed(retrain)
 
-        # Training data
         self.TrainDataPath = find_file("poisson_square_neumann.mat", search_path)
-        input, output = MatReader_affeti(self.TrainDataPath)
+        reader = h5py.File(self.TrainDataPath, "r")
+        input = torch.from_numpy(reader["input_dataset"][:]).type(torch.float32)
+        output = torch.from_numpy(reader["output_dataset"][:]).type(torch.float32)
+
+        # Training data
         input_train, output_train = (
-            input[:training_samples, ::s],
-            output[:training_samples, ::s],
+            input[::s, :training_samples].transpose(0, 1),
+            output[::s, :training_samples].transpose(0, 1),
         )
 
         # Compute mean and std (for gaussian point-wise normalization)
         self.input_normalizer = UnitGaussianNormalizer(input_train)
         self.output_normalizer = UnitGaussianNormalizer(output_train)
 
-        # Normalize
-        input_train = self.input_normalizer.encode(input_train)
-        output_train = self.output_normalizer.encode(output_train)
+        # # Normalize
+        # input_train = self.input_normalizer.encode(input_train)
+        # output_train = self.output_normalizer.encode(output_train)
 
         # Validation data
         input_val, output_val = (
-            input[training_samples : training_samples + 250, ::s],
-            output[training_samples : training_samples + 250, ::s],
+            input[::s, training_samples : training_samples + 250].transpose(0, 1),
+            output[::s, training_samples : training_samples + 250].transpose(0, 1),
         )
-        input_val = self.input_normalizer.encode(input_val)
-        output_val = self.output_normalizer.encode(output_val)
+        # input_val = self.input_normalizer.encode(input_val)
+        # output_val = self.output_normalizer.encode(output_val)
 
         # Test data
         input_test, output_test = (
-            input[training_samples + 250 :, ::s],
-            output[training_samples + 250 :, ::s],
+            input[::s, training_samples + 250 :].transpose(0, 1),
+            output[::s, training_samples + 250 :].transpose(0, 1),
         )
-        input_test = self.input_normalizer.encode(input_test)
-        output_test = self.output_normalizer.encode(output_test)
+        # input_test = self.input_normalizer.encode(input_test)
+        # output_test = self.output_normalizer.encode(output_test)
 
         self.N_Fourier_F = network_properties["FourierF"]
         if self.N_Fourier_F > 0:
@@ -2696,7 +2681,8 @@ class AFFETI:
             generator=g,
         )
 
-        self.s = input_test.shape[1]
+        self.s_in = input_test.shape[1]
+        self.s_out = output_test.shape[1]
 
     def get_grid(self, res):
         return torch.linspace(0, 1, res).unsqueeze(-1)

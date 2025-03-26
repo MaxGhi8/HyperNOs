@@ -6,6 +6,7 @@ import pytest
 sys.path.append("..")
 from datasets import (
     Airfoil,
+    AFFETI,
     AllenCahn,
     Burgers_Zongyi,
     ContTranslation,
@@ -315,3 +316,35 @@ def test_invalid_out_dist(example_name):
             training_samples=10,
             in_dist=False,
         )
+
+
+def test_affeti():
+    batch_size = 100
+    training_samples = 1500
+    example = NO_load_data_model(
+        which_example="affeti",
+        no_architecture={
+            "FourierF": 0,
+            "retrain": -1,
+        },
+        batch_size=batch_size,
+        training_samples=training_samples,
+        in_dist=True,
+    )
+
+    train_batch_input, train_batch_output = next(iter(example.train_loader))
+    assert train_batch_input.shape == (batch_size, example.s_in)
+    assert train_batch_output.shape == (batch_size, example.s_out)
+
+    test_batch_input, test_batch_output = next(iter(example.test_loader))
+    assert test_batch_input.shape == (batch_size, example.s_in)
+    assert test_batch_output.shape == (batch_size, example.s_out)
+
+    val_batch_input, val_batch_output = next(iter(example.val_loader))
+    assert val_batch_input.shape == (batch_size, example.s_in)
+    assert val_batch_output.shape == (batch_size, example.s_out)
+
+    assert example.input_normalizer.mean.shape[0] == example.s_in
+    assert example.input_normalizer.std.shape[0] == example.s_in
+    assert example.output_normalizer.mean.shape[0] == example.s_out
+    assert example.output_normalizer.std.shape[0] == example.s_out
