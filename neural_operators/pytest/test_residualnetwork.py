@@ -3,12 +3,12 @@ import sys
 sys.path.append("..")
 
 import torch
+from datasets import NO_load_data_model
 from ResNet.ResidualNetwork import (
     ResidualNetwork,
     centered_softmax,
     zero_mean_imposition,
 )
-from datasets import NO_load_data_model
 
 torch.set_default_dtype(torch.float64)
 
@@ -62,7 +62,7 @@ def test_residual_normalization():
     batch_size = 100
     training_samples = 1500
     example = NO_load_data_model(
-        which_example="affeti",
+        which_example="afieti_square_neumann",
         no_architecture={
             "FourierF": 0,
             "retrain": -1,
