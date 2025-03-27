@@ -58,7 +58,10 @@ def NO_load_data_model(
         "hh": HodgkinHuxley,
         "ord": OHaraRudy,
         ###
-        "affeti": AFFETI,
+        "afieti_square_neumann": AFFETI,
+        "afieti_square_dirichlet": AFFETI,
+        "afieti_quarterAnnulus_neumann": AFFETI,
+        "afieti_quarterAnnulus_dirichlet": AFFETI,
         ###
         "crosstruss": CrossTruss,
         "stiffness_matrix": StiffnessMatrix,
@@ -66,8 +69,12 @@ def NO_load_data_model(
 
     # Define additional parameters for specific cases
     additional_params = {
-        "fhn": {"time": "_tf_100"},
-        # "fhn_long": {"time": "_tf_200"},
+        "fhn": ["_tf_100"],
+        # "fhn_long": [ "time": "_tf_200" ],
+        "afieti_square_neumann": ["poisson_square_neumann.mat"],
+        "afieti_square_dirichlet": ["poisson_square_dirichlet.mat"],
+        "afieti_quarterAnnulus_neumann": ["poisson_quarterAnnulus_neumann.mat"],
+        "afieti_quarterAnnulus_dirichlet": ["poisson_quarterAnnulus_dirichlet.mat"],
     }
 
     # Check if the example is valid
@@ -86,7 +93,7 @@ def NO_load_data_model(
 
     # Add additional kwargs for specific cases
     if which_example in additional_params:
-        args = [additional_params[which_example]["time"]] + args
+        args = [*additional_params[which_example]] + args
 
     # Add s to kwargs if it is specified
     if s is not None:
@@ -2577,9 +2584,10 @@ class OHaraRudy:
 class AFFETI:
     def __init__(
         self,
-        network_properties,
-        batch_size,
-        training_samples=1500,
+        filename: str,
+        network_properties: dict,
+        batch_size: int,
+        training_samples: int,
         s=1,
         in_dist=True,
         search_path="/",
@@ -2602,7 +2610,7 @@ class AFFETI:
             # torch.use_deterministic_algorithms(True)
             g.manual_seed(retrain)
 
-        self.TrainDataPath = find_file("poisson_square_neumann.mat", search_path)
+        self.TrainDataPath = find_file(filename, search_path)
         reader = h5py.File(self.TrainDataPath, "r")
         input = torch.from_numpy(reader["input_dataset"][:]).type(torch.float32)
         output = torch.from_numpy(reader["output_dataset"][:]).type(torch.float32)

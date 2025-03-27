@@ -5,8 +5,8 @@ import pytest
 
 sys.path.append("..")
 from datasets import (
-    Airfoil,
     AFFETI,
+    Airfoil,
     AllenCahn,
     Burgers_Zongyi,
     ContTranslation,
@@ -318,11 +318,20 @@ def test_invalid_out_dist(example_name):
         )
 
 
-def test_affeti():
+@pytest.mark.parametrize(
+    "example_name",
+    [
+        ("afieti_square_neumann"),
+        ("afieti_square_dirichlet"),
+        ("afieti_quarterAnnulus_neumann"),
+        ("afieti_quarterAnnulus_dirichlet"),
+    ],
+)
+def test_afieti(example_name):
     batch_size = 100
     training_samples = 1500
     example = NO_load_data_model(
-        which_example="affeti",
+        which_example=example_name,
         no_architecture={
             "FourierF": 0,
             "retrain": -1,
