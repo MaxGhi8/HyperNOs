@@ -21,8 +21,8 @@ def train_fixed_model(
     dataset_builder,
     loss_fn,
     experiment_name,
-    plot_data_input,
-    plot_data_output,
+    plot_data_input=None,
+    plot_data_output=None,
     loss_phys=lambda x, y: 0.0,
 ):
     required_keys = [
@@ -207,25 +207,33 @@ def train_model_without_ray(
             # plot data during the training and save on tensorboard
             if epoch == 0:
                 # plot the input data
-                plot_data_input(
-                    dataset,
-                    esempio_test,
-                    "Input function",
-                    epoch,
-                    writer,
-                    normalization=True,
-                    plotting=plotting,
+                (
+                    plot_data_input(
+                        dataset,
+                        esempio_test,
+                        "Input function",
+                        epoch,
+                        writer,
+                        normalization=True,
+                        plotting=plotting,
+                    )
+                    if plot_data_input is not None
+                    else None
                 )
 
                 # plot the exact solution
-                plot_data_output(
-                    dataset,
-                    soluzione_test,
-                    "Exact solution",
-                    epoch,
-                    writer,
-                    normalization=True,
-                    plotting=plotting,
+                (
+                    plot_data_output(
+                        dataset,
+                        soluzione_test,
+                        "Exact solution",
+                        epoch,
+                        writer,
+                        normalization=True,
+                        plotting=plotting,
+                    )
+                    if plot_data_output is not None
+                    else None
                 )
 
             # Approximate solution with NO
@@ -235,26 +243,34 @@ def train_model_without_ray(
                     out_test = out_test.cpu()
 
                 # plot the approximate solution
-                plot_data_output(
-                    dataset,
-                    out_test,
-                    f"Approximate solution with {model.__class__.__name__}",
-                    epoch,
-                    writer,
-                    normalization=True,
-                    plotting=plotting,
+                (
+                    plot_data_output(
+                        dataset,
+                        out_test,
+                        f"Approximate solution with {model.__class__.__name__}",
+                        epoch,
+                        writer,
+                        normalization=True,
+                        plotting=plotting,
+                    )
+                    if plot_data_output is not None
+                    else None
                 )
 
                 # Module of the difference
                 diff = torch.abs(out_test - soluzione_test)
-                plot_data_output(
-                    dataset,
-                    diff,
-                    "Module of the error",
-                    epoch,
-                    writer,
-                    normalization=False,
-                    plotting=plotting,
+                (
+                    plot_data_output(
+                        dataset,
+                        diff,
+                        "Module of the error",
+                        epoch,
+                        writer,
+                        normalization=False,
+                        plotting=plotting,
+                    )
+                    if plot_data_output is not None
+                    else None
                 )
 
     writer.flush()  # for saving final data
