@@ -1,5 +1,5 @@
-""" 
-In this example I choose some parameters to tune and some to keep fixed. 
+"""
+In this example I choose some parameters to tune and some to keep fixed.
 Moreover I set the modes for the FNO in order to have comparable number of parameters across the different models.
 """
 
@@ -67,7 +67,7 @@ def ray_same_dof_fno(
     ]
 
     # Define the model builders
-    model_builder = lambda config: FNO(  # noqa: E731
+    model_builder = lambda config: FNO(
         config["problem_dim"],
         config["in_dim"],
         config["width"],
@@ -87,7 +87,7 @@ def ray_same_dof_fno(
     model_builder = wrap_model_builder(model_builder, which_example)
 
     # Define the dataset builder
-    dataset_builder = lambda config: NO_load_data_model(  # noqa: E731
+    dataset_builder = lambda config: NO_load_data_model(
         which_example=which_example,
         no_architecture={
             "FourierF": config["FourierF"],

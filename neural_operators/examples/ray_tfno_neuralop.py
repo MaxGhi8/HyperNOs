@@ -1,5 +1,5 @@
-""" 
-In this example I choose some parameters to tune and some to keep fixed for the FNO model. 
+"""
+In this example I choose some parameters to tune and some to keep fixed for the FNO model.
 """
 
 import sys
@@ -41,7 +41,7 @@ def ray_tfno(which_example: str, loss_fn_str: str):
     }
 
     # Define the model builders
-    model_builder = lambda config: TFNO(  # noqa: E731
+    model_builder = lambda config: TFNO(
         n_modes=(config["modes"], config["modes"]),
         hidden_channels=config["width"],
         n_layers=config["n_layers"],
@@ -53,7 +53,7 @@ def ray_tfno(which_example: str, loss_fn_str: str):
     )
 
     # Define the dataset builder
-    dataset_builder = lambda config: NO_load_data_model(  # noqa: E731
+    dataset_builder = lambda config: NO_load_data_model(
         which_example=which_example,
         no_architecture={
             "FourierF": config["FourierF"],

@@ -1,5 +1,5 @@
-""" 
-In this example I choose some parameters to tune and some to keep fixed for the FNO model. 
+"""
+In this example I choose some parameters to tune and some to keep fixed for the FNO model.
 """
 
 import sys
@@ -62,7 +62,7 @@ def main(
     ]
 
     # Define the model builders
-    model_builder = lambda config: FNO(  # noqa: E731
+    model_builder = lambda config: FNO(
         config["problem_dim"],
         config["in_dim"],
         config["width"],
@@ -81,7 +81,7 @@ def main(
     # Wrap the model builder
     model_builder = wrap_model_builder(model_builder, which_example)
 
-    dataset_builder = lambda config: concat_datasets(  # noqa: E731
+    dataset_builder = lambda config: concat_datasets(
         *(
             NO_load_data_model(
                 dataset_name,

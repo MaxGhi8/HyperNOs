@@ -1,5 +1,5 @@
-""" 
-In this example I choose some parameters to tune and some to keep fixed fot the CNO model. 
+"""
+In this example I choose some parameters to tune and some to keep fixed fot the CNO model.
 """
 
 import sys
@@ -61,7 +61,7 @@ def ray_cno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
     ]
 
     # Define the model builders
-    model_builder = lambda config: CNO(  # noqa: E731
+    model_builder = lambda config: CNO(
         problem_dim=config["problem_dim"],
         in_dim=config["in_dim"],
         out_dim=config["out_dim"],
@@ -78,7 +78,7 @@ def ray_cno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
     model_builder = wrap_model_builder(model_builder, which_example)
 
     # Define the dataset builder
-    dataset_builder = lambda config: NO_load_data_model(  # noqa: E731
+    dataset_builder = lambda config: NO_load_data_model(
         which_example=which_example,
         no_architecture={
             "FourierF": config["FourierF"],

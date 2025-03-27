@@ -1,4 +1,4 @@
-""" 
+"""
 In this example I fix all the hyperparameters for the FNO model and train it.
 """
 
@@ -34,7 +34,7 @@ def train_fno(mode_hyperparams: str, loss_fn_str: str, alpha_phys: float):
     }
 
     # Define the model builders
-    model_builder = lambda config: FNO(  # noqa: E731
+    model_builder = lambda config: FNO(
         config["problem_dim"],
         config["in_dim"],
         config["width"],
@@ -52,7 +52,7 @@ def train_fno(mode_hyperparams: str, loss_fn_str: str, alpha_phys: float):
     )
 
     # Define the dataset builder
-    dataset_builder = lambda config: SinFrequency(  # noqa: E731
+    dataset_builder = lambda config: SinFrequency(
         {
             "FourierF": config["FourierF"],
             "retrain": config["retrain"],
