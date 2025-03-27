@@ -102,6 +102,7 @@ class ResidualNetwork(nn.Module):
         hidden_channels: list[int],
         activation_str: str,
         n_blocks: int,
+        device: torch.device = torch.device("cpu"),
         zero_mean: bool = False,
         input_normalizer=nn.Identity(),
         output_denormalizer=nn.Identity(),
@@ -133,6 +134,8 @@ class ResidualNetwork(nn.Module):
         self.output_denormalizer = lambda x: output_denormalizer(x)
 
         self.post_processing = zero_mean_imposition if zero_mean else nn.Identity
+
+        self.to(device)
 
     @jaxtyped(typechecker=beartype)
     def forward(
