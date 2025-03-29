@@ -4,7 +4,7 @@
 HyperNOs is a Python project focused on the implementation of completely automatic, distributed and parallel neural operators hyperparameter optimization. The project aims to provide a framework for training neural operator models using Pytorch and Ray Tune for hyperparameter tuning.
 
 ## Visualization website
-The project also includes a visualization [website: (https://hypernos.streamlit.app)](https://hypernos.streamlit.app) that allows users to visualize the results obtained with Pytorch library.
+The project also includes a visualization [website: (https://hypernos.streamlit.app)](https://hypernos.streamlit.app) that allows users to visualize the results obtained with HyperNOs library.
 
 
 ## Installation
