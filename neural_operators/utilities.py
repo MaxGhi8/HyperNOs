@@ -25,7 +25,7 @@ def find_file(file_name, search_path):
     for root, dirs, files in os.walk(search_path):
         if file_name in files:
             print(
-                f"File {file_name} found in {root}"
+                f"📂 File {file_name} found in {root}"
             )  # print the path where the file was found
             return os.path.join(root, file_name)  # full path
     raise FileNotFoundError(f"File {file_name} not found in {search_path}")

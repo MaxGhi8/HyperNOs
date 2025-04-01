@@ -96,8 +96,10 @@ def train_model_without_ray(
     # count and print the total number of parameters
     total_params, total_bytes = count_params(model)
     total_mb = total_bytes / (1024**2)
-    print(f"Total Parameters: {total_params:,}")
-    print(f"Total Model Size: {total_bytes:,} bytes ({total_mb:.2f} MB)")
+
+    print("\n🤖 Model Summary:")
+    print(f"  📊 Total Parameters: {total_params:,}")
+    print(f"  💾Total Model Size: {total_bytes:,} bytes ({total_mb:.2f} MB)\n")
     writer.add_text("Parameters", f"Total Parameters: {total_params:,}", 0)
     writer.add_text(
         "Model Size", f"Total Model Size: {total_bytes:,} bytes ({total_mb:.2f} MB)", 0
@@ -113,9 +115,11 @@ def train_model_without_ray(
         optimizer, step_size=scheduler_step, gamma=scheduler_gamma
     )
 
+    print("🚀 Training Progress 🚀")
     for epoch in range(start_epoch, max_epochs):
         with tqdm(
-            desc=f"Epoch {epoch}", bar_format="{desc}: [{elapsed_s:.2f}{postfix}]"
+            desc=f"Epoch {epoch:>4d}",
+            bar_format="{desc} : [Time : {elapsed_s:<6.2f}{postfix}]",
         ) as tepoch:
             # train the model for one epoch
             train_epoch_result = train_epoch(
@@ -315,12 +319,10 @@ def train_epoch(
         # set the postfix for print
         train_loss += loss_f.item()
         if tepoch is not None:
-            tepoch.set_postfix(
-                {
-                    "Batch": step + 1,
-                    "Train loss (in progress)": train_loss
-                    / (input_batch.shape[0] * (step + 1)),
-                }
+            tepoch.set_postfix_str(
+                f"Batch: {(step + 1):3}"
+                + " , "
+                + f"Train loss (in progress): {(train_loss / (input_batch.shape[0] * (step + 1))):<7.4f}🔥",
             )
 
     # update the learning rate after an epoch
@@ -423,14 +425,16 @@ def validate_epoch(
         # train_loss /= len(train_loader) #!! For Mishra implementation
 
     # set the postfix for print
-    tepoch.set_postfix(
-        {
-            "Train loss": train_loss,
-            "Test rel. L^1 error": test_relative_l1,
-            "Test rel. L^2 error": test_relative_l2,
-            "Test rel. semi-H^1 error": test_relative_semih1,
-            "Test rel. H^1 error": test_relative_h1,
-        }
+    tepoch.set_postfix_str(
+        " | ".join(
+            [
+                f"Train loss: {train_loss:<7.4f}",
+                rf"Test rel. L¹: {test_relative_l1:<7.4f}",
+                f"Test rel. L²: {test_relative_l2:<7.4f}",
+                f"Test rel. semi-H¹: {test_relative_semih1:<7.4f}",
+                f"Test rel. H¹: {test_relative_h1:<7.4f}",
+            ]
+        )
     )
     tepoch.close()
 
