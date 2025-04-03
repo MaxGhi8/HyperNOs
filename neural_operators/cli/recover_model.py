@@ -365,8 +365,6 @@ print("")
 #########################################
 # Example 1: Plot the histogram
 #########################################
-
-
 @jaxtyped(typechecker=beartype)
 def plot_histogram(error: Float[Tensor, "n_samples"], str_norm: str):
     error_np = error.to("cpu").numpy()
@@ -375,6 +373,7 @@ def plot_histogram(error: Float[Tensor, "n_samples"], str_norm: str):
     sns.set(style="whitegrid", palette="deep")
 
     plt.figure(figsize=(10, 6))
+    plt.xscale("log")
     sns.histplot(error_np, bins=100, kde=True, color="skyblue", edgecolor="black")
 
     # Add labels and title
@@ -389,7 +388,8 @@ def plot_histogram(error: Float[Tensor, "n_samples"], str_norm: str):
     plt.tight_layout()
 
     # Show the plot
-    plt.show()
+    plt.savefig(f"./tmp_{str_norm}.png", dpi=300, bbox_inches="tight")
+    # plt.show()
 
     # Resets the style to default
     plt.style.use("default")
@@ -640,17 +640,15 @@ def save_tensor(
             }
 
         case "ord":
-            tf = 1000
+            tf = 500
             data_to_save = {
-                "input": input_tensor[:, ::4, :].numpy().squeeze(),
+                "input": input_tensor[:, :, :].numpy().squeeze(),
             }
             for idx, field in enumerate(example.fields_to_concat):
                 key_exact = field + "_exact"
                 key_pred = field + "_pred"
-                data_to_save[key_exact] = output_tensor[:, ::4, idx].numpy().squeeze()
-                data_to_save[key_pred] = (
-                    prediction_tensor[:, ::4, idx].numpy().squeeze()
-                )
+                data_to_save[key_exact] = output_tensor[:, :, idx].numpy().squeeze()
+                data_to_save[key_pred] = prediction_tensor[:, :, idx].numpy().squeeze()
 
         case _:
             flag = False
@@ -673,9 +671,9 @@ def save_tensor(
             os.makedirs(directory, exist_ok=True)
 
         if which_example == "ord":
-            str_file = f"{directory}{which_example}_train{norm_str}_n_{output_tensor.shape[0]}_points_{output_tensor[:, ::4, idx].shape[1]}_tf_{tf}_{mode_str}.mat"
+            str_file = f"{directory}{which_example}_train{norm_str}_n_{output_tensor.shape[0]}_points_{output_tensor[:, :, 0].shape[1]}_tf_{tf}_{mode_str}.mat"
         elif which_example in ["hh", "fhn"]:
-            str_file = f"{directory}{which_example}_train{norm_str}_n_{output_tensor.shape[0]}_points_{output_tensor[:, :, idx].shape[1]}_tf_{tf}_{mode_str}.mat"
+            str_file = f"{directory}{which_example}_train{norm_str}_n_{output_tensor.shape[0]}_points_{output_tensor[:, :, ].shape[1]}_tf_{tf}_{mode_str}.mat"
         elif which_example in [
             "poisson",
             "wave_0_5",
