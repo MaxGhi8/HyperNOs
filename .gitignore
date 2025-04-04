@@ -4,4 +4,5 @@ __pycache__/
 data/
 tests/
 train_loss/
-neural_operators/cli/figures/
+**/figures/
+*.png

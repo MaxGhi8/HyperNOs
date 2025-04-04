@@ -251,19 +251,47 @@ print("")
     output_tensor,
     prediction_tensor,
 ) = get_tensors(model, test_loader, device)
+(
+    train_input_tensor,
+    train_output_tensor,
+    train_prediction_tensor,
+) = get_tensors(model, train_loader, device)
 
 #########################################
 # Compute mean error and print it
 #########################################
 # Error tensors
+train_relative_l1_tensor = LprelLoss(1, None)(
+    train_output_tensor, train_prediction_tensor
+)
 test_relative_l1_tensor = LprelLoss(1, None)(output_tensor, prediction_tensor)
+
+train_relative_l2_tensor = LprelLoss(2, None)(
+    train_output_tensor, train_prediction_tensor
+)
 test_relative_l2_tensor = LprelLoss(2, None)(output_tensor, prediction_tensor)
+
 if problem_dim == 1:
+    train_relative_semih1_tensor = H1relLoss_1D(1.0, None, 0.0)(
+        train_output_tensor, train_prediction_tensor
+    )
+    train_relative_h1_tensor = H1relLoss_1D(1.0, None)(
+        train_output_tensor, train_prediction_tensor
+    )
+
     test_relative_semih1_tensor = H1relLoss_1D(1.0, None, 0.0)(
         output_tensor, prediction_tensor
     )
     test_relative_h1_tensor = H1relLoss_1D(1.0, None)(output_tensor, prediction_tensor)
+
 elif problem_dim == 2:
+    train_relative_semih1_tensor = H1relLoss(1.0, None, 0.0)(
+        train_output_tensor, train_prediction_tensor
+    )
+    train_relative_h1_tensor = H1relLoss(1.0, None)(
+        train_output_tensor, train_prediction_tensor
+    )
+
     test_relative_semih1_tensor = H1relLoss(1.0, None, 0.0)(
         output_tensor, prediction_tensor
     )
@@ -366,29 +394,54 @@ print("")
 # Example 1: Plot the histogram
 #########################################
 @jaxtyped(typechecker=beartype)
-def plot_histogram(error: Float[Tensor, "n_samples"], str_norm: str):
-    error_np = error.to("cpu").numpy()
+def plot_histogram(
+    errors: list[Float[Tensor, "n_samples"]], str_norm: str, legends: list[str] = None
+):
+
+    if legends != None:
+        assert len(legends) == len(
+            errors
+        ), "Legend is not consistent with input errros, have different length."
+
+        error_np = {}
+        for legend, error in zip(legends, errors):
+            error_np[legend] = error.to("cpu").numpy()
+
+    else:
+        error_np = [error.to("cpu").numpy() for error in errors]
 
     # Set seaborn style for better aesthetics
     sns.set(style="whitegrid", palette="deep")
 
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(8, 6))
     plt.xscale("log")
-    sns.histplot(error_np, bins=100, kde=True, color="skyblue", edgecolor="black")
+    sns.histplot(
+        error_np,
+        bins=100,
+        # kde=True,
+        color="skyblue",
+        edgecolor="black",
+        multiple="stack",
+        legend=True if legends else False,
+    )
 
     # Add labels and title
-    plt.xlabel("Relative Error", fontsize=12)
-    plt.ylabel("Number of Samples", fontsize=12)
-    plt.title(
-        f"Histogram of the Relative Error in Norm {str_norm}", fontsize=14, pad=20
-    )
+    plt.xlabel("Relative Error", fontsize=18)
+    plt.ylabel("Number of Samples", fontsize=18)
+    plt.xticks(fontsize=18)
+    plt.yticks(fontsize=18)
+    # plt.title(
+    #     f"Histogram of the Relative Error in Norm {str_norm}", fontsize=20, pad=20
+    # )
 
     # Improve grid and layout
     plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
     plt.tight_layout()
 
     # Show the plot
-    plt.savefig(f"./tmp_{str_norm}.png", dpi=300, bbox_inches="tight")
+    plt.savefig(
+        f"./{which_example}_histograms_{str_norm}.png", dpi=300, bbox_inches="tight"
+    )
     # plt.show()
 
     # Resets the style to default
@@ -396,10 +449,106 @@ def plot_histogram(error: Float[Tensor, "n_samples"], str_norm: str):
 
 
 # call the functions to plot histograms for errors
-plot_histogram(test_relative_l1_tensor, "L1")
-plot_histogram(test_relative_l2_tensor, "L2")
-plot_histogram(test_relative_semih1_tensor, "Semi H1")
-plot_histogram(test_relative_h1_tensor, "H1")
+# plot_histogram(
+#     [train_relative_l1_tensor, test_relative_l1_tensor],
+#     "L1",
+#     ["Train error", "Test error"],
+# )
+plot_histogram(
+    [train_relative_l2_tensor, test_relative_l2_tensor],
+    "L2",
+    ["Train error", "Test error"],
+)
+# plot_histogram(
+#     [train_relative_semih1_tensor, test_relative_semih1_tensor],
+#     "Semi H1",
+#     ["Train error", "Test error"],
+# )
+# plot_histogram(
+#     [train_relative_h1_tensor, test_relative_h1_tensor],
+#     "H1",
+#     ["Train error", "Test error"],
+# )
+
+
+#########################################
+# Example 1_bis: boxplot
+#########################################
+@jaxtyped(typechecker=beartype)
+def plot_boxplot(
+    errors: list[Float[Tensor, "n_samples"]], str_norm: str, legends: list[str] = None
+):
+
+    if legends != None:
+        assert len(legends) == len(
+            errors
+        ), "Legend is not consistent with input errros, have different length."
+
+        error_np = {}
+        for legend, error in zip(legends, errors):
+            error_np[legend] = error.to("cpu").numpy()
+
+    else:
+        error_np = [error.to("cpu").numpy() for error in errors]
+
+    # Set seaborn style for better aesthetics
+    sns.set(style="whitegrid", palette="deep")
+
+    plt.figure(figsize=(8, 6))
+    sns.stripplot(
+        error_np,
+        orient="v",
+        log_scale=True,
+        jitter=0.4,
+        edgecolor="black",
+        size=1.5,
+        linewidth=0.15,
+    )
+    sns.boxplot(error_np, fliersize=0, whis=1.5)
+
+    # Add labels and title
+    plt.ylabel("Relative Error", fontsize=18)
+    plt.xticks(fontsize=18)
+    plt.yticks(fontsize=18)
+    # plt.title(
+    #     f"boxplot of the Relative Error in Norm {str_norm}", fontsize=20, pad=20
+    # )
+
+    # Improve grid and layout
+    plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
+    plt.tight_layout()
+
+    # Show the plot
+    plt.savefig(
+        f"./{which_example}_boxplot_{str_norm}.png", dpi=300, bbox_inches="tight"
+    )
+    # plt.show()
+
+    # Resets the style to default
+    plt.style.use("default")
+
+
+# call the functions to plot swarm-plots for errors
+# plot_boxplot(
+#     [train_relative_l1_tensor, test_relative_l1_tensor],
+#     "L1",
+#     ["Train error", "Test error"],
+# )
+plot_boxplot(
+    [train_relative_l2_tensor, test_relative_l2_tensor],
+    "L2",
+    ["Train error", "Test error"],
+)
+# plot_boxplot(
+#     [train_relative_semih1_tensor, test_relative_semih1_tensor],
+#     "Semi H1",
+#     ["Train error", "Test error"],
+# )
+# plot_boxplot(
+#     [train_relative_h1_tensor, test_relative_h1_tensor],
+#     "H1",
+#     ["Train error", "Test error"],
+# )
 
 #########################################
 # Example 2: Plot the worst and best samples
@@ -565,7 +714,7 @@ test_plot_samples(
     which_example,
     ntest=100,
     str_norm=loss_fn_str,
-    n_idx=10,
+    n_idx=5,
 )
 
 

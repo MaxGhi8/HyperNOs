@@ -784,7 +784,8 @@ def plot_fhn(input_tensor, output_tensor, prediction_tensor, idx):
 
     plt.suptitle("Phase space of the FitzHugh-Nagumo equations")  # title
     plt.tight_layout()
-    plt.show()
+    # plt.savefig("./fhn_examples.png", dpi=300, bbox_inches="tight")
+    # plt.show()
 
 
 #########################################
@@ -868,7 +869,8 @@ def plot_hh(input_tensor, output_tensor, prediction_tensor, idx):
 
     plt.suptitle("Hodgkin-Huxley equations")  # title
     plt.tight_layout()
-    plt.show()
+    # plt.savefig("./hh_examples.png", dpi=300, bbox_inches="tight")
+    # plt.show()
 
 
 #########################################
