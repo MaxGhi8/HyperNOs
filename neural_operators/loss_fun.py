@@ -110,6 +110,39 @@ class MSELoss_rel:
 
 
 #########################################
+# l^p loss
+#########################################
+class lpLoss:
+    """l^p loss for vectors"""
+
+    def __init__(self, p: int, size_mean=False):
+        self.p = p
+        self.size_mean = size_mean
+
+    @jaxtyped(typechecker=beartype)
+    def __call__(
+        self,
+        x: Float[Tensor, "n_samples *n"],
+        y: Float[Tensor, "n_samples *n"],
+    ) -> Float[Tensor, "*n_samples"]:
+
+        print(x, x.shape)
+        print(y, x.shape)
+        print(self.p)
+        diff_norms = torch.norm(x - y, p=self.p, dim=1)
+        print(diff_norms, diff_norms.shape)
+
+        if self.size_mean is True:
+            return torch.mean(diff_norms)
+        elif self.size_mean is False:
+            return torch.sum(diff_norms)  # sum along batchsize
+        elif self.size_mean is None:
+            return diff_norms  # no reduction
+        else:
+            raise ValueError("size_mean must be a boolean or None")
+
+
+#########################################
 # L^p relative loss for N-D functions
 #########################################
 class LprelLoss:

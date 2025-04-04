@@ -1038,7 +1038,7 @@ def test_plot_samples(
     input_tensor: Float[Tensor, "n_samples *n in_dim"],
     output_tensor: Float[Tensor, "n_samples *n d_v"],
     prediction_tensor: Float[Tensor, "n_samples *n d_v"],
-    error: Float[Tensor, "n_samples"],  # noqa: F821
+    error: Float[Tensor, "n_samples"],
     mode: str,
     which_example: str,
     ntest: int,

@@ -1,4 +1,4 @@
-""" 
+"""
 In this example I fix all the hyperparameters for the FNO model and train it.
 """
 
@@ -48,7 +48,7 @@ def train_tfno(which_example: str, loss_fn_str: str):
     )
 
     # Define the dataset builder
-    dataset_builder = lambda config: NO_load_data_model(  # noqa: E731
+    dataset_builder = lambda config: NO_load_data_model(
         which_example=which_example,
         no_architecture={
             "FourierF": config["FourierF"],

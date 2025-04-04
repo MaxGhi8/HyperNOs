@@ -10,7 +10,50 @@ import pytest
 import torch
 
 sys.path.append("..")
-from loss_fun import H1relLoss, LprelLoss, MSELoss_rel, SmoothL1Loss_rel
+from loss_fun import lpLoss, H1relLoss, LprelLoss, MSELoss_rel, SmoothL1Loss_rel
+
+torch.set_default_dtype(torch.float64)
+torch.manual_seed(0)
+np.random.seed(0)
+
+
+def test_lpLoss():
+    # test 1: test L1(x, x)
+    x = torch.tensor([[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]])
+    result = lpLoss(1)(x, x)
+    assert result.item() == 0.0
+    result = lpLoss(2)(x, x)
+    assert result.item() == 0.0
+    result = lpLoss(42, True)(x, x)
+    assert result.item() == 0.0
+
+    # test 2: as test 1 but with a single sample
+    x = torch.rand(1, 32)
+    result = lpLoss(1)(x, x)
+    assert result.item() == 0.0
+    result = lpLoss(2)(x, x)
+    assert result.item() == 0.0
+    result = lpLoss(42, True)(x, x)
+    assert result.item() == 0.0
+
+    # test 3: random test 1
+    x = torch.rand(24, 32)
+    result = lpLoss(1)(x, x)
+    assert result.item() == 0.0
+    result = lpLoss(2)(x, x)
+    assert result.item() == 0.0
+    result = lpLoss(42, True)(x, x)
+    assert result.item() == 0.0
+
+    # test 4: hands on test
+    x = torch.ones(1, 10)
+    y = torch.zeros(1, 10)
+    result = lpLoss(1)(x, y)
+    assert result.item() == 10.0
+    result = lpLoss(2)(x, y)
+    assert np.abs(result.item() - np.sqrt(10.0)) < 1e-12
+    result = lpLoss(2, True)(x, y)
+    assert np.abs(result.item() - np.sqrt(10.0)) < 1e-12
 
 
 def test_SmoothL1Loss_rel():

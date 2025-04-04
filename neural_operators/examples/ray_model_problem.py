@@ -1,5 +1,5 @@
-""" 
-In this example I choose some parameters to tune and some to keep fixed for the FNO model. 
+"""
+In this example I choose some parameters to tune and some to keep fixed for the FNO model.
 """
 
 import sys
@@ -45,7 +45,7 @@ def ray_model_problem():
         "width": tune.choice([4, 8, 16, 32, 64, 128, 256]),
     }
 
-    model_builder = lambda config: FNO(  # noqa: E731
+    model_builder = lambda config: FNO(
         config["problem_dim"],
         config["in_dim"],
         config["width"],
@@ -63,7 +63,7 @@ def ray_model_problem():
     )
 
     # Define the dataset builder
-    dataset_builder = lambda config: Darcy(  # noqa: E731
+    dataset_builder = lambda config: Darcy(
         {
             "FourierF": config["FourierF"],
             "retrain": config["retrain"],

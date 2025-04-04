@@ -1,4 +1,4 @@
-""" 
+"""
 In this example I fix all the hyperparameters for the CNO model and train it.
 """
 
@@ -53,7 +53,7 @@ def train_samedofs_cno(which_example: str, loss_fn_str: str):
     )
 
     # Define the model builders
-    model_builder = lambda config: CNO(  # noqa: E731
+    model_builder = lambda config: CNO(
         problem_dim=config["problem_dim"],
         in_dim=config["in_dim"],
         out_dim=config["out_dim"],
@@ -70,7 +70,7 @@ def train_samedofs_cno(which_example: str, loss_fn_str: str):
     model_builder = wrap_model_builder(model_builder, which_example)
 
     # Define the dataset builder
-    dataset_builder = lambda config: NO_load_data_model(  # noqa: E731
+    dataset_builder = lambda config: NO_load_data_model(
         which_example=which_example,
         no_architecture={
             "FourierF": config["FourierF"],
