@@ -321,10 +321,7 @@ def test_invalid_out_dist(example_name):
 @pytest.mark.parametrize(
     "example_name",
     [
-        ("afieti_square_neumann"),
-        ("afieti_square_dirichlet"),
-        ("afieti_quarterAnnulus_neumann"),
-        ("afieti_quarterAnnulus_dirichlet"),
+        ("afieti_homogeneous_neumann"),
     ],
 )
 def test_afieti(example_name):

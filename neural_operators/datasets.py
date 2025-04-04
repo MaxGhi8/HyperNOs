@@ -58,10 +58,7 @@ def NO_load_data_model(
         "hh": HodgkinHuxley,
         "ord": OHaraRudy,
         ###
-        "afieti_square_neumann": AFFETI,
-        "afieti_square_dirichlet": AFFETI,
-        "afieti_quarterAnnulus_neumann": AFFETI,
-        "afieti_quarterAnnulus_dirichlet": AFFETI,
+        "afieti_homogeneous_neumann": AFFETI,
         ###
         "crosstruss": CrossTruss,
         "stiffness_matrix": StiffnessMatrix,
@@ -71,10 +68,7 @@ def NO_load_data_model(
     additional_params = {
         "fhn": ["_tf_100"],
         # "fhn_long": [ "time": "_tf_200" ],
-        "afieti_square_neumann": ["poisson_square_neumann.mat"],
-        "afieti_square_dirichlet": ["poisson_square_dirichlet.mat"],
-        "afieti_quarterAnnulus_neumann": ["poisson_quarterAnnulus_neumann.mat"],
-        "afieti_quarterAnnulus_dirichlet": ["poisson_quarterAnnulus_dirichlet.mat"],
+        "afieti_homogeneous_neumann": ["dataset_homogeneous_Neumann.mat"],
     }
 
     # Check if the example is valid
@@ -2576,9 +2570,9 @@ class OHaraRudy:
 
 # ------------------------------------------------------------------------------
 # AF-FETI data
-# Training samples (1500)
-# Testing samples (250)
-# Validation samples (250)
+# Training samples (3200)
+# Testing samples (400)
+# Validation samples (400)
 
 
 class AFFETI:
@@ -2592,7 +2586,7 @@ class AFFETI:
         in_dist=True,
         search_path="/",
     ):
-        assert training_samples <= 1500, "Training samples must be less than 3000"
+        assert training_samples <= 3200, "Training samples must be less than 3000"
         assert in_dist, "Out-of-distribution testing samples are not available"
         assert s == 1, "Sampling rate must be 1, no subsampling allowed in this example"
 
@@ -2612,35 +2606,35 @@ class AFFETI:
 
         self.TrainDataPath = find_file(filename, search_path)
         reader = h5py.File(self.TrainDataPath, "r")
-        input = torch.from_numpy(reader["input_dataset"][:]).type(torch.float32)
-        output = torch.from_numpy(reader["output_dataset"][:]).type(torch.float32)
+        input = torch.from_numpy(reader["input"][:]).type(torch.float32)
+        output = torch.from_numpy(reader["output"][:]).type(torch.float32)
 
         # Training data
         input_train, output_train = (
-            input[::s, :training_samples].transpose(0, 1),
-            output[::s, :training_samples].transpose(0, 1),
+            input[:training_samples, ::s],
+            output[:training_samples, ::s],
         )
 
         # Compute mean and std (for gaussian point-wise normalization)
         self.input_normalizer = UnitGaussianNormalizer(input_train)
         self.output_normalizer = UnitGaussianNormalizer(output_train)
 
-        # # Normalize
+        # Normalize
         # input_train = self.input_normalizer.encode(input_train)
         # output_train = self.output_normalizer.encode(output_train)
 
         # Validation data
         input_val, output_val = (
-            input[::s, training_samples : training_samples + 250].transpose(0, 1),
-            output[::s, training_samples : training_samples + 250].transpose(0, 1),
+            input[training_samples : training_samples + 400, ::s],
+            output[training_samples : training_samples + 400, ::s],
         )
         # input_val = self.input_normalizer.encode(input_val)
         # output_val = self.output_normalizer.encode(output_val)
 
         # Test data
         input_test, output_test = (
-            input[::s, training_samples + 250 :].transpose(0, 1),
-            output[::s, training_samples + 250 :].transpose(0, 1),
+            input[training_samples + 400 :, ::s],
+            output[training_samples + 400 :, ::s],
         )
         # input_test = self.input_normalizer.encode(input_test)
         # output_test = self.output_normalizer.encode(output_test)
