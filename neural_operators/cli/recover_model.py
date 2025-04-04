@@ -88,19 +88,20 @@ def parse_arguments():
             "hh",
             "ord",
             "crosstruss",
+            "afieti_homogeneous_neumann",
         ],
         help="Select the example to run.",
     )
     parser.add_argument(
         "architecture",
         type=str,
-        choices=["fno", "cno"],
+        choices=["FNO", "CNO", "ResNet"],
         help="Select the architecture to use.",
     )
     parser.add_argument(
         "loss_fn_str",
         type=str,
-        choices=["l1", "l2", "h1", "l1_smooth"],
+        choices=["L1", "L2", "H1", "L1_smooth", "l2"],
         help="Select the relative loss function to use during the training process.",
     )
     parser.add_argument(
@@ -128,8 +129,8 @@ def parse_arguments():
 
     return {
         "example": args.example.lower(),
-        "architecture": args.architecture.upper(),
-        "loss_fn_str": args.loss_fn_str.upper(),
+        "architecture": args.architecture,
+        "loss_fn_str": args.loss_fn_str,
         "mode": args.mode,
         "in_dist": args.in_dist,
     }
@@ -151,6 +152,7 @@ name_model = folder + [file for file in files if file.startswith("model_")][0]
 
 try:
     model = torch.load(name_model, weights_only=False, map_location=device)
+    model.eval()
     # torch.save(model.state_dict(), name_model + "_state_dict")
 except Exception:
     raise ValueError(
@@ -169,7 +171,10 @@ hyperparams["loss_fn_str"] = loss_fn_str
 
 # Training hyperparameters
 batch_size = hyperparams["batch_size"]
-beta = hyperparams["beta"]
+try:
+    beta = hyperparams["beta"]
+except KeyError:
+    beta = 1.0  # default value
 FourierF = hyperparams["FourierF"]
 problem_dim = hyperparams["problem_dim"]
 retrain = hyperparams["retrain"]
@@ -346,7 +351,7 @@ if which_example in ["fhn", "hh", "ord"]:
     print("Test mean relative h1 norm componentwise: ", test_rel_h1_componentwise)
     print("")
 
-elif arc in ["crosstruss"]:
+elif which_example in ["crosstruss"]:
     test_rel_l1_componentwise = LprelLoss_multiout(1, True)(
         output_tensor, prediction_tensor
     )
@@ -373,7 +378,6 @@ elif arc in ["crosstruss"]:
 # Time for evaluation
 #########################################
 # evaluation of all the test set
-model.eval()
 t_1 = time.time()
 with torch.no_grad():
     _ = model(input_tensor)

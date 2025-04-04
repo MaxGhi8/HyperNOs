@@ -57,7 +57,7 @@ def NO_load_data_model(
         "hh": HodgkinHuxley,
         "ord": OHaraRudy,
         ###
-        "afieti_homogeneous_neumann": AFFETI,
+        "afieti_homogeneous_neumann": AFIETI,
         ###
         "crosstruss": CrossTruss,
         "stiffness_matrix": StiffnessMatrix,
@@ -2568,13 +2568,13 @@ class OHaraRudy:
 
 
 # ------------------------------------------------------------------------------
-# AF-FETI data
+# AF-IETI data
 # Training samples (3200)
 # Testing samples (400)
 # Validation samples (400)
 
 
-class AFFETI:
+class AFIETI:
     def __init__(
         self,
         filename: str,

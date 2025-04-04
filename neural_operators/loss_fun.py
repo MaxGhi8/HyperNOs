@@ -17,6 +17,8 @@ def loss_selector(loss_fn_str: str, problem_dim: int, beta: float = 1.0):
             loss = LprelLoss(1, False)
         case "L2":
             loss = LprelLoss(2, False)
+        case "l2":
+            loss = lpLoss(2, False)
         case "H1":
             if problem_dim == 1:
                 loss = H1relLoss_1D(beta, False, 1.0)
@@ -126,11 +128,7 @@ class lpLoss:
         y: Float[Tensor, "n_samples *n"],
     ) -> Float[Tensor, "*n_samples"]:
 
-        print(x, x.shape)
-        print(y, x.shape)
-        print(self.p)
         diff_norms = torch.norm(x - y, p=self.p, dim=1)
-        print(diff_norms, diff_norms.shape)
 
         if self.size_mean is True:
             return torch.mean(diff_norms)

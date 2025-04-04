@@ -5,7 +5,7 @@ import pytest
 
 sys.path.append("..")
 from datasets import (
-    AFFETI,
+    AFIETI,
     Airfoil,
     AllenCahn,
     Burgers_Zongyi,
