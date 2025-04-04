@@ -1,5 +1,5 @@
 """
-In this example I fix all the hyperparameters for the FNO model and train it.
+In this example I fix all the hyperparameters for the ResNet model and train it.
 """
 
 import os

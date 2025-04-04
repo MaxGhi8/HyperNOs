@@ -1,3 +1,13 @@
+"""
+This script creates a plot of training and test loss curves from multiple CSV files,
+showing mean and standard deviation. It uses the seaborn and matplotlib libraries for
+visualization. The script reads the CSV files, extracts the relevant data, and generates
+a plot with shaded areas representing the standard deviation. The plot is saved to a file
+(in the figures folder) or displayed on the screen.
+We have to download the CSV files from the training process form Tensorboard (or creating them from scratch)
+to use this script.
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd

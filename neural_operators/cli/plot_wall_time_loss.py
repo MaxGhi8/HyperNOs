@@ -1,3 +1,9 @@
+"""
+This script parses CSV files containing wall time and loss values,
+and generates a plot of the loss values over time for the ray hyperparameters optimization process.
+We need to save the errors in CSVs (one CSV for each trial done in the ray hyperparameters optimization process).
+"""
+
 import glob
 import os
 from datetime import datetime

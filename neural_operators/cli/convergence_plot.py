@@ -1,3 +1,10 @@
+"""
+File for making the convergence plot respect to some quantities,
+for example the number of trainable parameters of the network or the number of samples in the dataset.
+The plot is made with the seaborn library and saved in the figures folder.
+The values have to be computed from hand and passed to the function.
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
