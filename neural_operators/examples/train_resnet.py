@@ -11,13 +11,13 @@ sys.path.append("..")
 
 import torch.nn as nn
 from datasets import NO_load_data_model
-from loss_fun import lpLoss
+from loss_fun import LprelLoss, lpLoss
 from ResNet.ResidualNetwork import ResidualNetwork
 from ResNet.ResNet_utilities import ResNet_initialize_hyperparameters
 from train import train_fixed_model
 
 
-def train_resnet(which_example: str, mode_hyperparams: str, loss_fn_str: str):
+def train_resnet(which_example: str, mode_hyperparams: str):
 
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -53,6 +53,22 @@ def train_resnet(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         training_samples=default_hyper_params["training_samples"],
     )
 
+    class input_normalizer_class(nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.input_normalizer = example.input_normalizer
+
+        def forward(self, x):
+            return self.input_normalizer.encode(x)
+
+    class output_denormalizer_class(nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.output_normalizer = example.output_normalizer
+
+        def forward(self, x):
+            return self.output_normalizer.decode(x)
+
     model_builder = lambda config: ResidualNetwork(
         config["in_channels"],
         config["out_channels"],
@@ -60,16 +76,14 @@ def train_resnet(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         config["activation_str"],
         config["n_blocks"],
         device,
+        layer_norm=config["layer_norm"],
+        dropout_rate=config["dropout_rate"],
         zero_mean=config["zero_mean"],
-        input_normalizer=lambda x: (
-            example.input_normalizer.encode(x)
-            if config["input_normalizer"]
-            else nn.Identity()
+        input_normalizer=(
+            input_normalizer_class() if config["input_normalizer"] else None
         ),
-        output_denormalizer=lambda x: (
-            example.output_normalizer.decode(x)
-            if config["output_denormalizer"]
-            else nn.Identity()
+        output_denormalizer=(
+            output_denormalizer_class() if config["output_denormalizer"] else None
         ),
     )
     # Wrap the model builder
@@ -77,6 +91,9 @@ def train_resnet(which_example: str, mode_hyperparams: str, loss_fn_str: str):
 
     # Define the loss function
     loss_fn = lpLoss(default_hyper_params["p"], False)
+    loss_fn_str = "l2"
+    # loss_fn = LprelLoss(2, False)
+    # loss_fn_str = "L2"
 
     experiment_name = (
         f"ResNet/{which_example}/loss_{loss_fn_str}_mode_{mode_hyperparams}"
@@ -100,8 +117,9 @@ def train_resnet(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         dataset_builder,
         loss_fn,
         experiment_name,
+        full_validation=False,
     )
 
 
 if __name__ == "__main__":
-    train_resnet("afieti_square_neumann", "default", "L2")
+    train_resnet("afieti_homogeneous_neumann", "default")
