@@ -62,7 +62,7 @@ def test_residual_normalization():
     batch_size = 100
     training_samples = 1500
     example = NO_load_data_model(
-        which_example="afieti_square_neumann",
+        which_example="afieti_homogeneous_neumann",
         no_architecture={
             "FourierF": 0,
             "retrain": -1,

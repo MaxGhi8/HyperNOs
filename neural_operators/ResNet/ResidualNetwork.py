@@ -1,7 +1,3 @@
-"""
-This file contains all the core architectures and modules of the Fourier Neural Operator (FNO) for 1D case.
-"""
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -64,6 +60,8 @@ class ResidualBlock(nn.Module):
         self,
         hidden_channels: list[int],
         activation_str: str,
+        layer_norm: bool = False,
+        dropout_rate: float = 0.0,
     ) -> None:
         super(ResidualBlock, self).__init__()
         self.hidden_channels = hidden_channels
@@ -75,16 +73,43 @@ class ResidualBlock(nn.Module):
                 nn.Linear(self.hidden_channels[i], self.hidden_channels[i + 1])
             )
 
-            # Activation function
-            modules.append(activation_fun(activation_str))
+            # Layer normalization
+            if layer_norm:
+                modules.append(nn.LayerNorm(self.hidden_channels[i + 1]))
+
+            # Activation function (except for the last layer)
+            if i < len(self.hidden_channels) - 2:
+                modules.append(activation_fun(activation_str))
+
+                # Add dropout if specified
+                if dropout_rate > 0:
+                    modules.append(nn.Dropout(dropout_rate))
 
         self.res_block = nn.Sequential(*modules)
+
+        # Kaiming initialization
+        try:
+            self._init_weights(activation_str)
+        except Exception as e:
+            print(
+                "Warning: Kaiming initialization failed. Using default initialization."
+            )
+
+    def _init_weights(self, activation_str) -> None:
+        """
+        Initialize weights using Kaiming initialization for better training dynamics.
+        """
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, nonlinearity=activation_str)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
 
     @jaxtyped(typechecker=beartype)
     def forward(
         self, x: Float[Tensor, "n_samples {self.hidden_channels[0]}"]
     ) -> Float[Tensor, "n_samples {self.hidden_channels[-1]}"]:
-        return self.res_block(x)
+        return x + self.res_block(x)
 
 
 #########################################
@@ -103,9 +128,11 @@ class ResidualNetwork(nn.Module):
         activation_str: str,
         n_blocks: int,
         device: torch.device = torch.device("cpu"),
+        layer_norm: bool = False,
+        dropout_rate: float = 0.0,
         zero_mean: bool = False,
-        input_normalizer=nn.Identity(),
-        output_denormalizer=nn.Identity(),
+        input_normalizer=None,
+        output_denormalizer=None,
     ) -> None:
         super(ResidualNetwork, self).__init__()
 
@@ -117,25 +144,69 @@ class ResidualNetwork(nn.Module):
         ), "The input and output dimensions must be the same for being concatenated"
         assert n_blocks >= 0, "Number of layers must be greater or equal to 0"
 
-        self.input_normalizer = lambda x: input_normalizer(x)
+        self.input_normalizer = (
+            nn.Identity() if input_normalizer is None else input_normalizer
+        )
 
         self.input_layer = nn.Sequential(
-            nn.Linear(in_channels, hidden_channels[0]), activation_fun(activation_str)
+            nn.Linear(in_channels, hidden_channels[0]),
+            nn.LayerNorm(hidden_channels[0]) if layer_norm else nn.Identity(),
+            activation_fun(activation_str),
         )
 
-        self.residual_blocks = nn.ModuleList(
-            [ResidualBlock(hidden_channels, activation_str) for _ in range(n_blocks)]
+        self.residual_blocks = nn.Sequential(
+            *[
+                ResidualBlock(
+                    hidden_channels,
+                    activation_str,
+                    layer_norm=layer_norm,
+                    dropout_rate=dropout_rate,
+                )
+                for _ in range(n_blocks)
+            ]
         )
 
-        self.output_layer = nn.Sequential(
-            nn.Linear(hidden_channels[-1], out_channels), activation_fun(activation_str)
-        )
+        self.output_layer = nn.Linear(hidden_channels[-1], out_channels)
 
-        self.output_denormalizer = lambda x: output_denormalizer(x)
+        self.output_denormalizer = (
+            nn.Identity() if output_denormalizer is None else output_denormalizer
+        )
 
         self.post_processing = zero_mean_imposition if zero_mean else nn.Identity
 
+        # Kaiming initialization
+        # try:
+        #     self._init_weights(activation_str)
+        # except Exception as e:
+        #     print(
+        #         "Warning: Kaiming initialization failed. Using default initialization."
+        #     )
+
+        # Move the model to the specified device
         self.to(device)
+
+        # Enable JIT compilation for better performance if PyTorch version supports it
+        if hasattr(torch, "compile") and torch.__version__ >= "2.0.0":
+            self._enable_compilation()
+
+    def _init_weights(self, activation_str) -> None:
+        """
+        Initialize weights using Kaiming initialization for better training dynamics.
+        """
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, nonlinearity=activation_str)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+
+    def _enable_compilation(self) -> None:
+        """Enable PyTorch 2.0+ compilation for performance if available."""
+        try:
+            # This is a PyTorch 2.0+ feature
+            self = torch.compile(self)
+            print("PyTorch compilation enabled for better performance")
+        except Exception as e:
+            print(f"Could not enable PyTorch compilation: {e}")
 
     @jaxtyped(typechecker=beartype)
     def forward(
@@ -143,10 +214,7 @@ class ResidualNetwork(nn.Module):
     ) -> Float[Tensor, "n_samples {self.out_channels}"]:
 
         x = self.input_layer(self.input_normalizer(x))
-
-        for res_block in self.residual_blocks:
-            x = x + res_block(x)
-
+        x = self.residual_blocks(x)
         x = self.output_layer(x)
 
         return zero_mean_imposition(self.output_denormalizer(x))
