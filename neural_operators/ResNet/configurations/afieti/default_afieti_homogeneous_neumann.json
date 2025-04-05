@@ -22,8 +22,7 @@
 		"dropout_rate": 0.2,
         "zero_mean": true,
 		"FourierF": 0,
-		"input_normalizer": true,
-		"output_denormalizer": true,
+		"internal_normalization": true,
 		"retrain": 4
 	}
 }
