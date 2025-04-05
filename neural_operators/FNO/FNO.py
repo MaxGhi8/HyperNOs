@@ -514,9 +514,9 @@ class FNO(nn.Module):
 
         ## Grid and initialization
         if self.problem_dim == 1:
-            grid = self.get_grid_1d(x.shape).to(self.device)
+            grid = self.get_grid_1d(x.shape).to(x.device)
         elif self.problem_dim == 2:
-            grid = self.get_grid_2d(x.shape).to(self.device)
+            grid = self.get_grid_2d(x.shape).to(x.device)
         x = torch.cat(
             (grid, x), dim=-1
         )  # concatenate last dimension --> (n_samples)*(*n_x)*(in_dim+problem_dim)

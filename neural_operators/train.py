@@ -324,13 +324,16 @@ def train_model_without_ray(
     writer.close()  # close the tensorboard writer
 
     try:
-        torch.save(model, name_model)
-    except:
         checkpoint = {
+            "epoch": epoch,
             "state_dict": model.state_dict(),
             "optimizer": optimizer.state_dict(),
+            "loss": train_loss,
+            "scheduler": scheduler.state_dict(),
         }
-        torch.save(checkpoint, name_model)
+        torch.save(checkpoint, name_model + ".tar")
+    except:
+        torch.save(model, name_model + ".pth")
 
 
 def train_epoch(
