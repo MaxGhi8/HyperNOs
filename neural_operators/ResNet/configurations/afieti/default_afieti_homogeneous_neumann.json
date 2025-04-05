@@ -1,10 +1,10 @@
 {
 	"training_properties": {
-		"training_samples": 3200,
-		"val_samples": 400,
-		"test_samples": 400,
+		"training_samples": 16000,
+		"val_samples": 2000,
+		"test_samples": 2000,
 		"learning_rate": 0.0005,
-		"epochs": 10000,
+		"epochs": 100,
 		"batch_size": 100,
 		"weight_decay": 0.0001,
 		"scheduler_step": 500,
@@ -18,7 +18,7 @@
         "hidden_channels": [300, 300, 300, 300],
         "activation_str": "relu",
         "n_blocks": 3,
-		"layer_norm" : true,
+		"layer_norm" : false,
 		"dropout_rate": 0.2,
         "zero_mean": true,
 		"FourierF": 0,

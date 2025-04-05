@@ -2569,9 +2569,9 @@ class OHaraRudy:
 
 # ------------------------------------------------------------------------------
 # AF-IETI data
-# Training samples (3200)
-# Testing samples (400)
-# Validation samples (400)
+# Training samples (16000)
+# Testing samples (2000)
+# Validation samples (2000)
 
 
 class AFIETI:
@@ -2585,7 +2585,7 @@ class AFIETI:
         in_dist=True,
         search_path="/",
     ):
-        assert training_samples <= 3200, "Training samples must be less than 3000"
+        assert training_samples <= 16000, "Training samples must be less than 3000"
         assert in_dist, "Out-of-distribution testing samples are not available"
         assert s == 1, "Sampling rate must be 1, no subsampling allowed in this example"
 
@@ -2624,16 +2624,16 @@ class AFIETI:
 
         # Validation data
         input_val, output_val = (
-            input[training_samples : training_samples + 400, ::s],
-            output[training_samples : training_samples + 400, ::s],
+            input[training_samples : training_samples + 2000, ::s],
+            output[training_samples : training_samples + 2000, ::s],
         )
         # input_val = self.input_normalizer.encode(input_val)
         # output_val = self.output_normalizer.encode(output_val)
 
         # Test data
         input_test, output_test = (
-            input[training_samples + 400 :, ::s],
-            output[training_samples + 400 :, ::s],
+            input[training_samples + 2000 :, ::s],
+            output[training_samples + 2000 :, ::s],
         )
         # input_test = self.input_normalizer.encode(input_test)
         # output_test = self.output_normalizer.encode(output_test)
