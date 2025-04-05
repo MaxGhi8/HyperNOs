@@ -14,3 +14,5 @@ torch>=2.5.0,<2.6.0
 tqdm>=4.66.0,<4.67.0
 seaborn>=0.13.0,<0.14.0
 neuraloperator==1.0.2
+onnx>=1.17
+onnxscript>=0.2.3
