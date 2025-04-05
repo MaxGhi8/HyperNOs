@@ -53,22 +53,6 @@ def train_resnet(which_example: str, mode_hyperparams: str):
         training_samples=default_hyper_params["training_samples"],
     )
 
-    class input_normalizer_class(nn.Module):
-        def __init__(self) -> None:
-            super().__init__()
-            self.input_normalizer = example.input_normalizer
-
-        def forward(self, x):
-            return self.input_normalizer.encode(x)
-
-    class output_denormalizer_class(nn.Module):
-        def __init__(self) -> None:
-            super().__init__()
-            self.output_normalizer = example.output_normalizer
-
-        def forward(self, x):
-            return self.output_normalizer.decode(x)
-
     model_builder = lambda config: ResidualNetwork(
         config["in_channels"],
         config["out_channels"],
@@ -79,12 +63,7 @@ def train_resnet(which_example: str, mode_hyperparams: str):
         layer_norm=config["layer_norm"],
         dropout_rate=config["dropout_rate"],
         zero_mean=config["zero_mean"],
-        input_normalizer=(
-            input_normalizer_class() if config["input_normalizer"] else None
-        ),
-        output_denormalizer=(
-            output_denormalizer_class() if config["output_denormalizer"] else None
-        ),
+        example=(example if config["internal_normalization"] else None),
     )
     # Wrap the model builder
     # model_builder = wrap_model_builder(model_builder, which_example) # TODO

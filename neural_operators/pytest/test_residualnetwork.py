@@ -84,8 +84,7 @@ def test_residual_normalization():
         activation_str,
         n_blocks,
         zero_mean=True,
-        input_normalizer=lambda x: example.input_normalizer.encode(x),
-        output_denormalizer=lambda x: example.output_normalizer.decode(x),
+        example=example,
     )
 
     input = torch.rand(batch_size, in_channels)

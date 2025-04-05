@@ -115,6 +115,24 @@ class ResidualBlock(nn.Module):
 #########################################
 # Residual Network
 #########################################
+class input_normalizer_class(nn.Module):
+    def __init__(self, input_normalizer) -> None:
+        super(input_normalizer_class, self).__init__()
+        self.input_normalizer = input_normalizer
+
+    def forward(self, x):
+        return self.input_normalizer.encode(x)
+
+
+class output_denormalizer_class(nn.Module):
+    def __init__(self, output_normalizer) -> None:
+        super(output_denormalizer_class, self).__init__()
+        self.output_normalizer = output_normalizer
+
+    def forward(self, x):
+        return self.output_normalizer.decode(x)
+
+
 class ResidualNetwork(nn.Module):
     """
     Residual Network for the Fourier Neural Operator
@@ -131,8 +149,7 @@ class ResidualNetwork(nn.Module):
         layer_norm: bool = False,
         dropout_rate: float = 0.0,
         zero_mean: bool = False,
-        input_normalizer=None,
-        output_denormalizer=None,
+        example=None,
     ) -> None:
         super(ResidualNetwork, self).__init__()
 
@@ -145,7 +162,9 @@ class ResidualNetwork(nn.Module):
         assert n_blocks >= 0, "Number of layers must be greater or equal to 0"
 
         self.input_normalizer = (
-            nn.Identity() if input_normalizer is None else input_normalizer
+            nn.Identity()
+            if example is None
+            else input_normalizer_class(example.input_normalizer)
         )
 
         self.input_layer = nn.Sequential(
@@ -169,7 +188,9 @@ class ResidualNetwork(nn.Module):
         self.output_layer = nn.Linear(hidden_channels[-1], out_channels)
 
         self.output_denormalizer = (
-            nn.Identity() if output_denormalizer is None else output_denormalizer
+            nn.Identity()
+            if example is None
+            else output_denormalizer_class(example.output_normalizer)
         )
 
         self.post_processing = zero_mean_imposition if zero_mean else nn.Identity
