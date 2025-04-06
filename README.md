@@ -33,14 +33,14 @@ To set up the HyperNOs project, follow these steps:
    ```
 > [!WARNING]
 > Only **for Windows** I recommend to install [WSL](https://ubuntu.com/desktop/wsl). Then open the WSL terminal and navigate where you have installed the HyperNOs library
-   ```bash
-   cd /mnt/c/Users/<your_user>/<your_path_to_HyperNOs>
-   ```
-   and then try to run the program with `./download_data.sh` if you get an error like `/bin/bash^M: bad interpreter. No such file or directory` this can be due to `CR` and `LF` in Windows. In this case try to run the following line and then rerun the program.
-   ```bash
-   sed -i -e 's/\r$//' download_data.sh
-   ./download_data.sh
-   ```
+>  ```bash
+>  cd /mnt/c/Users/<your_user>/<your_path_to_HyperNOs>
+>  ```
+>   and then try to run the program with `./download_data.sh` if you get an error like `/bin/bash^M: bad interpreter. No such file or directory` this can be due to `CR` and `LF` in Windows. In this case try to run the following line and then rerun the program.
+>   ```bash
+>   sed -i -e 's/\r$//' download_data.sh
+>   ./download_data.sh
+>```
 
 4. If you want to download our trained model this have to be done in two steps. First of all clone the following github repository:
    ```bash
