@@ -10,19 +10,14 @@ import torch
 sys.path.append("..")
 
 from datasets import NO_load_data_model
-from FNO.FNO import FNO
-from FNO.FNO_utilities import (
-    FNO_initialize_hyperparameters,
-    compute_modes,
-    count_params_fno,
-)
+from FNO import FNO, FNO_initialize_hyperparameters, compute_modes, count_params_fno
 from loss_fun import loss_selector
 from ray import tune
 from tune import tune_hyperparameters
-from wrappers.wrap_model import wrap_model_builder
+from wrappers import wrap_model_builder
 
 
-def ray_same_dof_fno(
+def ray_samedof_fno(
     which_example: str, mode_hyperparams: str, loss_fn_str: str, maximum: int
 ):
     # Select available device
@@ -118,4 +113,4 @@ def ray_same_dof_fno(
 
 
 if __name__ == "__main__":
-    ray_same_dof_fno("poisson", "default", "L2", 33)
+    ray_samedof_fno("poisson", "default", "L2", 33)

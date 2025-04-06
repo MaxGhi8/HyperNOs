@@ -2,7 +2,6 @@ import sys
 
 sys.path.append("..")
 
-import numpy as np
 import torch
 from loss_fun_with_physics import (
     DarcyResidualAutograd,

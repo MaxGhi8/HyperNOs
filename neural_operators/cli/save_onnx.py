@@ -10,14 +10,11 @@ import torch
 
 sys.path.append("..")
 
-from FNO.FNO import FNO
-from CNO.CNO import CNO
+from FNO import FNO, FNO_initialize_hyperparameters
+from CNO import CNO, CNO_initialize_hyperparameters
 from datasets import NO_load_data_model
-from wrappers.wrap_model import wrap_model
-from ResNet.ResidualNetwork import ResidualNetwork
-from FNO.FNO_utilities import FNO_initialize_hyperparameters
-from CNO.CNO_utilities import CNO_initialize_hyperparameters
-from ResNet.ResNet_utilities import ResNet_initialize_hyperparameters
+from wrappers import wrap_model
+from ResNet import ResidualNetwork, ResNet_initialize_hyperparameters
 
 
 #########################################

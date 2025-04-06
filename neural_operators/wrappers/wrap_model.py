@@ -1,6 +1,6 @@
-from wrappers.AirfoilWrapper import AirfoilWrapper
-from wrappers.CrossTrussWrapper import CrossTrussWrapper
-from wrappers.StiffnessMatrixWrapper import StiffnessMatrixWrapper
+from .AirfoilWrapper import AirfoilWrapper
+from .CrossTrussWrapper import CrossTrussWrapper
+from .StiffnessMatrixWrapper import StiffnessMatrixWrapper
 
 
 def wrap_model(model, which_example):

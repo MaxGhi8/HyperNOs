@@ -9,7 +9,7 @@ import torch
 sys.path.append("..")
 
 from datasets import Darcy
-from FNO.FNO import FNO
+from FNO import FNO
 from loss_fun import LprelLoss
 from ray import tune
 from tune import tune_hyperparameters

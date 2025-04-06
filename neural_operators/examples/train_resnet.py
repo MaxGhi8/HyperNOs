@@ -9,11 +9,9 @@ import torch
 
 sys.path.append("..")
 
-import torch.nn as nn
 from datasets import NO_load_data_model
-from loss_fun import LprelLoss, lpLoss
-from ResNet.ResidualNetwork import ResidualNetwork
-from ResNet.ResNet_utilities import ResNet_initialize_hyperparameters
+from loss_fun import lpLoss
+from ResNet import ResidualNetwork, ResNet_initialize_hyperparameters
 from train import train_fixed_model
 
 

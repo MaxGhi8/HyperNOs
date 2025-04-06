@@ -4,9 +4,8 @@ sys.path.append("..")
 
 import pytest
 import torch
-from CNO.CNO import CNO
-from CNO.CNO_utilities import CNO_initialize_hyperparameters
-from wrappers.wrap_model import wrap_model
+from CNO import CNO, CNO_initialize_hyperparameters
+from wrappers import wrap_model
 
 
 # Select some random params for testing fro 1D CNO

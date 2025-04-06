@@ -4,7 +4,7 @@ sys.path.append("..")
 
 import torch
 from datasets import NO_load_data_model
-from ResNet.ResidualNetwork import (
+from ResNet import (
     ResidualNetwork,
     centered_softmax,
     zero_mean_imposition,

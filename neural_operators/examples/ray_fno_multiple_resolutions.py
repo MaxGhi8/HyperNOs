@@ -9,15 +9,14 @@ import torch
 sys.path.append("..")
 
 from datasets import NO_load_data_model, concat_datasets
-from FNO.FNO import FNO
-from FNO.FNO_utilities import FNO_initialize_hyperparameters
+from FNO import FNO, FNO_initialize_hyperparameters
 from loss_fun import loss_selector
 from ray import tune
 from tune import tune_hyperparameters
-from wrappers.wrap_model import wrap_model_builder
+from wrappers import wrap_model_builder
 
 
-def main(
+def ray_fno_multiple__resolutions(
     resolution: list[int],
     which_example: str,
     mode_hyperparams: str,
@@ -118,4 +117,4 @@ def main(
 
 
 if __name__ == "__main__":
-    main([64, 32, 16], "poisson", "test", "L1")
+    ray_fno_multiple__resolutions([64, 32, 16], "poisson", "test", "L1")

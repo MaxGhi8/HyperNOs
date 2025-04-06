@@ -4,9 +4,8 @@ sys.path.append("..")
 
 import pytest
 import torch
-from FNO.FNO import FNO
-from FNO.FNO_utilities import FNO_initialize_hyperparameters
-from wrappers.wrap_model import wrap_model
+from FNO import FNO, FNO_initialize_hyperparameters
+from wrappers import wrap_model
 
 torch.set_default_dtype(torch.float32)
 

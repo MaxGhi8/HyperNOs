@@ -10,15 +10,14 @@ import torch
 sys.path.append("..")
 
 from datasets import SinFrequency
-from FNO.FNO import FNO
-from FNO.FNO_utilities import FNO_initialize_hyperparameters
+from FNO import FNO, FNO_initialize_hyperparameters
 from loss_fun import loss_selector
 from loss_fun_with_physics import PoissonResidualFiniteDiff
 from train import train_fixed_model
 from utilities import get_plot_function
 
 
-def train_fno(mode_hyperparams: str, loss_fn_str: str, alpha_phys: float):
+def train_fno_with_phys(mode_hyperparams: str, loss_fn_str: str, alpha_phys: float):
 
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -96,4 +95,4 @@ def train_fno(mode_hyperparams: str, loss_fn_str: str, alpha_phys: float):
 
 
 if __name__ == "__main__":
-    train_fno("default", "L2", 0.01)
+    train_fno_with_phys("default", "L2", 0.01)

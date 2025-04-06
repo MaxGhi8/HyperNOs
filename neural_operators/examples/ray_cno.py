@@ -8,13 +8,12 @@ import torch
 
 sys.path.append("..")
 
-from CNO.CNO import CNO
-from CNO.CNO_utilities import CNO_initialize_hyperparameters
+from CNO import CNO, CNO_initialize_hyperparameters
 from datasets import NO_load_data_model
 from loss_fun import loss_selector
 from ray import tune
 from tune import tune_hyperparameters
-from wrappers.wrap_model import wrap_model_builder
+from wrappers import wrap_model_builder
 
 
 def ray_cno(which_example: str, mode_hyperparams: str, loss_fn_str: str):

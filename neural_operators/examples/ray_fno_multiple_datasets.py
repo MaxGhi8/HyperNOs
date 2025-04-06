@@ -9,15 +9,14 @@ import torch
 sys.path.append("..")
 
 from datasets import NO_load_data_model, concat_datasets
-from FNO.FNO import FNO
-from FNO.FNO_utilities import FNO_initialize_hyperparameters
+from FNO import FNO, FNO_initialize_hyperparameters
 from loss_fun import loss_selector
 from ray import tune
 from tune import tune_hyperparameters
-from wrappers.wrap_model import wrap_model_builder
+from wrappers import wrap_model_builder
 
 
-def main(
+def ray_fno_multiple_datasets(
     which_example: list,
     example_default_params: str,
     mode_hyperparams: str,
@@ -116,4 +115,4 @@ def main(
 
 
 if __name__ == "__main__":
-    main(["darcy", "poisson"], "darcy", "default", "L1")
+    ray_fno_multiple_datasets(["darcy", "poisson"], "darcy", "default", "L1")

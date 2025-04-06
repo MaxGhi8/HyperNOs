@@ -1,5 +1,5 @@
 """
-In this example I fix all the hyperparameters for the CNO model and train it.
+In this example I fix all the hyperparameters for the FNO model and train it.
 """
 
 import os
@@ -9,62 +9,62 @@ import torch
 
 sys.path.append("..")
 
-from CNO.CNO import CNO
-from CNO.CNO_utilities import (
-    CNO_initialize_hyperparameters,
-    compute_channel_multiplier,
-    count_params_cno,
-)
 from datasets import NO_load_data_model
+from FNO import FNO, FNO_initialize_hyperparameters, compute_modes, count_params_fno
 from loss_fun import loss_selector
 from train import train_fixed_model
 from utilities import get_plot_function
-from wrappers.wrap_model import wrap_model_builder
+from wrappers import wrap_model_builder
 
 
-def train_samedofs_cno(which_example: str, loss_fn_str: str):
+def train_samedof_fno(which_example: str, loss_fn_str: str, maximum: int):
 
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Compute the total number of default parameters
-    hyperparams_train, hyperparams_arc = CNO_initialize_hyperparameters(
-        which_example, mode="default"
+    hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
+        which_example, "default"
     )
-    total_default_params = count_params_cno(
+    total_default_params = count_params_fno(
         {
             **hyperparams_train,
             **hyperparams_arc,
         },
         accurate=False,
     )
+    # total_default_params = 500000
 
     # Load true hyper-parameters
-    hyperparams_train, hyperparams_arc = CNO_initialize_hyperparameters(
+    hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
         which_example, "best_samedofs"
     )
     default_hyper_params = {
         **hyperparams_train,
         **hyperparams_arc,
     }
+
     print(
-        "Channel multiplier: ",
-        compute_channel_multiplier(total_default_params, default_hyper_params),
+        "The number of modes is:",
+        compute_modes(total_default_params, maximum, default_hyper_params),
     )
 
     # Define the model builders
-    model_builder = lambda config: CNO(
-        problem_dim=config["problem_dim"],
-        in_dim=config["in_dim"],
-        out_dim=config["out_dim"],
-        size=config["in_size"],
-        N_layers=config["N_layers"],
-        N_res=config["N_res"],
-        N_res_neck=config["N_res_neck"],
-        channel_multiplier=compute_channel_multiplier(total_default_params, config),
-        kernel_size=config["kernel_size"],
-        use_bn=config["bn"],
-        device=device,
+    model_builder = lambda config: FNO(
+        config["problem_dim"],
+        config["in_dim"],
+        config["width"],
+        config["out_dim"],
+        config["n_layers"],
+        compute_modes(total_default_params, maximum, config),
+        config["fun_act"],
+        config["weights_norm"],
+        config["fno_arc"],
+        config["RNN"],
+        config["fft_norm"],
+        config["padding"],
+        device,
+        config["retrain"],
     )
     # Wrap the model builder
     model_builder = wrap_model_builder(model_builder, which_example)
@@ -87,7 +87,7 @@ def train_samedofs_cno(which_example: str, loss_fn_str: str):
         beta=default_hyper_params["beta"],
     )
 
-    experiment_name = f"CNO/{which_example}/loss_{loss_fn_str}_mode_best_samedofs"
+    experiment_name = f"FNO/{which_example}/loss_{loss_fn_str}_mode_best_samedofs"
 
     # Create the right folder if it doesn't exist
     folder = f"../tests/{experiment_name}"
@@ -113,4 +113,4 @@ def train_samedofs_cno(which_example: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    train_samedofs_cno("poisson", "L1")
+    train_samedof_fno("poisson", "L2", 33)

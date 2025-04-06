@@ -9,12 +9,11 @@ import torch
 sys.path.append("..")
 
 from datasets import NO_load_data_model
-from FNO.FNO import FNO
-from FNO.FNO_utilities import FNO_initialize_hyperparameters
+from FNO import FNO, FNO_initialize_hyperparameters
 from loss_fun import loss_selector
 from ray import tune
 from tune import tune_hyperparameters
-from wrappers.wrap_model import wrap_model_builder
+from wrappers import wrap_model_builder
 
 
 def ray_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
