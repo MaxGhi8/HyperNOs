@@ -1,4 +1,5 @@
 #!/bin/bash
+# This script downloads the data fro benchmarks from Zenodo and extracts it.
 
 # Check if unzip is installed
 if ! command -v unzip &> /dev/null; then

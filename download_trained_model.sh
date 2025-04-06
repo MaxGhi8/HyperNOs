@@ -1,4 +1,5 @@
 #!/bin/bash
+# This script downloads user desired trained models from Zenodo.
 
 #########################################
 # Get user input
