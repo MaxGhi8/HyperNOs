@@ -4,7 +4,8 @@ sys.path.append("..")
 
 import pytest
 import torch
-from FNO import FNO, FNO_initialize_hyperparameters
+from FNO import FNO
+from utilities import initialize_hyperparameters
 from wrappers import wrap_model
 
 torch.set_default_dtype(torch.float32)
@@ -27,7 +28,7 @@ def test_FNO_1d(which_example, mode_hyperparams):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load the default hyperparameters for the FNO model
-    hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
+    hyperparams_train, hyperparams_arc = initialize_hyperparameters(
         which_example, mode_hyperparams
     )
 
@@ -86,8 +87,8 @@ def test_FNO_2d(which_example, mode_hyperparams):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load the default hyperparameters for the FNO model
-    hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
-        which_example, mode_hyperparams
+    hyperparams_train, hyperparams_arc = initialize_hyperparameters(
+        "FNO", which_example, mode_hyperparams
     )
 
     config = {

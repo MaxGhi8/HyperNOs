@@ -10,11 +10,12 @@ import torch
 
 sys.path.append("..")
 
-from FNO import FNO, FNO_initialize_hyperparameters
-from CNO import CNO, CNO_initialize_hyperparameters
+from FNO import FNO
+from CNO import CNO
 from datasets import NO_load_data_model
 from wrappers import wrap_model
-from ResNet import ResidualNetwork, ResNet_initialize_hyperparameters
+from ResNet import ResidualNetwork
+from utilities import initialize_hyperparameters
 
 
 #########################################
@@ -113,25 +114,11 @@ name_model = folder + [file for file in files if file.startswith("model_")][0]
 print(f"🤖 Uploading model's name: {name_model}")
 
 try:
-    try:
-        # For models saved with torch.save(model.state_dict())
-
+    try:  # For models saved with torch.save(model.state_dict())
         # Load the default hyperparameters for the FNO model
-        match arc:
-            case "FNO":
-                hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
-                    which_example, mode_str
-                )
-            case "CNO":
-                hyperparams_train, hyperparams_arc = CNO_initialize_hyperparameters(
-                    which_example, mode_str
-                )
-            case "ResNet":
-                hyperparams_train, hyperparams_arc = ResNet_initialize_hyperparameters(
-                    which_example, mode_str
-                )
-            case _:
-                raise ValueError("Unknown architecture")
+        hyperparams_train, hyperparams_arc = initialize_hyperparameters(
+            arc, which_example, mode_str
+        )
 
         default_hyper_params = {
             **hyperparams_train,

@@ -9,14 +9,15 @@ import torch
 sys.path.append("..")
 
 from datasets import NO_load_data_model, concat_datasets
-from FNO import FNO, FNO_initialize_hyperparameters
+from FNO import FNO
 from loss_fun import loss_selector
 from ray import tune
 from tune import tune_hyperparameters
+from utilities import initialize_hyperparameters
 from wrappers import wrap_model_builder
 
 
-def ray_fno_multiple__resolutions(
+def ray_fno_multiple_resolutions(
     resolution: list[int],
     which_example: str,
     mode_hyperparams: str,
@@ -26,8 +27,8 @@ def ray_fno_multiple__resolutions(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load the default hyperparameters for the FNO model
-    hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
-        which_example, mode=mode_hyperparams
+    hyperparams_train, hyperparams_arc = initialize_hyperparameters(
+        "FNO", which_example, mode=mode_hyperparams
     )
 
     # Define the hyperparameter search space
@@ -117,4 +118,4 @@ def ray_fno_multiple__resolutions(
 
 
 if __name__ == "__main__":
-    ray_fno_multiple__resolutions([64, 32, 16], "poisson", "test", "L1")
+    ray_fno_multiple_resolutions([64, 32, 16], "poisson", "test", "L1")

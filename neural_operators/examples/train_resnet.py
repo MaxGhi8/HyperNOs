@@ -11,8 +11,9 @@ sys.path.append("..")
 
 from datasets import NO_load_data_model
 from loss_fun import lpLoss
-from ResNet import ResidualNetwork, ResNet_initialize_hyperparameters
+from ResNet import ResidualNetwork
 from train import train_fixed_model
+from utilities import initialize_hyperparameters
 
 
 def train_resnet(which_example: str, mode_hyperparams: str):
@@ -21,8 +22,8 @@ def train_resnet(which_example: str, mode_hyperparams: str):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load the default hyperparameters for the ResNet model
-    hyperparams_train, hyperparams_arc = ResNet_initialize_hyperparameters(
-        which_example, mode_hyperparams
+    hyperparams_train, hyperparams_arc = initialize_hyperparameters(
+        "ResNet", which_example, mode_hyperparams
     )
     default_hyper_params = {
         **hyperparams_train,

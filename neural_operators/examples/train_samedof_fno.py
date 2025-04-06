@@ -10,10 +10,10 @@ import torch
 sys.path.append("..")
 
 from datasets import NO_load_data_model
-from FNO import FNO, FNO_initialize_hyperparameters, compute_modes, count_params_fno
+from FNO import FNO, compute_modes, count_params_fno
 from loss_fun import loss_selector
 from train import train_fixed_model
-from utilities import get_plot_function
+from utilities import get_plot_function, initialize_hyperparameters
 from wrappers import wrap_model_builder
 
 
@@ -23,8 +23,8 @@ def train_samedof_fno(which_example: str, loss_fn_str: str, maximum: int):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Compute the total number of default parameters
-    hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
-        which_example, "default"
+    hyperparams_train, hyperparams_arc = initialize_hyperparameters(
+        "FNO", which_example, "default"
     )
     total_default_params = count_params_fno(
         {
@@ -36,8 +36,8 @@ def train_samedof_fno(which_example: str, loss_fn_str: str, maximum: int):
     # total_default_params = 500000
 
     # Load true hyper-parameters
-    hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
-        which_example, "best_samedofs"
+    hyperparams_train, hyperparams_arc = initialize_hyperparameters(
+        "FNO", which_example, "best_samedofs"
     )
     default_hyper_params = {
         **hyperparams_train,

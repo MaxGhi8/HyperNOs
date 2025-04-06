@@ -1,6 +1,2 @@
 from .FNO import FNO
-from .FNO_utilities import (
-    count_params_fno,
-    compute_modes,
-    FNO_initialize_hyperparameters,
-)
+from .FNO_utilities import compute_modes, count_params_fno

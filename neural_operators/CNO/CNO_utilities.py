@@ -2,9 +2,6 @@
 In this file there are some utilities functions that are used in the main file.
 """
 
-import json
-from utilities import find_file
-
 
 def count_params_cno(config, accurate=True):
     """
@@ -56,28 +53,3 @@ def compute_channel_multiplier(total_param, config):
     ) ** (1 / 2)
 
     return int(channel_multiplier)
-
-
-def CNO_initialize_hyperparameters(which_example: str, mode: str):
-    """
-    Function to initialize the hyperparameters in according to the best
-    results obtained in the paper of Mishra on CNOs, by loading them from external JSON files.
-
-    which_example: str
-        The name of the example to load the hyperparameters for.
-    mode: str
-        The mode to use to load the hyperparameters (this can be either 'best' or 'default').
-    """
-    # Here I use relative path
-    config_directory = "../CNO/configurations/"
-    config_path = find_file(f"{mode}_{which_example}.json", config_directory)
-
-    # Load the configuration from the JSON file
-    with open(config_path, "r") as f:
-        config = json.load(f)
-
-    # Extract the training properties and FNO architecture from the loaded configuration
-    training_properties = config["training_properties"]
-    cno_architecture = config["cno_architecture"]
-
-    return training_properties, cno_architecture

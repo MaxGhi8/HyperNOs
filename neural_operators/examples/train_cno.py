@@ -9,11 +9,11 @@ import torch
 
 sys.path.append("..")
 
-from CNO import CNO, CNO_initialize_hyperparameters
+from CNO import CNO
 from datasets import NO_load_data_model
 from loss_fun import loss_selector
 from train import train_fixed_model
-from utilities import get_plot_function
+from utilities import get_plot_function, initialize_hyperparameters
 from wrappers import wrap_model_builder
 
 
@@ -23,8 +23,8 @@ def train_cno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load the default hyperparameters for the CNO model
-    hyperparams_train, hyperparams_arc = CNO_initialize_hyperparameters(
-        which_example, mode=mode_hyperparams
+    hyperparams_train, hyperparams_arc = initialize_hyperparameters(
+        "CNO", which_example, mode=mode_hyperparams
     )
 
     # Default value for the hyper-parameters in the search space

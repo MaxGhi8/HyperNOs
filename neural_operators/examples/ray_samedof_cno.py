@@ -9,16 +9,12 @@ import torch
 
 sys.path.append("..")
 
-from CNO import (
-    CNO,
-    CNO_initialize_hyperparameters,
-    compute_channel_multiplier,
-    count_params_cno,
-)
+from CNO import CNO, compute_channel_multiplier, count_params_cno
 from datasets import NO_load_data_model
 from loss_fun import loss_selector
 from ray import tune
 from tune import tune_hyperparameters
+from utilities import initialize_hyperparameters
 from wrappers import wrap_model_builder
 
 
@@ -27,8 +23,8 @@ def ray_samedof_cno(which_example: str, mode_hyperparams: str, loss_fn_str: str)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load the default hyperparameters for the CNO model
-    hyperparams_train, hyperparams_arc = CNO_initialize_hyperparameters(
-        which_example, mode=mode_hyperparams
+    hyperparams_train, hyperparams_arc = initialize_hyperparameters(
+        "CNO", which_example, mode=mode_hyperparams
     )
 
     fixed_params = {

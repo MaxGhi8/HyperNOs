@@ -9,10 +9,11 @@ import torch
 sys.path.append("..")
 
 from datasets import NO_load_data_model, concat_datasets
-from FNO import FNO, FNO_initialize_hyperparameters
+from FNO import FNO
 from loss_fun import loss_selector
 from ray import tune
 from tune import tune_hyperparameters
+from utilities import initialize_hyperparameters
 from wrappers import wrap_model_builder
 
 
@@ -26,8 +27,8 @@ def ray_fno_multiple_datasets(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load the default hyperparameters for the FNO model
-    hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
-        example_default_params, mode=mode_hyperparams
+    hyperparams_train, hyperparams_arc = initialize_hyperparameters(
+        "FNO", example_default_params, mode=mode_hyperparams
     )
 
     # Define the hyperparameter search space

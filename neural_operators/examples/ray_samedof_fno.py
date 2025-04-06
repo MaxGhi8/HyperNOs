@@ -10,10 +10,11 @@ import torch
 sys.path.append("..")
 
 from datasets import NO_load_data_model
-from FNO import FNO, FNO_initialize_hyperparameters, compute_modes, count_params_fno
+from FNO import FNO, compute_modes, count_params_fno
 from loss_fun import loss_selector
 from ray import tune
 from tune import tune_hyperparameters
+from utilities import initialize_hyperparameters
 from wrappers import wrap_model_builder
 
 
@@ -24,8 +25,8 @@ def ray_samedof_fno(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load the baseline model
-    hyperparams_train, hyperparams_arc = FNO_initialize_hyperparameters(
-        which_example, mode=mode_hyperparams
+    hyperparams_train, hyperparams_arc = initialize_hyperparameters(
+        "FNO", which_example, mode=mode_hyperparams
     )
 
     fixed_params = {

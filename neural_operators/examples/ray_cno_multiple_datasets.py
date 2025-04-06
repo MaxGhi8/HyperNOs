@@ -8,11 +8,12 @@ import torch
 
 sys.path.append("..")
 
-from CNO import CNO, CNO_initialize_hyperparameters
+from CNO import CNO
 from datasets import NO_load_data_model, concat_datasets
 from loss_fun import loss_selector
 from ray import tune
 from tune import tune_hyperparameters
+from utilities import initialize_hyperparameters
 from wrappers import wrap_model_builder
 
 
@@ -26,8 +27,8 @@ def ray_cno_multiple_datasets(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load the default hyperparameters for the CNO model
-    hyperparams_train, hyperparams_arc = CNO_initialize_hyperparameters(
-        example_default_params, mode=mode_hyperparams
+    hyperparams_train, hyperparams_arc = initialize_hyperparameters(
+        "CNO", example_default_params, mode=mode_hyperparams
     )
 
     # Define the hyperparameter search space

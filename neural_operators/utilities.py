@@ -2,8 +2,10 @@
 In this file there are some utilities functions that are used in the main file.
 """
 
+import json
 import operator
 import os
+import pathlib
 from functools import reduce
 
 import matplotlib.pyplot as plt
@@ -19,16 +21,69 @@ from torch import Tensor
 #########################################
 # Function to find a file in a directory
 #########################################
-def find_file(file_name, search_path):
-    # Set the directory to start the search, for example 'C:\' on Windows or '/' on Unix-based systems.
-    # Walk through all directories and files in the search_path.
+def find_file(file_path, search_path):
+    # Extract the filename and path components
+    file_name = os.path.basename(file_path)
+    path_components = pathlib.Path(file_path).parts[:-1]  # All except filename
+
+    # Walk through all directories and files in the search_path
     for root, dirs, files in os.walk(search_path):
         if file_name in files:
-            print(
-                f"📂 File {file_name} found in {root}"
-            )  # print the path where the file was found
-            return os.path.join(root, file_name)  # full path
-    raise FileNotFoundError(f"File {file_name} not found in {search_path}")
+            # Get the full path of the found file
+            full_path = os.path.join(root, file_name)
+
+            # Check if the path structure matches what we're looking for
+            relative_path = os.path.relpath(full_path, search_path)
+            relative_parts = pathlib.Path(relative_path).parts
+
+            # If no specific path structure was requested, or if the path matches our pattern
+            if not path_components or all(
+                pc in relative_parts for pc in path_components
+            ):
+                print(f"📂 File {file_name} found in {root}")
+                return full_path
+
+    raise FileNotFoundError(f"File {file_path} not found in {search_path}")
+
+
+##########################################
+# Function to initialize the hyperparameters from JSON
+##########################################
+def initialize_hyperparameters(arc: str, which_example: str, mode: str):
+    """
+    Function to initialize the hyperparameters of an architecture loading a JSON.
+
+    Parameters
+    ----------
+    arc: str
+        The architecture to load the hyperparameters for.
+
+    which_example: str
+        The name of the example to load the hyperparameters for.
+
+    mode: str
+        The mode to use to load the hyperparameters (this can be either 'best' or 'default').
+    """
+    # Here I use relative path
+    config_path = find_file(
+        f"{arc}/configurations/{mode}_{which_example}.json",
+        os.path.dirname("../HyperNOs"),
+    )
+
+    # Load the configuration from the JSON file
+    with open(config_path, "r") as f:
+        config = json.load(f)
+
+    # Extract the training properties and FNO architecture from the loaded configuration
+    training_properties = config["training_properties"]
+    no_architecture = config[f"{arc.lower()}_architecture"]
+
+    if arc == "FNO":
+        no_architecture["weights_norm"] = (
+            "Xavier" if no_architecture["fun_act"] == "gelu" else "Kaiming"
+        )
+
+    return training_properties, no_architecture
 
 
 #########################################
