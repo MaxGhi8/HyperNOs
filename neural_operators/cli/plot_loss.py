@@ -138,7 +138,7 @@ def plot_loss_curves(
     plt.yticks(fontsize=fontsize)
 
     if path:
-        plt.savefig(path)
+        plt.savefig(path, dpi=300, bbox_inches="tight")
     else:
         plt.show()
 

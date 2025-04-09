@@ -498,9 +498,9 @@ def plot_histogram(
         error_np = [error.to("cpu").numpy() for error in errors]
 
     # Set seaborn style for better aesthetics
-    sns.set(style="whitegrid", palette="deep")
+    sns.set(style="white", palette="deep")
+    plt.figure(figsize=(8, 6), layout="constrained")
 
-    plt.figure(figsize=(8, 6))
     plt.xscale("log")
     sns.histplot(
         error_np,
@@ -517,13 +517,10 @@ def plot_histogram(
     plt.ylabel("Number of Samples", fontsize=18)
     plt.xticks(fontsize=18)
     plt.yticks(fontsize=18)
+    plt.grid(True, which="both", ls="-", alpha=0.1, color="black")
     # plt.title(
     #     f"Histogram of the Relative Error in Norm {str_norm}", fontsize=20, pad=20
     # )
-
-    # Improve grid and layout
-    plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
-    plt.tight_layout()
 
     # Show the plot
     plt.savefig(
@@ -579,9 +576,9 @@ def plot_boxplot(
         error_np = [error.to("cpu").numpy() for error in errors]
 
     # Set seaborn style for better aesthetics
-    sns.set(style="whitegrid", palette="deep")
+    sns.set(style="white", palette="deep")
+    plt.figure(figsize=(8, 6), layout="constrained")
 
-    plt.figure(figsize=(8, 6))
     sns.stripplot(
         error_np,
         orient="v",
@@ -597,13 +594,10 @@ def plot_boxplot(
     plt.ylabel("Relative Error", fontsize=18)
     plt.xticks(fontsize=18)
     plt.yticks(fontsize=18)
+    plt.grid(True, which="both", ls="-", alpha=0.1, color="black")
     # plt.title(
     #     f"boxplot of the Relative Error in Norm {str_norm}", fontsize=20, pad=20
     # )
-
-    # Improve grid and layout
-    plt.grid(True, which="both", linestyle="--", linewidth=0.5, alpha=0.7)
-    plt.tight_layout()
 
     # Show the plot
     plt.savefig(
