@@ -39,7 +39,9 @@ import seaborn as sns
 import torch
 from beartype import beartype
 from cli.utilities_recover_model import get_tensors, test_fun, test_plot_samples
+from CNO import CNO
 from datasets import NO_load_data_model
+from FNO import FNO
 from jaxtyping import Float, jaxtyped
 from loss_fun import (
     H1relLoss,
@@ -50,9 +52,11 @@ from loss_fun import (
     LprelLoss_multiout,
     loss_selector,
 )
+from ResNet import ResidualNetwork
 from scipy.io import savemat
 from torch import Tensor
-from utilities import count_params
+from utilities import count_params, initialize_hyperparameters
+from wrappers import wrap_model
 
 #########################################
 # default values
@@ -151,9 +155,88 @@ files = os.listdir(folder)
 name_model = folder + [file for file in files if file.startswith("model_")][0]
 
 try:
-    model = torch.load(name_model, weights_only=False, map_location=device)
-    model.eval()
-    # torch.save(model.state_dict(), name_model + "_state_dict")
+    try:  # For models saved with torch.save(model.state_dict())
+        # Load the default hyperparameters for the FNO model
+        hyperparams_train, hyperparams_arc = initialize_hyperparameters(
+            arc, which_example, mode_str
+        )
+
+        default_hyper_params = {
+            **hyperparams_train,
+            **hyperparams_arc,
+        }
+
+        example = NO_load_data_model(
+            which_example=which_example,
+            no_architecture={
+                "FourierF": default_hyper_params["FourierF"],
+                "retrain": default_hyper_params["retrain"],
+            },
+            batch_size=default_hyper_params["batch_size"],
+            training_samples=default_hyper_params["training_samples"],
+        )
+
+        match arc:
+            case "FNO":
+                model = FNO(
+                    default_hyper_params["problem_dim"],
+                    default_hyper_params["in_dim"],
+                    default_hyper_params["width"],
+                    default_hyper_params["out_dim"],
+                    default_hyper_params["n_layers"],
+                    default_hyper_params["modes"],
+                    default_hyper_params["fun_act"],
+                    default_hyper_params["weights_norm"],
+                    default_hyper_params["fno_arc"],
+                    default_hyper_params["RNN"],
+                    default_hyper_params["fft_norm"],
+                    default_hyper_params["padding"],
+                    device,
+                    default_hyper_params["retrain"],
+                )
+                model = wrap_model(model, which_example)
+
+            case "CNO":
+                model = CNO(
+                    problem_dim=default_hyper_params["problem_dim"],
+                    in_dim=default_hyper_params["in_dim"],
+                    out_dim=default_hyper_params["out_dim"],
+                    size=default_hyper_params["in_size"],
+                    N_layers=default_hyper_params["N_layers"],
+                    N_res=default_hyper_params["N_res"],
+                    N_res_neck=default_hyper_params["N_res_neck"],
+                    channel_multiplier=default_hyper_params["channel_multiplier"],
+                    kernel_size=default_hyper_params["kernel_size"],
+                    use_bn=default_hyper_params["bn"],
+                    device=device,
+                )
+                model = wrap_model(model, which_example)
+
+            case "ResNet":
+                model = ResidualNetwork(
+                    default_hyper_params["in_channels"],
+                    default_hyper_params["out_channels"],
+                    default_hyper_params["hidden_channels"],
+                    default_hyper_params["activation_str"],
+                    default_hyper_params["n_blocks"],
+                    device,
+                    layer_norm=default_hyper_params["layer_norm"],
+                    dropout_rate=default_hyper_params["dropout_rate"],
+                    zero_mean=default_hyper_params["zero_mean"],
+                    example=(
+                        example
+                        if default_hyper_params["internal_normalization"]
+                        else None
+                    ),
+                )
+
+        checkpoint = torch.load(name_model, weights_only=True, map_location=device)
+        model.load_state_dict(checkpoint["state_dict"])
+
+    except Exception:
+        # save with torch.save(model)
+        model = torch.load(name_model, weights_only=False, map_location=device)
+
 except Exception:
     raise ValueError(
         "The model is not found, please check the hyperparameters passed trhow the CLI."
