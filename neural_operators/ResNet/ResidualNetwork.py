@@ -238,4 +238,4 @@ class ResidualNetwork(nn.Module):
         x = self.residual_blocks(x)
         x = self.output_layer(x)
 
-        return zero_mean_imposition(self.output_denormalizer(x))
+        return self.post_processing(self.output_denormalizer(x))
