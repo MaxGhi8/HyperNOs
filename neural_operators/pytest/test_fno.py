@@ -29,7 +29,7 @@ def test_FNO_1d(which_example, mode_hyperparams):
 
     # Load the default hyperparameters for the FNO model
     hyperparams_train, hyperparams_arc = initialize_hyperparameters(
-        which_example, mode_hyperparams
+        "FNO", which_example, mode_hyperparams
     )
 
     config = {
