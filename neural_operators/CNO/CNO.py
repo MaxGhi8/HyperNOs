@@ -48,6 +48,22 @@ class CNO_LReLu(nn.Module):
             )
             return x
 
+        elif self.problem_dim == 3:
+            x = F.interpolate(
+                x,
+                size=(2 * self.in_size, 2 * self.in_size, 2 * self.in_size),
+                mode="trilinear",
+                antialias=False,  # anti-aliasing not supported in 3D
+            )
+            x = self.act(x)
+            x = F.interpolate(
+                x,
+                size=(self.out_size, self.out_size, self.out_size),
+                mode="trilinear",
+                antialias=False,  # anti-aliasing not supported in 3D
+            )
+            return x
+
         else:
             raise ValueError("Problem dimension must be 1 or 2")
 
@@ -104,8 +120,23 @@ class CNOBlock(nn.Module):
                 self.batch_norm = nn.BatchNorm2d(self.out_channels)
             else:
                 self.batch_norm = nn.Identity()
+
+        elif self.problem_dim == 3:
+            self.convolution = torch.nn.Conv3d(
+                in_channels=self.in_channels,
+                out_channels=self.out_channels,
+                kernel_size=self.kernel_size,
+                padding=self.padding,
+                bias=not self.use_bn,
+            )
+
+            if use_bn:
+                self.batch_norm = nn.BatchNorm3d(self.out_channels)
+            else:
+                self.batch_norm = nn.Identity()
+
         else:
-            raise ValueError("Problem dimension must be 1 or 2")
+            raise ValueError("Problem dimension must be 1, 2 or 3")
 
         # Up/Down-sampling happens inside Activation
         self.act = CNO_LReLu(
@@ -162,8 +193,15 @@ class LiftProjectBlock(nn.Module):
                 kernel_size=self.kernel_size,
                 padding=self.padding,
             )
+        elif self.problem_dim == 3:
+            self.convolution = torch.nn.Conv3d(
+                in_channels=self.latent_dim,
+                out_channels=self.out_channels,
+                kernel_size=self.kernel_size,
+                padding=self.padding,
+            )
         else:
-            raise ValueError("Problem dimension must be 1 or 2")
+            raise ValueError("Problem dimension must be 1, 2 or 3")
 
     @jaxtyped(typechecker=beartype)
     def forward(
@@ -235,6 +273,33 @@ class ResidualBlock(nn.Module):
             else:
                 self.batch_norm1 = nn.Identity()
                 self.batch_norm2 = nn.Identity()
+
+        elif self.problem_dim == 3:
+            self.convolution1 = torch.nn.Conv3d(
+                in_channels=self.channels,
+                out_channels=self.channels,
+                kernel_size=self.kernel_size,
+                padding=self.padding,
+                bias=not self.use_bn,
+            )
+            self.convolution2 = torch.nn.Conv3d(
+                in_channels=self.channels,
+                out_channels=self.channels,
+                kernel_size=self.kernel_size,
+                padding=self.padding,
+                bias=not self.use_bn,
+            )
+
+            if self.use_bn:
+                self.batch_norm1 = nn.BatchNorm3d(self.channels)
+                self.batch_norm2 = nn.BatchNorm3d(self.channels)
+
+            else:
+                self.batch_norm1 = nn.Identity()
+                self.batch_norm2 = nn.Identity()
+
+        else:
+            raise ValueError("Problem dimension must be 1, 2 or 3")
 
         # Up/Down-sampling happens inside Activation
         self.act = CNO_LReLu(self.problem_dim, in_size=self.size, out_size=self.size)
@@ -508,6 +573,8 @@ class CNO(nn.Module):
             x = self.lift(x.permute(0, 2, 1))  # Execute Lift
         elif self.problem_dim == 2:
             x = self.lift(x.permute(0, 3, 1, 2))  # Execute Lift
+        elif self.problem_dim == 3:
+            x = self.lift(x.permute(0, 4, 1, 2, 3))
         else:
             raise ValueError("Problem dimension must be 1 or 2")
 
@@ -546,5 +613,8 @@ class CNO(nn.Module):
         elif self.problem_dim == 2:
             # project and reshape (for consistency with the rest of the models)
             return self.project(x).permute(0, 2, 3, 1)
+        elif self.problem_dim == 3:
+            # project and reshape (for consistency with the rest of the models)
+            return self.project(x).permute(0, 2, 3, 4, 1)
         else:
-            raise ValueError("Problem dimension must be 1 or 2")
+            raise ValueError("Problem dimension must be 1, 2 or 3")
