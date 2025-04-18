@@ -67,7 +67,7 @@ def NO_load_data_model(
     additional_params = {
         "fhn": ["_tf_100"],
         # "fhn_long": [ "time": "_tf_200" ],
-        "afieti_homogeneous_neumann": ["dataset_homogeneous_Neumann.mat"],
+        "afieti_homogeneous_neumann": ["dataset_homogeneous_Neumann_rhs_fixed.mat"],
     }
 
     # Check if the example is valid

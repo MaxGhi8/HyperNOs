@@ -6,17 +6,17 @@ It is used to save the model in ONNX format for deployment or inference.
 import argparse
 import os
 import sys
+
 import torch
 
 sys.path.append("..")
 
-from FNO import FNO
 from CNO import CNO
 from datasets import NO_load_data_model
-from wrappers import wrap_model
+from FNO import FNO
 from ResNet import ResidualNetwork
 from utilities import initialize_hyperparameters
-
+from wrappers import wrap_model
 
 #########################################
 # default values
