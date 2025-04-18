@@ -649,7 +649,6 @@ class FNO(nn.Module):
         self, x: Float[Tensor, "n_batch *n_x {self.in_dim-self.problem_dim}"]
     ) -> Float[Tensor, "n_batch *n_x {self.out_dim}"]:
 
-
         ## Grid and initialization
         if self.problem_dim == 1:
             grid = self.get_grid_1d(x.shape).to(x.device)
@@ -753,34 +752,30 @@ class FNO(nn.Module):
         batchsize, size_x, size_y, size_z = shape[0], shape[1], shape[2], shape[3]
         # grid for x
         gridx = torch.tensor(np.linspace(0, 1, size_x), dtype=torch.float)
-        gridx = gridx.reshape(1, 1, 1, size_x, 1).repeat(
-            [batchsize, size_z, size_y, 1, 1]
+        gridx = gridx.reshape(1, size_x, 1, 1, 1).repeat(
+            [batchsize, 1, size_y, size_z, 1]
         )
         # grid for y
         gridy = torch.tensor(np.linspace(0, 1, size_y), dtype=torch.float)
         gridy = gridy.reshape(1, 1, size_y, 1, 1).repeat(
-            [batchsize, size_z, 1, size_x, 1]
+            [batchsize, size_x, 1, size_z, 1]
         )
         # grid for z
         gridz = torch.tensor(np.linspace(0, 1, size_z), dtype=torch.float)
-        gridz = gridz.reshape(1, size_z, 1, 1, 1).repeat(
-            [batchsize, 1, size_y, size_x, 1]
+        gridz = gridz.reshape(1, 1, 1, size_z, 1).repeat(
+            [batchsize, size_x, size_y, 1, 1]
         )
-        # concatenate along the last dimension
-        grid = torch.cat((gridz, gridy, gridx), dim=-1)
-        return grid
+        return torch.cat((gridx, gridy, gridz), dim=-1)
 
     def get_grid_2d(self, shape: torch.Size) -> Tensor:
         batchsize, size_x, size_y = shape[0], shape[1], shape[2]
         # grid for x
         gridx = torch.tensor(np.linspace(0, 1, size_x), dtype=torch.float)
-        gridx = gridx.reshape(1, 1, size_x, 1).repeat([batchsize, size_y, 1, 1])
+        gridx = gridx.reshape(1, size_x, 1, 1).repeat([batchsize, 1, size_y, 1])
         # grid for y
         gridy = torch.tensor(np.linspace(0, 1, size_y), dtype=torch.float)
-        gridy = gridy.reshape(1, size_y, 1, 1).repeat([batchsize, 1, size_x, 1])
-        # concatenate along the last dimension
-        grid = torch.cat((gridy, gridx), dim=-1)
-        return grid
+        gridy = gridy.reshape(1, 1, size_y, 1).repeat([batchsize, size_x, 1, 1])
+        return torch.cat((gridx, gridy), dim=-1)
 
     def get_grid_1d(self, shape: torch.Size) -> Tensor:
         batchsize, size_x = shape[0], shape[1]

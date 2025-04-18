@@ -143,7 +143,7 @@ def test_FNO_3d():
         retrain_fno=4,
     )
 
-    dummy_input = torch.randn(10, 70, 70, 70, 1).to(device)
+    dummy_input = torch.randn(10, 50, 70, 70, 1).to(device)
     output = model(dummy_input)
     assert output.shape[:-1] == dummy_input.shape[:-1]
     assert output.shape[-1] == 1
