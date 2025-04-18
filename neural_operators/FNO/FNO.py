@@ -61,7 +61,7 @@ class MLP(nn.Module):
         self.mlp2 = torch.nn.Linear(mid_channels, out_channels)
         self.fun_act = fun_act
 
-    @jaxtyped(typechecker=beartype)
+    # @jaxtyped(typechecker=beartype)
     def forward(
         self, x: Float[Tensor, "n_samples *d_x {self.in_channels}"]
     ) -> Float[Tensor, "n_samples *d_x {self.out_channels}"]:
@@ -93,6 +93,10 @@ class MLP_conv(nn.Module):
         elif self.problem_dim == 2:
             self.mlp1 = torch.nn.Conv2d(in_channels, mid_channels, 1)
             self.mlp2 = torch.nn.Conv2d(mid_channels, out_channels, 1)
+        elif self.problem_dim == 3:
+            self.mlp1 = torch.nn.Conv3d(in_channels, mid_channels, 1)
+            self.mlp2 = torch.nn.Conv3d(mid_channels, out_channels, 1)
+
         self.fun_act = fun_act
 
     @jaxtyped(typechecker=beartype)
@@ -191,6 +195,53 @@ class FourierLayer(nn.Module):
             #         nn.Parameter(torch.empty(self.in_channels, self.out_channels, self.modes, self.modes, dtype=torch.cfloat)),
             #         a = 0, mode = 'fan_in', nonlinearity = self.fun_act)
 
+        elif self.problem_dim == 3:
+            self.scale = 1 / (in_channels * out_channels)
+            self.weights1 = nn.Parameter(
+                self.scale
+                * torch.rand(
+                    in_channels,
+                    out_channels,
+                    self.modes,
+                    self.modes,
+                    self.modes,
+                    dtype=torch.cfloat,
+                )
+            )
+            self.weights2 = nn.Parameter(
+                self.scale
+                * torch.rand(
+                    in_channels,
+                    out_channels,
+                    self.modes,
+                    self.modes,
+                    self.modes,
+                    dtype=torch.cfloat,
+                )
+            )
+            self.weights3 = nn.Parameter(
+                self.scale
+                * torch.rand(
+                    in_channels,
+                    out_channels,
+                    self.modes,
+                    self.modes,
+                    self.modes,
+                    dtype=torch.cfloat,
+                )
+            )
+            self.weights4 = nn.Parameter(
+                self.scale
+                * torch.rand(
+                    in_channels,
+                    out_channels,
+                    self.modes,
+                    self.modes,
+                    self.modes,
+                    dtype=torch.cfloat,
+                )
+            )
+
     @jaxtyped(typechecker=beartype)
     def tensor_mul_1d(
         self,
@@ -214,6 +265,23 @@ class FourierLayer(nn.Module):
         return torch.einsum("bixy,ioxy->boxy", input, weights)
 
     @jaxtyped(typechecker=beartype)
+    def tensor_mul_3d(
+        self,
+        input: Complex[
+            Tensor, "n_batch {self.in_channels} {self.modes} {self.modes} {self.modes}"
+        ],
+        weights: Complex[
+            Tensor,
+            "{self.in_channels} {self.out_channels} {self.modes} {self.modes} {self.modes}",
+        ],
+    ) -> Complex[
+        Tensor, "n_batch {self.out_channels} {self.modes} {self.modes} {self.modes}"
+    ]:
+        """Multiplication between complex numbers"""
+        # (batch, in_channel, x, y, z), (in_channel, out_channel, x, y, z) -> (batch, out_channel, x, y, z)
+        return torch.einsum("bixyz,ioxyz->boxyz", input, weights)
+
+    @jaxtyped(typechecker=beartype)
     def forward(
         self, x: Float[Tensor, "n_batch {self.in_channels} *n_x"]
     ) -> Float[Tensor, "n_batch {self.out_channels} *n_x"]:
@@ -222,10 +290,10 @@ class FourierLayer(nn.Module):
         Total computation cost is equal to O(n log(n))
 
         input: torch.tensor
-            the input 'x' is a tensor of shape (n_samples, in_channels, n_x, n_y)
+            the input 'x' is a tensor of shape (n_samples, in_channels, *n_x)
 
         output: torch.tensor
-            return a tensor of shape (n_samples, out_channels, n_x, n_y)
+            return a tensor of shape (n_samples, out_channels, *n_x)
         """
         batchsize = x.shape[0]
 
@@ -270,6 +338,53 @@ class FourierLayer(nn.Module):
 
             # Inverse Fourier transform
             x = torch.fft.irfft2(out_ft, s=(x.size(-2), x.size(-1)), norm=self.FFTnorm)
+
+        elif self.problem_dim == 3:
+            # Fourier transform
+            x_ft = torch.fft.rfftn(x, dim=(-3, -2, -1), norm=self.FFTnorm)
+
+            # Multiply relevant Fourier modes
+            out_ft = torch.zeros(
+                batchsize,
+                self.out_channels,
+                x.size(-3),
+                x.size(-2),
+                x.size(-1) // 2 + 1,
+                dtype=torch.cfloat,
+                device=x.device,
+            )
+
+            # first corner
+            out_ft[:, :, : self.modes, : self.modes, : self.modes] = self.tensor_mul_3d(
+                x_ft[:, :, : self.modes, : self.modes, : self.modes], self.weights1
+            )
+            # second corner
+            out_ft[:, :, -self.modes :, : self.modes, : self.modes] = (
+                self.tensor_mul_3d(
+                    x_ft[:, :, -self.modes :, : self.modes, : self.modes], self.weights2
+                )
+            )
+            # third corner
+            out_ft[:, :, : self.modes, -self.modes :, : self.modes] = (
+                self.tensor_mul_3d(
+                    x_ft[:, :, : self.modes, -self.modes :, : self.modes], self.weights3
+                )
+            )
+            # fourth corner
+            out_ft[:, :, -self.modes :, -self.modes :, : self.modes] = (
+                self.tensor_mul_3d(
+                    x_ft[:, :, -self.modes :, -self.modes :, : self.modes],
+                    self.weights4,
+                )
+            )
+
+            # Inverse Fourier transform
+            x = torch.fft.irfftn(
+                out_ft,
+                dim=(-3, -2, -1),
+                s=(x.size(-3), x.size(-2), x.size(-1)),
+                norm=self.FFTnorm,
+            )
 
         return x
 
@@ -368,6 +483,9 @@ class FNO(nn.Module):
                 elif self.problem_dim == 2:
                     self.ws1 = torch.nn.Conv2d(self.d_v, self.d_v, 1)
                     self.ws2 = torch.nn.Conv2d(self.d_v, self.d_v, 1)
+                elif self.problem_dim == 3:
+                    self.ws1 = torch.nn.Conv3d(self.d_v, self.d_v, 1)
+                    self.ws2 = torch.nn.Conv3d(self.d_v, self.d_v, 1)
                 self.integrals = FourierLayer(
                     self.problem_dim,
                     self.d_v,
@@ -391,6 +509,13 @@ class FNO(nn.Module):
                     )
                     self.ws2 = nn.ModuleList(
                         [torch.nn.Conv2d(self.d_v, self.d_v, 1) for _ in range(self.L)]
+                    )
+                elif self.problem_dim == 3:
+                    self.ws1 = nn.ModuleList(
+                        [torch.nn.Conv3d(self.d_v, self.d_v, 1) for _ in range(self.L)]
+                    )
+                    self.ws2 = nn.ModuleList(
+                        [torch.nn.Conv3d(self.d_v, self.d_v, 1) for _ in range(self.L)]
                     )
 
                 self.integrals = nn.ModuleList(
@@ -414,6 +539,8 @@ class FNO(nn.Module):
                     self.ws = torch.nn.Conv1d(self.d_v, self.d_v, 1)
                 elif self.problem_dim == 2:
                     self.ws = torch.nn.Conv2d(self.d_v, self.d_v, 1)
+                elif self.problem_dim == 3:
+                    self.ws = torch.nn.Conv3d(self.d_v, self.d_v, 1)
                 self.mlps = MLP_conv(
                     self.problem_dim, self.d_v, self.d_v, self.d_v, self.fun_act
                 )
@@ -434,6 +561,10 @@ class FNO(nn.Module):
                 elif self.problem_dim == 2:
                     self.ws = nn.ModuleList(
                         [torch.nn.Conv2d(self.d_v, self.d_v, 1) for _ in range(self.L)]
+                    )
+                elif self.problem_dim == 3:
+                    self.ws = nn.ModuleList(
+                        [torch.nn.Conv3d(self.d_v, self.d_v, 1) for _ in range(self.L)]
                     )
 
                 self.mlps = nn.ModuleList(
@@ -465,6 +596,8 @@ class FNO(nn.Module):
                     self.ws = torch.nn.Conv1d(self.d_v, self.d_v, 1)
                 elif self.problem_dim == 2:
                     self.ws = torch.nn.Conv2d(self.d_v, self.d_v, 1)
+                elif self.problem_dim == 3:
+                    self.ws = torch.nn.Conv3d(self.d_v, self.d_v, 1)
 
                 self.integrals = FourierLayer(
                     self.problem_dim,
@@ -483,6 +616,10 @@ class FNO(nn.Module):
                 elif self.problem_dim == 2:
                     self.ws = nn.ModuleList(
                         [nn.Conv2d(self.d_v, self.d_v, 1) for _ in range(self.L)]
+                    )
+                elif self.problem_dim == 3:
+                    self.ws = nn.ModuleList(
+                        [nn.Conv3d(self.d_v, self.d_v, 1) for _ in range(self.L)]
                     )
 
                 self.integrals = nn.ModuleList(
@@ -512,27 +649,37 @@ class FNO(nn.Module):
         self, x: Float[Tensor, "n_batch *n_x {self.in_dim-self.problem_dim}"]
     ) -> Float[Tensor, "n_batch *n_x {self.out_dim}"]:
 
+
         ## Grid and initialization
         if self.problem_dim == 1:
             grid = self.get_grid_1d(x.shape).to(x.device)
         elif self.problem_dim == 2:
             grid = self.get_grid_2d(x.shape).to(x.device)
+        elif self.problem_dim == 3:
+            grid = self.get_grid_3d(x.shape).to(x.device)
+
         x = torch.cat(
             (grid, x), dim=-1
         )  # concatenate last dimension --> (n_samples)*(*n_x)*(in_dim+problem_dim)
 
         ## Perform lifting operator P
         x = self.p(x)  # shape = (n_samples)*(*n_x)*(in_dim+problem_dim)
+
+        ## Reshaping
         if self.problem_dim == 1:
             x = x.permute(0, 2, 1)  # (n_samples)*(d_v)*(*n_x)
         elif self.problem_dim == 2:
             x = x.permute(0, 3, 1, 2)  # (n_samples)*(d_v)*(*n_x)
+        elif self.problem_dim == 3:
+            x = x.permute(0, 4, 1, 2, 3)  # (n_samples)*(d_v)*(*n_x)
 
         ## Padding
         if self.padding > 0 and self.problem_dim == 1:
             x = F.pad(x, [0, self.padding])
         elif self.padding > 0 and self.problem_dim == 2:
             x = F.pad(x, [0, self.padding, 0, self.padding])
+        elif self.padding > 0 and self.problem_dim == 3:
+            x = F.pad(x, [0, self.padding, 0, self.padding, 0, self.padding])
 
         ## Integral Layers
         for i in range(self.L):
@@ -587,15 +734,41 @@ class FNO(nn.Module):
             x = x[..., : -self.padding]
         elif self.padding > 0 and self.problem_dim == 2:
             x = x[..., : -self.padding, : -self.padding]
+        elif self.padding > 0 and self.problem_dim == 3:
+            x = x[..., : -self.padding, : -self.padding, : -self.padding]
 
         ## Perform projection (Q)
         if self.problem_dim == 1:
             x = x.permute(0, 2, 1)
         elif self.problem_dim == 2:
-            x = x.permute(0, 2, 3, 1)  # (n_samples)*(*n_x)*(d_v)
+            x = x.permute(0, 2, 3, 1)
+        elif self.problem_dim == 3:
+            x = x.permute(0, 2, 3, 4, 1)
+
         x = self.q(x)  # shape --> (n_samples)*(*n_x)*(out_dim)
 
         return x
+
+    def get_grid_3d(self, shape: torch.Size) -> Tensor:
+        batchsize, size_x, size_y, size_z = shape[0], shape[1], shape[2], shape[3]
+        # grid for x
+        gridx = torch.tensor(np.linspace(0, 1, size_x), dtype=torch.float)
+        gridx = gridx.reshape(1, 1, 1, size_x, 1).repeat(
+            [batchsize, size_z, size_y, 1, 1]
+        )
+        # grid for y
+        gridy = torch.tensor(np.linspace(0, 1, size_y), dtype=torch.float)
+        gridy = gridy.reshape(1, 1, size_y, 1, 1).repeat(
+            [batchsize, size_z, 1, size_x, 1]
+        )
+        # grid for z
+        gridz = torch.tensor(np.linspace(0, 1, size_z), dtype=torch.float)
+        gridz = gridz.reshape(1, size_z, 1, 1, 1).repeat(
+            [batchsize, 1, size_y, size_x, 1]
+        )
+        # concatenate along the last dimension
+        grid = torch.cat((gridz, gridy, gridx), dim=-1)
+        return grid
 
     def get_grid_2d(self, shape: torch.Size) -> Tensor:
         batchsize, size_x, size_y = shape[0], shape[1], shape[2]
