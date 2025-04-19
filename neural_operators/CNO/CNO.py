@@ -1,3 +1,5 @@
+from typing import Union
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,7 +12,7 @@ from torch import Tensor
 # Activation Function:
 #########################################
 class CNO_LReLu(nn.Module):
-    def __init__(self, problem_dim: int, in_size: int, out_size: int):
+    def __init__(self, problem_dim: int, in_size: list[int], out_size: list[int]):
         super(CNO_LReLu, self).__init__()
 
         self.problem_dim = problem_dim
@@ -25,40 +27,43 @@ class CNO_LReLu(nn.Module):
         if self.problem_dim == 1:
             x = F.interpolate(
                 x.unsqueeze(2),
-                size=(1, 2 * self.in_size),
+                size=(1, 2 * self.in_size[0]),
                 mode="bicubic",
                 antialias=True,
             )
             x = self.act(x)
             x = F.interpolate(
-                x, size=(1, self.out_size), mode="bicubic", antialias=True
+                x, size=(1, self.out_size[0]), mode="bicubic", antialias=True
             )
             return x[:, :, 0]
 
         elif self.problem_dim == 2:
             x = F.interpolate(
                 x,
-                size=(2 * self.in_size, 2 * self.in_size),
+                size=(2 * self.in_size[0], 2 * self.in_size[1]),
                 mode="bicubic",
                 antialias=True,
             )
             x = self.act(x)
             x = F.interpolate(
-                x, size=(self.out_size, self.out_size), mode="bicubic", antialias=True
+                x,
+                size=(self.out_size[0], self.out_size[1]),
+                mode="bicubic",
+                antialias=True,
             )
             return x
 
         elif self.problem_dim == 3:
             x = F.interpolate(
                 x,
-                size=(2 * self.in_size, 2 * self.in_size, 2 * self.in_size),
+                size=(2 * self.in_size[0], 2 * self.in_size[1], 2 * self.in_size[2]),
                 mode="trilinear",
                 antialias=False,  # anti-aliasing not supported in 3D
             )
             x = self.act(x)
             x = F.interpolate(
                 x,
-                size=(self.out_size, self.out_size, self.out_size),
+                size=(self.out_size[0], self.out_size[1], self.out_size[2]),
                 mode="trilinear",
                 antialias=False,  # anti-aliasing not supported in 3D
             )
@@ -77,8 +82,8 @@ class CNOBlock(nn.Module):
         problem_dim: int,
         in_channels: int,
         out_channels: int,
-        in_size: int,
-        out_size: int,
+        in_size: list[int],
+        out_size: list[int],
         kernel_size: int = 3,
         use_bn: bool = False,
     ):
@@ -161,7 +166,7 @@ class LiftProjectBlock(nn.Module):
         problem_dim: int,
         in_channels: int,
         out_channels: int,
-        size: int,
+        size: list[int],
         latent_dim: int = 64,
         kernel_size: int = 3,
     ):
@@ -226,7 +231,7 @@ class ResidualBlock(nn.Module):
         self,
         problem_dim: int,
         channels: int,
-        size: int,
+        size: list[int],
         kernel_size: int = 3,
         use_bn: int = True,
     ):
@@ -337,7 +342,7 @@ class ResNet(nn.Module):
         self,
         problem_dim: int,
         channels: int,
-        size: int,
+        size: list[int],
         num_blocks: int,
         kernel_size: int = 3,
         use_bn: bool = True,
@@ -355,11 +360,11 @@ class ResNet(nn.Module):
         for _ in range(self.num_blocks):
             self.res_nets.append(
                 ResidualBlock(
-                    problem_dim=problem_dim,
-                    channels=channels,
-                    size=size,
+                    problem_dim=self.problem_dim,
+                    channels=self.channels,
+                    size=self.size,
                     kernel_size=self.kernel_size,
-                    use_bn=use_bn,
+                    use_bn=self.use_bn,
                 )
             )
 
@@ -383,7 +388,7 @@ class CNO(nn.Module):
         problem_dim: int,
         in_dim: int,
         out_dim: int,
-        size: int,
+        size: Union[int, list[int]],
         N_layers: int,
         N_res: int = 4,
         N_res_neck: int = 4,
@@ -403,7 +408,7 @@ class CNO(nn.Module):
         out_dim: int
             Number of output channels.
 
-        size: int
+        size: int or list[int]
             Input and Output spatial size
 
         N_layers: int
@@ -427,15 +432,23 @@ class CNO(nn.Module):
         super(CNO, self).__init__()
 
         self.problem_dim = problem_dim
-        self.N_layers = N_layers
-        self.lift_dim = (
-            channel_multiplier // 2
-        )  # Input is lifted to the half of channel_multiplier dimension
         self.in_dim = in_dim
         self.out_dim = out_dim
+        self.size = [size] * self.problem_dim if isinstance(size, int) else size
+        self.N_layers = N_layers
+        self.N_res = N_res
+        self.N_res_neck = N_res_neck
         self.channel_multiplier = channel_multiplier  # The growth of the channels
         self.kernel_size = kernel_size
         self.use_bn = use_bn
+
+        assert (
+            len(self.size) == self.problem_dim
+        ), "Size must be a list of len equals to problem_dim"
+
+        self.lift_dim = (
+            channel_multiplier // 2
+        )  # Input is lifted to the half of channel_multiplier dimension
 
         #### Num of channels/features - evolution
         # Encoder (at every layer the number of channels is doubled)
@@ -461,10 +474,10 @@ class CNO(nn.Module):
         self.decoder_sizes = []
         for i in range(self.N_layers + 1):
             self.encoder_sizes.append(
-                size // (2**i)
+                list(map(lambda x: x // (2**i), self.size))
             )  # Encoder sizes are halved at every layer
             self.decoder_sizes.append(
-                size // (2 ** (self.N_layers - i))
+                list(map(lambda x: x // (2 ** (self.N_layers - i)), self.size))
             )  # Decoder sizes are doubled at every layer
 
         #### Define Lift and Project blocks
@@ -472,7 +485,7 @@ class CNO(nn.Module):
             problem_dim=self.problem_dim,
             in_channels=in_dim,
             out_channels=self.encoder_features[0],
-            size=size,
+            size=self.size,
             kernel_size=self.kernel_size,
         )
 
@@ -481,7 +494,7 @@ class CNO(nn.Module):
             in_channels=self.encoder_features[0]
             + self.decoder_features_out[-1],  # concatenation with the ResNet
             out_channels=out_dim,
-            size=size,
+            size=self.size,
             kernel_size=self.kernel_size,
         )
 
@@ -554,8 +567,6 @@ class CNO(nn.Module):
 
         #### Define ResNets Blocks
         self.res_nets = nn.ModuleList()
-        self.N_res = int(N_res)
-        self.N_res_neck = int(N_res_neck)
 
         # Define the ResNet networks (before the neck)
         for i in range(self.N_layers):

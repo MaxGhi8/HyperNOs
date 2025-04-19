@@ -134,3 +134,27 @@ def test_CNO_3d():
     output = model(dummy_input)
     assert output.shape[:-1] == dummy_input.shape[:-1]
     assert output.shape[-1] == 1
+
+
+def test_CNO_different_resolution():
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Define the model builders
+    model = CNO(
+        problem_dim=3,
+        in_dim=1,
+        out_dim=1,
+        size=[30, 40, 50],
+        N_layers=3,
+        N_res=2,
+        N_res_neck=3,
+        channel_multiplier=2,
+        kernel_size=3,
+        use_bn=False,
+        device=device,
+    )
+
+    dummy_input = torch.randn(10, 30, 40, 50, 1).to(device)
+    output = model(dummy_input)
+    assert output.shape[:-1] == dummy_input.shape[:-1]
+    assert output.shape[-1] == 1
