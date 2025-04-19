@@ -157,7 +157,13 @@ class CNOBlock(nn.Module):
 #########################################
 class LiftProjectBlock(nn.Module):
     def __init__(
-        self, problem_dim, in_channels, out_channels, size, latent_dim=64, kernel_size=3
+        self,
+        problem_dim: int,
+        in_channels: int,
+        out_channels: int,
+        size: int,
+        latent_dim: int = 64,
+        kernel_size: int = 3,
     ):
         super(LiftProjectBlock, self).__init__()
 
@@ -216,7 +222,14 @@ class LiftProjectBlock(nn.Module):
 # Residual Block:
 #########################################
 class ResidualBlock(nn.Module):
-    def __init__(self, problem_dim, channels, size, kernel_size=3, use_bn=True):
+    def __init__(
+        self,
+        problem_dim: int,
+        channels: int,
+        size: int,
+        kernel_size: int = 3,
+        use_bn: int = True,
+    ):
         super(ResidualBlock, self).__init__()
 
         self.problem_dim = problem_dim
@@ -321,7 +334,13 @@ class ResidualBlock(nn.Module):
 #########################################
 class ResNet(nn.Module):
     def __init__(
-        self, problem_dim, channels, size, num_blocks, kernel_size=3, use_bn=True
+        self,
+        problem_dim: int,
+        channels: int,
+        size: int,
+        num_blocks: int,
+        kernel_size: int = 3,
+        use_bn: bool = True,
     ):
         super(ResNet, self).__init__()
 
@@ -361,17 +380,17 @@ class ResNet(nn.Module):
 class CNO(nn.Module):
     def __init__(
         self,
-        problem_dim,
-        in_dim,
-        out_dim,
-        size,
-        N_layers,
-        N_res=4,
-        N_res_neck=4,
-        channel_multiplier=16,
-        kernel_size=3,
-        use_bn=True,
-        device=torch.device("cpu"),
+        problem_dim: int,
+        in_dim: int,
+        out_dim: int,
+        size: int,
+        N_layers: int,
+        N_res: int = 4,
+        N_res_neck: int = 4,
+        channel_multiplier: int = 16,
+        kernel_size: int = 3,
+        use_bn: bool = True,
+        device: torch.device = torch.device("cpu"),
     ):
         """
         CNO: Convolutional Neural Operator
