@@ -6,3 +6,5 @@ tests/
 train_loss/
 **/figures/
 *.png
+
+**/BAMPNO/
