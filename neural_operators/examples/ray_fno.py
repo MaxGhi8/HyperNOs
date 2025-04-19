@@ -38,6 +38,7 @@ def ray_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         "fno_arc": tune.choice(["Classic", "Zongyi", "Residual"]),
         "padding": tune.randint(0, 16),
     }
+
     # Set all the other parameters to fixed values
     fixed_params = {
         **hyperparams_train,

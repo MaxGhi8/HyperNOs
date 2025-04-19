@@ -2,7 +2,7 @@ import os
 import tempfile
 
 import torch
-from ray import init, train, tune
+from ray import get, init, put, train, tune
 from ray.train import Checkpoint
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.search.hyperopt import HyperOptSearch
@@ -38,15 +38,35 @@ def tune_hyperparameters(
             f"Attention: the key {missing_keys} are missing in the config_space, so I'll using the default value."
         )
 
+    # Initialize Ray
+    init(
+        address="auto",
+        runtime_env={
+            "env_vars": {"PYTHONPATH": os.path.abspath("..")},
+        },
+    )
+
+    # puts large builders in Ray's object store
+    dataset_builder_ref = put(dataset_builder)
+    model_builder_ref = put(model_builder)
+    loss_fn_ref = put(loss_fn)
+    loss_phys_ref = put(loss_phys)
+
     # Define the training function
     def train_fn(config):
-        dataset = dataset_builder(config)
-        model = model_builder(config)
+        actual_model_builder = get(model_builder_ref)
+        actual_dataset_builder = get(dataset_builder_ref)
+        actual_loss_fn = get(loss_fn_ref)
+        actual_loss_phys = get(loss_phys_ref)
+
+        dataset = actual_dataset_builder(config)
+        model = actual_model_builder(config)
+
         train_model(
             model,
             dataset.train_loader,
             dataset.val_loader,
-            loss_fn,
+            actual_loss_fn,
             max_epochs,
             # model.device,
             torch.device("cuda" if torch.cuda.is_available() else "cpu"),
@@ -55,16 +75,8 @@ def tune_hyperparameters(
             config["scheduler_step"],
             config["scheduler_gamma"],
             checkpoint_freq=checkpoint_freq,
-            loss_phys=loss_phys,
+            loss_phys=actual_loss_phys,
         )
-
-    # Initialize Ray
-    init(
-        address="auto",
-        runtime_env={
-            "env_vars": {"PYTHONPATH": os.path.abspath("..")},
-        },
-    )
 
     # Define the scheduler
     scheduler = ASHAScheduler(
