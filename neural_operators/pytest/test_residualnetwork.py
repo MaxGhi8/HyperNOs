@@ -4,11 +4,7 @@ sys.path.append("..")
 
 import torch
 from datasets import NO_load_data_model
-from ResNet import (
-    ResidualNetwork,
-    centered_softmax,
-    zero_mean_imposition,
-)
+from ResNet import ResidualNetwork, centered_softmax, zero_mean_imposition
 
 torch.set_default_dtype(torch.float64)
 
@@ -84,7 +80,8 @@ def test_residual_normalization():
         activation_str,
         n_blocks,
         zero_mean=True,
-        example=example,
+        example_input_normalizer=example.input_normalizer,
+        example_output_normalizer=example.output_normalizer,
     )
 
     input = torch.rand(batch_size, in_channels)

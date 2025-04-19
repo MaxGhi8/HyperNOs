@@ -223,8 +223,13 @@ try:
                     layer_norm=default_hyper_params["layer_norm"],
                     dropout_rate=default_hyper_params["dropout_rate"],
                     zero_mean=default_hyper_params["zero_mean"],
-                    example=(
-                        example
+                    example_input_normalizer=(
+                        example.input_normalizer
+                        if default_hyper_params["internal_normalization"]
+                        else None
+                    ),
+                    example_output_normalizer=(
+                        example.output_normalizer
                         if default_hyper_params["internal_normalization"]
                         else None
                     ),

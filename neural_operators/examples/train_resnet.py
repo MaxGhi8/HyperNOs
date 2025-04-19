@@ -62,7 +62,12 @@ def train_resnet(which_example: str, mode_hyperparams: str):
         layer_norm=config["layer_norm"],
         dropout_rate=config["dropout_rate"],
         zero_mean=config["zero_mean"],
-        example=(example if config["internal_normalization"] else None),
+        example_input_normalizer=(
+            example.input_normalizer if config["internal_normalization"] else None
+        ),
+        example_output_normalizer=(
+            example.output_normalizer if config["internal_normalization"] else None
+        ),
     )
     # Wrap the model builder
     # model_builder = wrap_model_builder(model_builder, which_example) # TODO

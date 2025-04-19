@@ -149,7 +149,8 @@ class ResidualNetwork(nn.Module):
         layer_norm: bool = False,
         dropout_rate: float = 0.0,
         zero_mean: bool = False,
-        example=None,
+        example_input_normalizer=None,
+        example_output_normalizer=None,
     ) -> None:
         super(ResidualNetwork, self).__init__()
 
@@ -163,8 +164,8 @@ class ResidualNetwork(nn.Module):
 
         self.input_normalizer = (
             nn.Identity()
-            if example is None
-            else input_normalizer_class(example.input_normalizer)
+            if example_input_normalizer is None
+            else input_normalizer_class(example_input_normalizer)
         )
 
         self.input_layer = nn.Sequential(
@@ -189,11 +190,11 @@ class ResidualNetwork(nn.Module):
 
         self.output_denormalizer = (
             nn.Identity()
-            if example is None
-            else output_denormalizer_class(example.output_normalizer)
+            if example_output_normalizer is None
+            else output_denormalizer_class(example_output_normalizer)
         )
 
-        self.post_processing = zero_mean_imposition if zero_mean else nn.Identity
+        self.post_processing = zero_mean_imposition if zero_mean else nn.Identity()
 
         # Kaiming initialization
         # try:
