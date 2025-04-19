@@ -143,7 +143,34 @@ def test_FNO_3d():
         retrain_fno=4,
     )
 
-    dummy_input = torch.randn(10, 50, 70, 70, 1).to(device)
+    dummy_input = torch.randn(10, 70, 70, 70, 1).to(device)
+    output = model(dummy_input)
+    assert output.shape[:-1] == dummy_input.shape[:-1]
+    assert output.shape[-1] == 1
+
+
+def test_FNO_different_resolutions():
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Define the model builders
+    model = FNO(
+        problem_dim=3,
+        in_dim=1,
+        d_v=5,
+        out_dim=1,
+        L=3,
+        modes=2,
+        fun_act="gelu",
+        weights_norm="Kaiming",
+        arc="Classic",
+        RNN=False,
+        FFTnorm=None,
+        padding=1,
+        device=device,
+        retrain_fno=4,
+    )
+
+    dummy_input = torch.randn(10, 50, 60, 70, 1).to(device)
     output = model(dummy_input)
     assert output.shape[:-1] == dummy_input.shape[:-1]
     assert output.shape[-1] == 1
