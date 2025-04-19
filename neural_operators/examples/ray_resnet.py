@@ -115,6 +115,10 @@ def ray_resnet(which_example: str, mode_hyperparams: str):
         [default_hyper_params],
         runs_per_cpu=12.0,
         runs_per_gpu=1.0,
+        grace_period=400,
+        reduction_factor=4,
+        max_epochs=2000,
+        checkpoint_freq=1000,
     )
 
 
