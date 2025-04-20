@@ -150,6 +150,57 @@ class UnitGaussianNormalizer(object):
         return x
 
 
+class minmaxNormalizer(object):
+    """
+    Initial normalization is the point-wise min-max normalization over the tensor x
+    """
+
+    def __init__(self, x):
+        self.min = torch.min(x, 0).values.to(x.device)
+        self.max = torch.max(x, 0).values.to(x.device)
+
+    @jaxtyped(typechecker=beartype)
+    def encode(self, x: Float[Tensor, "n_samples *n"]) -> Float[Tensor, "n_samples *n"]:
+        min_ = self.min.to(x.device)
+        max_ = self.max.to(x.device)
+        x = (x - min_) / (max_ - min_)
+        return x
+
+    @jaxtyped(typechecker=beartype)
+    def decode(self, x: Float[Tensor, "n_samples *n"]) -> Float[Tensor, "n_samples *n"]:
+        min_ = self.min.to(x.device)
+        max_ = self.max.to(x.device)
+        x = x * (max_ - min_) + min_
+        return x
+
+
+class minmaxGlobalNormalizer(object):
+    """
+    Initial normalization is the global min-max normalization over the tensor x
+    """
+
+    def __init__(self, x):
+        self.min = x
+        self.max = x
+        for i in range(x.dim()):
+            self.min = torch.min(self.min, dim=0).values
+            self.max = torch.max(self.max, dim=0).values
+
+    @jaxtyped(typechecker=beartype)
+    def encode(self, x: Float[Tensor, "n_samples *n"]) -> Float[Tensor, "n_samples *n"]:
+        min_ = self.min.to(x.device)
+        max_ = self.max.to(x.device)
+        x = (x - min_) / (max_ - min_)
+        return x
+
+    @jaxtyped(typechecker=beartype)
+    def decode(self, x: Float[Tensor, "n_samples *n"]) -> Float[Tensor, "n_samples *n"]:
+        min_ = self.min.to(x.device)
+        max_ = self.max.to(x.device)
+        x = x * (max_ - min_) + min_
+        return x
+
+
 #########################################
 # Fourier features
 #########################################
