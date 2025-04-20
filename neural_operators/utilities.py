@@ -182,7 +182,7 @@ class minmaxGlobalNormalizer(object):
     def __init__(self, x):
         self.min = x
         self.max = x
-        for i in range(x.dim()):
+        for _ in range(x.dim()):
             self.min = torch.min(self.min, dim=0).values
             self.max = torch.max(self.max, dim=0).values
 

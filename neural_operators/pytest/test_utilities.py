@@ -52,6 +52,15 @@ def test_minmaxNormalizer():
     assert normalizer.min.size() == torch.Size([n, d_v])
     assert normalizer.max.size() == torch.Size([n, d_v])
 
+    x_normalized_min = normalizer.encode(x)
+    x_normalized_max = normalizer.encode(x)
+    for _ in range(x_normalized_min.dim()):
+        x_normalized_min = torch.min(x_normalized_min, dim=0).values
+        x_normalized_max = torch.max(x_normalized_max, dim=0).values
+
+    assert abs(x_normalized_min - 0) < 1e-5
+    assert abs(x_normalized_max - 1) < 1e-5
+
     # Tes for 2D input
     batch_size = 100
     n = 10
@@ -61,6 +70,15 @@ def test_minmaxNormalizer():
     assert normalizer.min.size() == torch.Size([n, n, d_v])
     assert normalizer.max.size() == torch.Size([n, n, d_v])
 
+    x_normalized_min = normalizer.encode(x)
+    x_normalized_max = normalizer.encode(x)
+    for _ in range(x_normalized_min.dim()):
+        x_normalized_min = torch.min(x_normalized_min, dim=0).values
+        x_normalized_max = torch.max(x_normalized_max, dim=0).values
+
+    assert abs(x_normalized_min - 0) < 1e-5
+    assert abs(x_normalized_max - 1) < 1e-5
+
     # Tes for 3D input
     batch_size = 100
     n = 10
@@ -69,6 +87,15 @@ def test_minmaxNormalizer():
     normalizer = minmaxNormalizer(x)
     assert normalizer.min.size() == torch.Size([n, n, n, d_v])
     assert normalizer.max.size() == torch.Size([n, n, n, d_v])
+
+    x_normalized_min = normalizer.encode(x)
+    x_normalized_max = normalizer.encode(x)
+    for _ in range(x_normalized_min.dim()):
+        x_normalized_min = torch.min(x_normalized_min, dim=0).values
+        x_normalized_max = torch.max(x_normalized_max, dim=0).values
+
+    assert abs(x_normalized_min - 0) < 1e-5
+    assert abs(x_normalized_max - 1) < 1e-5
 
 
 def test_minmaxGlobalNormalizer():
@@ -81,6 +108,15 @@ def test_minmaxGlobalNormalizer():
     assert normalizer.min.size() == torch.Size([])
     assert normalizer.max.size() == torch.Size([])
 
+    x_normalized_min = normalizer.encode(x)
+    x_normalized_max = normalizer.encode(x)
+    for _ in range(x_normalized_min.dim()):
+        x_normalized_min = torch.min(x_normalized_min, dim=0).values
+        x_normalized_max = torch.max(x_normalized_max, dim=0).values
+
+    assert abs(x_normalized_min - 0) < 1e-5
+    assert abs(x_normalized_max - 1) < 1e-5
+
     # Tes for 2D input
     batch_size = 100
     n = 10
@@ -90,6 +126,15 @@ def test_minmaxGlobalNormalizer():
     assert normalizer.min.size() == torch.Size([])
     assert normalizer.max.size() == torch.Size([])
 
+    x_normalized_min = normalizer.encode(x)
+    x_normalized_max = normalizer.encode(x)
+    for _ in range(x_normalized_min.dim()):
+        x_normalized_min = torch.min(x_normalized_min, dim=0).values
+        x_normalized_max = torch.max(x_normalized_max, dim=0).values
+
+    assert abs(x_normalized_min - 0) < 1e-5
+    assert abs(x_normalized_max - 1) < 1e-5
+
     # Tes for 3D input
     batch_size = 100
     n = 10
@@ -98,3 +143,12 @@ def test_minmaxGlobalNormalizer():
     normalizer = minmaxGlobalNormalizer(x)
     assert normalizer.min.size() == torch.Size([])
     assert normalizer.max.size() == torch.Size([])
+
+    x_normalized_min = normalizer.encode(x)
+    x_normalized_max = normalizer.encode(x)
+    for _ in range(x_normalized_min.dim()):
+        x_normalized_min = torch.min(x_normalized_min, dim=0).values
+        x_normalized_max = torch.max(x_normalized_max, dim=0).values
+
+    assert abs(x_normalized_min - 0) < 1e-5
+    assert abs(x_normalized_max - 1) < 1e-5
