@@ -318,17 +318,11 @@ def test_invalid_out_dist(example_name):
         )
 
 
-@pytest.mark.parametrize(
-    "example_name",
-    [
-        ("afieti_homogeneous_neumann"),
-    ],
-)
-def test_afieti(example_name):
+def test_afieti_dataset():
     batch_size = 100
     training_samples = 1500
     example = NO_load_data_model(
-        which_example=example_name,
+        which_example="afieti_homogeneous_neumann",
         no_architecture={
             "FourierF": 0,
             "retrain": -1,
@@ -354,3 +348,60 @@ def test_afieti(example_name):
     assert example.input_normalizer.std.shape[0] == example.s_in
     assert example.output_normalizer.mean.shape[0] == example.s_out
     assert example.output_normalizer.std.shape[0] == example.s_out
+
+
+def test_bapno_dataset():
+    n_patch = 3
+    batch_size = 100
+    training_samples = 1600
+    example = NO_load_data_model(
+        which_example="bampno",
+        no_architecture={
+            "FourierF": 0,
+            "retrain": -1,
+        },
+        batch_size=batch_size,
+        training_samples=training_samples,
+    )
+
+    train_batch_input, train_batch_output = next(iter(example.train_loader))
+    assert train_batch_input.shape == (
+        batch_size,
+        n_patch,
+        example.s_in,
+        example.s_in,
+        1,
+    )
+    assert train_batch_output.shape == (
+        batch_size,
+        n_patch,
+        example.s_out,
+        example.s_out,
+        1,
+    )
+
+    test_batch_input, test_batch_output = next(iter(example.test_loader))
+    assert test_batch_input.shape == (
+        batch_size,
+        n_patch,
+        example.s_in,
+        example.s_in,
+        1,
+    )
+    assert test_batch_output.shape == (
+        batch_size,
+        n_patch,
+        example.s_out,
+        example.s_out,
+        1,
+    )
+
+    val_batch_input, val_batch_output = next(iter(example.val_loader))
+    assert val_batch_input.shape == (batch_size, n_patch, example.s_in, example.s_in, 1)
+    assert val_batch_output.shape == (
+        batch_size,
+        n_patch,
+        example.s_out,
+        example.s_out,
+        1,
+    )
