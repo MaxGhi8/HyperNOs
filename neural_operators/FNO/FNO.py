@@ -1,5 +1,5 @@
 """
-This file contains all the core architectures and modules of the Fourier Neural Operator (FNO) for 1D and 2D cases.
+This file contains all the core architectures and modules of the Fourier Neural Operator (FNO) for 1D, 2D and 3D cases.
 """
 
 import numpy as np
@@ -61,7 +61,7 @@ class MLP(nn.Module):
         self.mlp2 = torch.nn.Linear(mid_channels, out_channels)
         self.fun_act = fun_act
 
-    # @jaxtyped(typechecker=beartype)
+    @jaxtyped(typechecker=beartype)
     def forward(
         self, x: Float[Tensor, "n_samples *d_x {self.in_channels}"]
     ) -> Float[Tensor, "n_samples *d_x {self.out_channels}"]:
