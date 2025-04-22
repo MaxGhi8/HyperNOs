@@ -33,6 +33,7 @@ def NO_load_data_model(
     s: int = None,  # Make s optional
     in_dist: bool = True,
     search_path: str = os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    filename: str = None,
 ):
     """
     Function to load the data and the model.
@@ -67,12 +68,12 @@ def NO_load_data_model(
     }
 
     # Define additional parameters for specific cases
-    additional_params = {
-        "fhn": ["_tf_100"],
-        # "fhn_long": [ "time": "_tf_200" ],
-        "afieti_homogeneous_neumann": ["dataset_homogeneous_Neumann_rhs_fixed.mat"],
-        "bampno": ["Darcy_Lshape_chebyshev_60pts.mat"],
-    }
+    additional_params = {}
+    if filename is not None:
+        additional_params[which_example] = [filename]
+        # examples:
+        # "afieti_homogeneous_neumann": ["dataset_homogeneous_Neumann_rhs_fixed.mat"],
+        # "bampno": ["Darcy_Lshape_chebyshev_60pts.mat"],
 
     # Check if the example is valid
     if which_example not in example_map:
@@ -2059,7 +2060,6 @@ def MatReader_fhn(
 class FitzHughNagumo:
     def __init__(
         self,
-        time: str,
         network_properties,
         batch_size,
         training_samples=3000,
@@ -2087,7 +2087,7 @@ class FitzHughNagumo:
 
         # Training data
         self.TrainDataPath = find_file(
-            f"Training_dataset_FHN_n_3000_points_5040{time}.mat", search_path
+            f"Training_dataset_FHN_n_3000_points_5040_tf_100.mat", search_path
         )
         a, v, w = MatReader_fhn(self.TrainDataPath)
         a_train, v_train, w_train = (
@@ -2108,7 +2108,7 @@ class FitzHughNagumo:
 
         # Validation data
         self.ValDataPath = find_file(
-            f"Validation_dataset_FHN_n_375_points_5040{time}.mat", search_path
+            f"Validation_dataset_FHN_n_375_points_5040_tf_100.mat", search_path
         )
         a, v, w = MatReader_fhn(self.ValDataPath)
         a_val, v_val, w_val = (
@@ -2123,7 +2123,7 @@ class FitzHughNagumo:
 
         # Test data
         self.TestDataPath = find_file(
-            f"Test_dataset_FHN_n_375_points_5040{time}.mat", search_path
+            f"Test_dataset_FHN_n_375_points_5040_tf_100.mat", search_path
         )
         a, v, w = MatReader_fhn(self.TestDataPath)
         a_test, v_test, w_test = (
@@ -3002,6 +3002,8 @@ class BAMPNO:
         reader = mat73.loadmat(self.TrainDataPath)
         input = torch.from_numpy(reader["COEFF"]).type(torch.float32)
         output = torch.from_numpy(reader["SOL"]).type(torch.float32)
+        self.X_phys = torch.from_numpy(reader["X_phys"]).type(torch.float32)
+        self.Y_phys = torch.from_numpy(reader["Y_phys"]).type(torch.float32)
 
         # Training data
         input_train, output_train = (

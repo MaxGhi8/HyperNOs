@@ -330,6 +330,7 @@ def test_afieti_dataset():
         batch_size=batch_size,
         training_samples=training_samples,
         in_dist=True,
+        filename="dataset_homogeneous_Neumann_rhs_fixed.mat",
     )
 
     train_batch_input, train_batch_output = next(iter(example.train_loader))
@@ -362,6 +363,7 @@ def test_bapno_dataset():
         },
         batch_size=batch_size,
         training_samples=training_samples,
+        filename="Darcy_Lshape_chebyshev_60pts.mat",
     )
 
     train_batch_input, train_batch_output = next(iter(example.train_loader))
@@ -405,3 +407,9 @@ def test_bapno_dataset():
         example.s_out,
         1,
     )
+
+    X = example.X_phys
+    Y = example.Y_phys
+    assert X.shape == (n_patch, example.s_in, example.s_in)
+    assert Y.shape == (n_patch, example.s_in, example.s_in)
+    assert X.shape == Y.shape
