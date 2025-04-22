@@ -6,6 +6,7 @@ import os
 import random
 
 import h5py
+import mat73
 import numpy as np
 import scipy
 import torch
@@ -2998,19 +2999,9 @@ class BAMPNO:
             g.manual_seed(retrain)
 
         self.TrainDataPath = find_file(filename, search_path)
-        reader = h5py.File(self.TrainDataPath, "r")
-        input = (
-            torch.from_numpy(reader["COEFF"][:]).type(torch.float32).permute(3, 2, 1, 0)
-        )
-        output = (
-            torch.from_numpy(reader["SOL"][:]).type(torch.float32).permute(3, 2, 1, 0)
-        )
-        self.X_phys = (
-            torch.from_numpy(reader["X_phys"][:]).type(torch.float32).permute(2, 1, 0)
-        )
-        self.Y_phys = (
-            torch.from_numpy(reader["Y_phys"][:]).type(torch.float32).permute(2, 1, 0)
-        )
+        reader = mat73.loadmat(self.TrainDataPath)
+        input = torch.from_numpy(reader["COEFF"]).type(torch.float32)
+        output = torch.from_numpy(reader["SOL"]).type(torch.float32)
 
         # Training data
         input_train, output_train = (
