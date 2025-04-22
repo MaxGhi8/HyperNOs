@@ -501,6 +501,92 @@ def plot_data_ord(
 
 
 #########################################
+# Function to plot the data for BAMPNO
+#########################################
+def plot_data_bampno_input(
+    example,
+    data_plot: Tensor,
+    title: str,
+    ep: int,
+    writer: SummaryWriter,
+    normalization: bool = True,
+    plotting: bool = False,
+):
+    if normalization:
+        data_plot = example.input_normalizer.decode(data_plot).squeeze()
+
+    plot_data_multi_patch(
+        example.X_phys, example.Y_phys, data_plot, title, ep, writer, plotting
+    )
+
+
+def plot_data_bampno(
+    example,
+    data_plot: Tensor,
+    title: str,
+    ep: int,
+    writer: SummaryWriter,
+    normalization: bool = True,
+    plotting: bool = False,
+):
+    if normalization:
+        data_plot = example.output_normalizer.decode(data_plot).squeeze()
+
+    plot_data_multi_patch(
+        example.X_phys, example.Y_phys, data_plot, title, ep, writer, plotting
+    )
+
+
+#########################################
+# Function to plot a generic multi-patch data
+#########################################
+def plot_data_multi_patch(
+    X: Tensor,
+    Y: Tensor,
+    data_plot: Tensor,
+    title: str,
+    ep: int,
+    writer: SummaryWriter,
+    plotting: bool = False,
+):
+    # select the data to plot
+    n_idx = data_plot.size(0)
+
+    vmin = data_plot
+    vmax = data_plot
+    for _ in range(data_plot.dim()):
+        vmin = torch.min(vmin, dim=0).values
+        vmax = torch.max(vmax, dim=0).values
+
+    # plot
+    fig, ax = plt.subplots(1, n_idx, figsize=(18, 4), layout="constrained")
+    fig.suptitle(title)
+
+    if n_idx == 1:
+        ax = [ax]
+
+    ax[0].set(ylabel="y")
+    for i in range(n_idx):
+        ax[i].set_yticklabels([])
+        ax[i].set_xticklabels([])
+        ax[i].set(xlabel="x")
+        for patch in range(X.size(0)):
+            im = ax[i].pcolormesh(
+                X[patch, :, :].squeeze(),
+                Y[patch, :, :].squeeze(),
+                data_plot[i, patch, :, :].squeeze(),
+                vmin=vmin,
+                vmax=vmax,
+            )
+
+        fig.colorbar(im, ax=ax[i])
+    if plotting:
+        plt.show()
+    # save the plot on tensorboard
+    writer.add_figure(title, fig, ep)
+
+
+#########################################
 # Function to plot a generic 2d data
 #########################################
 def plot_data_generic_2d(
@@ -516,6 +602,10 @@ def plot_data_generic_2d(
     # plot
     fig, ax = plt.subplots(1, n_idx, figsize=(18, 4))
     fig.suptitle(title)
+
+    if n_idx == 1:
+        ax = [ax]
+
     ax[0].set(ylabel="y")
     for i in range(n_idx):
         ax[i].set_yticklabels([])
@@ -670,8 +760,8 @@ def get_plot_function(
     which_example: str,
     title: str,
 ):
-    ## 1D problem
     match which_example:
+        # 1D problem
         case "fhn":
             if "input" in title.lower():
                 return plot_data_fhn_input
@@ -687,6 +777,7 @@ def get_plot_function(
                 return plot_data_ord_input
             return plot_data_ord
 
+        # 2D problem
         case "crosstruss":
             if "input" in title.lower():
                 return plot_data_crosstruss_input
@@ -697,28 +788,31 @@ def get_plot_function(
                 return plot_data_crosstruss_input
             return plot_data_stiffness_matrix
 
-    if which_example in [
-        "poisson",
-        "wave_0_5",
-        "cont_tran",
-        "disc_tran",
-        "allen",
-        "shear_layer",
-        "airfoil",
-        "darcy",
-    ]:
-        if "input" in title.lower():
-            return plot_data_mishra_input
-        return plot_data_mishra
+        case (
+            "poisson"
+            | "wave_0_5"
+            | "cont_tran"
+            | "disc_tran"
+            | "allen"
+            | "shear_layer"
+            | "airfoil"
+            | "darcy"
+        ):
+            if "input" in title.lower():
+                return plot_data_mishra_input
+            return plot_data_mishra
 
-    elif which_example in [
-        "burgers_zongyi",
-        "darcy_zongyi",
-        "navier_stokes_zongyi",
-    ]:
-        return None  # TODO
+        case "burgers_zongyi" | "darcy_zongyi" | "navier_stokes_zongyi":
+            return None  # TODO
 
-    return None
+        case "bampno":
+            if "input" in title.lower():
+                return plot_data_bampno_input
+            return plot_data_bampno
+
+        case _:
+            print(f"Unknown example: {which_example}")
+            return None
 
 
 def plot_data(
