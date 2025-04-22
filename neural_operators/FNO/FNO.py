@@ -2,6 +2,8 @@
 This file contains all the core architectures and modules of the Fourier Neural Operator (FNO) for 1D, 2D and 3D cases.
 """
 
+from functools import cache
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -748,6 +750,7 @@ class FNO(nn.Module):
 
         return x
 
+    @cache
     def get_grid_3d(self, shape: torch.Size) -> Tensor:
         batchsize, size_x, size_y, size_z = shape[0], shape[1], shape[2], shape[3]
         # grid for x
@@ -767,7 +770,9 @@ class FNO(nn.Module):
         )
         return torch.cat((gridx, gridy, gridz), dim=-1)
 
+    @cache
     def get_grid_2d(self, shape: torch.Size) -> Tensor:
+        print("get_grid_2d")
         batchsize, size_x, size_y = shape[0], shape[1], shape[2]
         # grid for x
         gridx = torch.tensor(np.linspace(0, 1, size_x), dtype=torch.float)
@@ -777,6 +782,7 @@ class FNO(nn.Module):
         gridy = gridy.reshape(1, 1, size_y, 1).repeat([batchsize, size_x, 1, 1])
         return torch.cat((gridx, gridy), dim=-1)
 
+    @cache
     def get_grid_1d(self, shape: torch.Size) -> Tensor:
         batchsize, size_x = shape[0], shape[1]
         # grid for x
