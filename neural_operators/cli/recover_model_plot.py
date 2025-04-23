@@ -415,20 +415,30 @@ def plot_boxplot(
     sns.set(style="white", palette="deep")
 
     plt.figure(figsize=(12, 6), layout="constrained")
-    flierprops = dict(
-        marker="o",
-        markerfacecolor="red",
-        markersize=4,
-        linestyle="none",
-        markeredgecolor="black",
+    # flierprops = dict(
+    #     marker="o",
+    #     markerfacecolor="red",
+    #     markersize=4,
+    #     linestyle="none",
+    #     markeredgecolor="black",
+    # )
+    # sns.boxplot(error_np, log_scale=True, flierprops=flierprops)
+    sns.stripplot(
+        error_np,
+        orient="v",
+        log_scale=True,
+        jitter=0.4,
+        edgecolor="black",
+        size=1.5,
+        linewidth=0.15,
     )
-    sns.boxplot(error_np, log_scale=True, flierprops=flierprops)
+    sns.boxplot(error_np, fliersize=0, whis=1.5)
 
     # Add labels and title
     plt.ylabel("Relative Error", fontsize=18)
     plt.xticks(fontsize=18)
-    plt.yticks([0.0001, 0.001, 0.01, 0.1, 1], fontsize=18)
-    plt.ylim(0.0001, 1)
+    plt.yticks([0.001, 0.01, 0.1, 1], fontsize=18)
+    plt.ylim(0.001, 1)
     # plt.title(
     #     f"boxplot of the Relative Error in Norm {str_norm}", fontsize=20, pad=20
     # )
@@ -438,7 +448,9 @@ def plot_boxplot(
 
     # Show the plot
     plt.savefig(
-        f"./{which_example}_boxplot_{str_norm}.png", dpi=300, bbox_inches="tight"
+        f"./{which_example}_boxplot_{str_norm}_swarmplot.png",
+        dpi=300,
+        bbox_inches="tight",
     )
     # plt.show()
 
