@@ -16,7 +16,7 @@ from train import train_fixed_model
 from utilities import initialize_hyperparameters
 
 
-def train_resnet(which_example: str, mode_hyperparams: str):
+def train_resnet(which_example: str, filename: str, mode_hyperparams: str):
 
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -50,6 +50,7 @@ def train_resnet(which_example: str, mode_hyperparams: str):
         },
         batch_size=default_hyper_params["batch_size"],
         training_samples=default_hyper_params["training_samples"],
+        filename=filename,
     )
 
     model_builder = lambda config: ResidualNetwork(
@@ -105,4 +106,8 @@ def train_resnet(which_example: str, mode_hyperparams: str):
 
 
 if __name__ == "__main__":
-    train_resnet("afieti_homogeneous_neumann", "default")
+    train_resnet(
+        "afieti_homogeneous_neumann",
+        "dataset_homogeneous_Neumann_rhs_fixed_deg_4.mat",
+        "default",
+    )
