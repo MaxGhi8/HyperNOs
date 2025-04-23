@@ -13,8 +13,8 @@
 	},
 	"resnet_architecture": {
 		"problem_dim": 1,
-		"in_channels": 361,
-        "out_channels": 361,
+		"in_channels": 144,
+        "out_channels": 144,
         "hidden_channels": [400, 400, 400],
         "activation_str": "relu",
         "n_blocks": 3,
