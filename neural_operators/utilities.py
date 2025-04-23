@@ -554,9 +554,9 @@ def plot_data_multi_patch(
 
     vmin = data_plot
     vmax = data_plot
-    for _ in range(data_plot.dim()):
-        vmin = torch.min(vmin, dim=0).values
-        vmax = torch.max(vmax, dim=0).values
+    for _ in range(data_plot.dim() - 1):
+        vmin = torch.min(vmin, dim=1).values
+        vmax = torch.max(vmax, dim=1).values
 
     # plot
     fig, ax = plt.subplots(1, n_idx, figsize=(18, 4), layout="constrained")
@@ -575,8 +575,8 @@ def plot_data_multi_patch(
                 X[patch, :, :].squeeze(),
                 Y[patch, :, :].squeeze(),
                 data_plot[i, patch, :, :].squeeze(),
-                vmin=vmin,
-                vmax=vmax,
+                vmin=vmin[i],
+                vmax=vmax[i],
             )
 
         fig.colorbar(im, ax=ax[i])
