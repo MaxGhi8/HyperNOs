@@ -39,6 +39,7 @@ def train_resnet(which_example: str, filename: str, mode_hyperparams: str):
         },
         batch_size=config["batch_size"],
         training_samples=config["training_samples"],
+        filename=filename,
     )
 
     # Define the model builders
