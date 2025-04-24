@@ -17,7 +17,7 @@ from tune import tune_hyperparameters
 from utilities import initialize_hyperparameters
 
 
-def ray_resnet(which_example: str, mode_hyperparams: str):
+def ray_resnet(which_example: str, filename: str, mode_hyperparams: str):
 
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -70,6 +70,7 @@ def ray_resnet(which_example: str, mode_hyperparams: str):
         },
         batch_size=config["batch_size"],
         training_samples=config["training_samples"],
+        filename=filename,
     )
 
     # Define the model builders
@@ -81,6 +82,7 @@ def ray_resnet(which_example: str, mode_hyperparams: str):
         },
         batch_size=default_hyper_params["batch_size"],
         training_samples=default_hyper_params["training_samples"],
+        filename=filename,
     )
 
     model_builder = lambda config: ResidualNetwork(
@@ -123,4 +125,8 @@ def ray_resnet(which_example: str, mode_hyperparams: str):
 
 
 if __name__ == "__main__":
-    ray_resnet("afieti_homogeneous_neumann", "default")
+    ray_resnet(
+        "afieti_homogeneous_neumann",
+        "dataset_homogeneous_Neumann_rhs_fixed_l_5.mat",
+        "default",
+    )
