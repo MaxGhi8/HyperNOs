@@ -2,6 +2,7 @@ import random
 import sys
 
 import pytest
+import torch
 
 sys.path.append("..")
 from datasets import (
@@ -366,6 +367,7 @@ def test_bapno_dataset():
         filename="Darcy_Lshape_chebyshev_60pts.mat",
     )
 
+    # Check for the dimensions of the input and output tensors
     train_batch_input, train_batch_output = next(iter(example.train_loader))
     assert train_batch_input.shape == (
         batch_size,
@@ -408,8 +410,37 @@ def test_bapno_dataset():
         1,
     )
 
+    # Check for the dimensions of the physical tensors
     X = example.X_phys
     Y = example.Y_phys
     assert X.shape == (n_patch, example.s_in, example.s_in)
     assert Y.shape == (n_patch, example.s_in, example.s_in)
     assert X.shape == Y.shape
+
+    # Check for the boundary conditions
+    assert abs(sum(train_batch_output[:, 0, 0, :, :].reshape(-1, 1))) < 1e-8
+    assert abs(sum(train_batch_output[:, 0, -1, :, :].reshape(-1, 1))) < 1e-8
+    assert abs(sum(train_batch_output[:, 0, :, 0, :].reshape(-1, 1))) < 1e-8
+
+    assert abs(sum(train_batch_output[:, 1, 0, :, :].reshape(-1, 1))) < 1e-8
+    assert abs(sum(train_batch_output[:, 1, :, -1, :].reshape(-1, 1))) < 1e-8
+
+    assert abs(sum(train_batch_output[:, 2, :, -1, :].reshape(-1, 1))) < 1e-8
+    assert abs(sum(train_batch_output[:, 2, -1, :, :].reshape(-1, 1))) < 1e-8
+    assert abs(sum(train_batch_output[:, 2, :, 0, :].reshape(-1, 1))) < 1e-8
+
+    # check for continuity condition for input
+    assert torch.allclose(
+        train_batch_input[:, 0, :, -1, :], train_batch_input[:, 1, :, 0, :], atol=1e-6
+    )
+    assert torch.allclose(
+        train_batch_input[:, 1, -1, :, :], train_batch_input[:, 2, 0, :, :], atol=1e-6
+    )
+
+    # check for continuity condition for output
+    assert torch.allclose(
+        train_batch_output[:, 0, :, -1, :], train_batch_output[:, 1, :, 0, :], atol=1e-6
+    )
+    assert torch.allclose(
+        train_batch_output[:, 1, -1, :, :], train_batch_output[:, 2, 0, :, :], atol=1e-6
+    )
