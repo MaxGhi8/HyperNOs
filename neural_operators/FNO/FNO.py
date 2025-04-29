@@ -646,6 +646,9 @@ class FNO(nn.Module):
         ## Move to device
         self.to(device)
 
+        if hasattr(torch, "compile") and torch.__version__ >= "2.0.0":
+            self._enable_compilation()
+
     @jaxtyped(typechecker=beartype)
     def forward(
         self, x: Float[Tensor, "n_batch *n_x {self.in_dim-self.problem_dim}"]
@@ -772,7 +775,6 @@ class FNO(nn.Module):
 
     @cache
     def get_grid_2d(self, shape: torch.Size) -> Tensor:
-        print("get_grid_2d")
         batchsize, size_x, size_y = shape[0], shape[1], shape[2]
         # grid for x
         gridx = torch.tensor(np.linspace(0, 1, size_x), dtype=torch.float)
@@ -789,3 +791,12 @@ class FNO(nn.Module):
         gridx = torch.tensor(np.linspace(0, 1, size_x), dtype=torch.float)
         gridx = gridx.reshape(1, size_x, 1).repeat([batchsize, 1, 1])
         return gridx
+
+    def _enable_compilation(self) -> None:
+        """Enable PyTorch 2.0+ compilation for performance if available."""
+        try:
+            # This is a PyTorch 2.0+ feature
+            self = torch.compile(self)
+            print("PyTorch compilation enabled for better performance")
+        except Exception as e:
+            print(f"Could not enable PyTorch compilation: {e}")

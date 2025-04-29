@@ -594,6 +594,9 @@ class CNO(nn.Module):
         self.to(device)
         self.device = device
 
+        if hasattr(torch, "compile") and torch.__version__ >= "2.0.0":
+            self._enable_compilation()
+
     @jaxtyped(typechecker=beartype)
     def forward(
         self, x: Float[Tensor, "batch *size {self.in_dim}"]
@@ -648,3 +651,12 @@ class CNO(nn.Module):
             return self.project(x).permute(0, 2, 3, 4, 1)
         else:
             raise ValueError("Problem dimension must be 1, 2 or 3")
+
+    def _enable_compilation(self) -> None:
+        """Enable PyTorch 2.0+ compilation for performance if available."""
+        try:
+            # This is a PyTorch 2.0+ feature
+            self = torch.compile(self)
+            print("PyTorch compilation enabled for better performance")
+        except Exception as e:
+            print(f"Could not enable PyTorch compilation: {e}")
