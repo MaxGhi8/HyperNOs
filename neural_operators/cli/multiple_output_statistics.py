@@ -35,6 +35,7 @@ import time
 sys.path.append("..")
 
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
 import torch
 from beartype import beartype
@@ -366,6 +367,11 @@ if which_example in ["fhn", "hh", "ord"]:
     print(test_rel_l1_componentwise.size())
 
 
+# Save the test_rel_l2_componentwise tensor to a .mat file
+mat_file_path = f"./{which_example}_test_rel_l2_componentwise.npy"
+np.save(mat_file_path, test_rel_l2_componentwise.cpu().numpy())
+
+
 #########################################
 # Time for evaluation
 #########################################
@@ -463,9 +469,62 @@ print("")
 # #     ["Train error", "Test error"],
 # # )
 
-
 # #########################################
 # # Example 1_bis: boxplot
+# #########################################
+# @jaxtyped(typechecker=beartype)
+# def plot_boxplot(
+#     errors: list[Float[Tensor, "n_samples"]], str_norm: str, legends: list[str] = None
+# ):
+
+#     if legends != None:
+#         assert len(legends) == len(
+#             errors
+#         ), "Legend is not consistent with input errros, have different length."
+
+#         error_np = {}
+#         for legend, error in zip(legends, errors):
+#             error_np[legend] = error.to("cpu").numpy()
+
+#     else:
+#         error_np = [error.to("cpu").numpy() for error in errors]
+
+#     # Set seaborn style for better aesthetics
+#     sns.set(style="white", palette="deep")
+
+#     plt.figure(figsize=(14, 6), layout="constrained")  # 14 for ord
+#     flierprops = dict(
+#         marker="o",
+#         markerfacecolor="red",
+#         markersize=4,
+#         linestyle="none",
+#         markeredgecolor="black",
+#     )
+#     sns.boxplot(error_np, log_scale=True, flierprops=flierprops)
+
+#     # Add labels and title
+#     plt.ylabel("Relative Error", fontsize=18)
+#     plt.xticks(fontsize=18, rotation=90)
+#     plt.yticks([0.0001, 0.001, 0.01, 0.1, 1], fontsize=18)
+#     plt.ylim(0.0001, 7)
+
+#     # Improve grid and layout
+#     plt.grid(True, which="both", ls="-", alpha=0.1, color="black")
+
+#     # Show the plot
+#     plt.savefig(
+#         f"./{which_example}_boxplot_{str_norm}_componentwise.png",
+#         dpi=300,
+#         bbox_inches="tight",
+#     )
+#     # plt.show()
+
+#     # Resets the style to default
+#     plt.style.use("default")
+
+
+# #########################################
+# # Example 2_bis: boxplot
 # #########################################
 @jaxtyped(typechecker=beartype)
 def plot_boxplot(
@@ -488,34 +547,76 @@ def plot_boxplot(
     sns.set(style="white", palette="deep")
 
     plt.figure(figsize=(14, 6), layout="constrained")  # 14 for ord
-    flierprops = dict(
-        marker="o",
-        markerfacecolor="red",
-        markersize=4,
-        linestyle="none",
-        markeredgecolor="black",
-    )
-    sns.boxplot(error_np, log_scale=True, flierprops=flierprops)
 
+    sns.boxplot(error_np, log_scale=True, showfliers=False)
+
+    #! FHN
+    # plt.axhline(y=0.0087, color="r", linestyle="--", linewidth=1.5, label="Test error")
+    # plt.axhspan(
+    #     ymin=0.0087 - 0.00042,
+    #     ymax=0.0087 + 0.00042,
+    #     color="r",
+    #     alpha=0.2,  # Transparency (0=invisible, 1=solid)
+    # )
+    # # Add labels and title
+    # plt.ylabel("Relative Error", fontsize=18)
+    # plt.xticks(fontsize=18)
+    # plt.yticks([0.0001, 0.001, 0.01, 0.1, 1], fontsize=18)
+    # plt.ylim(0.0001, 1)
+    # plt.grid(True, which="both", ls="-", alpha=0.1, color="black")
+
+    #! HH
+    # plt.axhline(y=0.0234, color="r", linestyle="--", linewidth=1.5, label="Test error")
+    # plt.axhspan(
+    #     ymin=0.0234 - 0.00062,
+    #     ymax=0.0234 + 0.00062,
+    #     color="r",
+    #     alpha=0.2,  # Transparency (0=invisible, 1=solid)
+    # )
+    # # Add labels and title
+    # plt.ylabel("Relative Error", fontsize=18)
+    # plt.xticks(fontsize=18)
+    # plt.yticks([0.001, 0.01, 0.1, 1], fontsize=18)
+    # plt.ylim(0.001, 1)
+
+    # # Improve grid and layout
+    # plt.grid(True, which="both", ls="-", alpha=0.1, color="black")
+
+    # # Resets the style to default
+    # plt.style.use("default")
+
+    #! ORd
+    plt.axhline(y=0.0219, color="r", linestyle="--", linewidth=1.5, label="Test error")
+    plt.axhspan(
+        ymin=0.0219 - 0.00004,
+        ymax=0.0219 + 0.00004,
+        color="r",
+        alpha=0.2,  # Transparency (0=invisible, 1=solid)
+    )
     # Add labels and title
     plt.ylabel("Relative Error", fontsize=18)
     plt.xticks(fontsize=18, rotation=90)
     plt.yticks([0.0001, 0.001, 0.01, 0.1, 1], fontsize=18)
-    plt.ylim(0.0001, 7)
+    plt.ylim(0.0001, 5)
 
     # Improve grid and layout
     plt.grid(True, which="both", ls="-", alpha=0.1, color="black")
 
-    # Show the plot
+    # # Show the plot
+    # # plt.savefig(
+    # #     f"./{which_example}_boxplot_{str_norm}_componentwise.png",
+    # #     dpi=300,
+    # #     bbox_inches="tight",
+    # # )
+    plt.legend()
+    # plt.show()
     plt.savefig(
         f"./{which_example}_boxplot_{str_norm}_componentwise.png",
         dpi=300,
         bbox_inches="tight",
     )
-    # plt.show()
-
-    # Resets the style to default
-    plt.style.use("default")
+    # # Resets the style to default
+    # plt.style.use("default")
 
 
 if which_example == "fhn":
@@ -539,11 +640,94 @@ elif which_example == "hh":
     )
 
 elif which_example == "ord":
+    list_range = [
+        11,
+        35,
+        3,
+        2,
+        10,
+        1,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+    ]
+    field_name = [
+        "V",
+        "n",
+        "[Ca$^{2+}$]$_{nsr}$",
+        "[Ca$^{2+}$]$_{jsr}$",
+        "[Na$^{+}$]$_{ss}$",
+        "CaMK$_{trap}$",
+        "[Ca$^{2+}$]$_i$",
+        "[Ca$^{2+}$]$_{ss}$",
+        "J$_{rel,CaMK}$",
+        "J$_{rel,NP}$",
+        "[K$^+$]$_i$",
+        "[K$^+$]$_ {ss}$",
+        "[Na$^+$]$_i$",
+        "a$_{CaMK}$",
+        "a",
+        "d",
+        "f$_{CaMK,fast}$",
+        "f$_{Ca,CaMK,fast}$",
+        "f$_{Ca,fast}$",
+        "f$_{Ca,slow}$",
+        "f$_{fast}$",
+        "f$_{slow}$",
+        "h$_{CaMK,slow}$",
+        "h$_{L,CaMK}$",
+        "h$_{L}$",
+        "h$_{fast}$",
+        "h$_{slow}$",
+        "i$_{CaMK,fast}$",
+        "i$_{CaMK,slow}$",
+        "i$_{fast}$",
+        "i$_{slow}$",
+        "j$_{CaMK}$",
+        "j$_{Ca}$",
+        "j",
+        "m$_L$",
+        "m",
+        "x$_{k1}$",
+        "x$_{r,fast}$",
+        "x$_{r,slow}$",
+        "x$_{s1}$",
+        "x$_{s2}$",
+    ]
     plot_boxplot(
-        [
-            test_rel_l2_componentwise[:, i]
-            for i in range(test_rel_l2_componentwise.shape[1])
-        ],
+        [test_rel_l2_componentwise[:, i - 1] for i in list_range],
         "L2",
-        [field[:-8] for field in example.fields_to_concat],
+        [field for field in field_name],
     )
