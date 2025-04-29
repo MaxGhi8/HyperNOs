@@ -62,6 +62,7 @@ def NO_load_data_model(
         "afieti_homogeneous_neumann": AFIETI,
         ###
         "bampno": BAMPNO,
+        # "bampno": BAMPNO_old,
         ###
         "crosstruss": CrossTruss,
         "stiffness_matrix": StiffnessMatrix,
@@ -2977,7 +2978,7 @@ class BAMPNO:
         network_properties: dict,
         batch_size: int,
         training_samples: int,
-        s=1,
+        s=3,
         in_dist=True,
         search_path="/",
     ):
@@ -3004,6 +3005,8 @@ class BAMPNO:
         output = torch.from_numpy(reader["SOL"]).type(torch.float32)
         self.X_phys = torch.from_numpy(reader["X_phys"]).type(torch.float32)
         self.Y_phys = torch.from_numpy(reader["Y_phys"]).type(torch.float32)
+        self.X_phys = self.X_phys[:, ::s, ::s]
+        self.Y_phys = self.Y_phys[:, ::s, ::s]
 
         # Training data
         input_train, output_train = (
@@ -3017,7 +3020,7 @@ class BAMPNO:
 
         # Normalize
         input_train = self.input_normalizer.encode(input_train)
-        output_train = self.output_normalizer.encode(output_train)
+        # output_train = self.output_normalizer.encode(output_train)
 
         # Validation data
         input_val, output_val = (
@@ -3027,7 +3030,7 @@ class BAMPNO:
             ),
         )
         input_val = self.input_normalizer.encode(input_val)
-        output_val = self.output_normalizer.encode(output_val)
+        # output_val = self.output_normalizer.encode(output_val)
 
         # Test data
         input_test, output_test = (
@@ -3035,7 +3038,7 @@ class BAMPNO:
             output[training_samples + 200 :, :, ::s, ::s].unsqueeze(-1),
         )
         input_test = self.input_normalizer.encode(input_test)
-        output_test = self.output_normalizer.encode(output_test)
+        # output_test = self.output_normalizer.encode(output_test)
 
         self.N_Fourier_F = network_properties["FourierF"]
         if self.N_Fourier_F > 0:
@@ -3084,3 +3087,148 @@ class BAMPNO:
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
         return grid
+
+
+@jaxtyped(typechecker=beartype)
+def MatReader(
+    file_path: str,
+) -> tuple[
+    Float[Tensor, "n_samples n_patch n_x n_y"],
+    Float[Tensor, "n_samples n_patch n_x n_y"],
+    Float[Tensor, "n_patch*n_x*n_y-n_x-n_y 2"],
+]:
+    """
+    Function to read .mat files version 7.3
+
+    Parameters
+    ----------
+    file_path : string
+        path of the .mat file to read
+
+    Returns
+    -------
+    a : tensor
+        evaluations of the function a(x) of the Darcy problem
+        dimension = (n_samples)*(n_patch)*(n_x)*(n_y)
+    u : tensor
+        approximation of the solution u(x) obtained with a
+        standard method (in our case isogeometric)
+        dimension = (n_samples)*(n_patch)*(n_x)*(n_y)
+    nodes : tensor
+        nodes of the mesh
+        dimension = (n_patch*n_x*n_y - n_x - n_y)*(2)
+    """
+    data = mat73.loadmat(file_path)
+
+    a = data["COEFF"]
+    a = torch.from_numpy(a).float()  # transform np.array in torch.tensor
+
+    u = data["SOL"]
+    u = torch.from_numpy(u).float()
+
+    nodes = data["nodes"]
+    nodes = torch.from_numpy(nodes).float()
+
+    return a, u, nodes
+
+
+class BAMPNO_old:
+    def __init__(
+        self,
+        filename: str,
+        network_properties: dict,
+        batch_size: int,
+        training_samples: int,
+        s=5,
+        in_dist=True,
+        search_path="/",
+    ):
+
+        assert training_samples <= 1600, "Training samples must be less than 3000"
+        assert in_dist, "Out-of-distribution testing samples are not available"
+
+        g = torch.Generator()
+
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
+            torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g.manual_seed(retrain)
+
+        TrainDataPath = find_file(
+            "Darcy_Lshape_chebyshev_grid_pc_train.mat", search_path
+        )
+        TestDataPath = find_file("Darcy_Lshape_chebyshev_grid_pc_test.mat", search_path)
+
+        self.GridDataPath = find_file(filename, search_path)
+        reader = mat73.loadmat(self.GridDataPath)
+        self.X_phys = torch.from_numpy(reader["X_phys"]).type(torch.float32)
+        self.Y_phys = torch.from_numpy(reader["Y_phys"]).type(torch.float32)
+
+        ntrain = training_samples
+        ntest = 200
+        a_train, u_train, _ = MatReader(TrainDataPath)
+        idx_train = list([i for i in range(0, a_train.size(0))])
+        random.Random(1).shuffle(idx_train)
+        idx_train = idx_train[:ntrain]
+        a_train, u_train = (
+            a_train[idx_train, :, ::s, ::s].unsqueeze(-1),
+            u_train[idx_train, :, ::s, ::s].unsqueeze(-1),
+        )  # shape: (n_samples)*(n_patch)*(n_x)*(n_y)
+
+        # Test data
+        a_test, u_test, _ = MatReader(TestDataPath)
+        idx_test = list([i for i in range(0, a_test.size(0))])
+        random.Random(1).shuffle(idx_test)
+        idx_test = idx_test[:ntest]
+        a_test, u_test = a_test[idx_test, :, ::s, ::s].unsqueeze(-1), u_test[
+            idx_test, :, ::s, ::s
+        ].unsqueeze(-1)
+
+        # Gaussian pointwise normalization
+        self.input_normalizer = UnitGaussianNormalizer(a_train)  # compute mean e std
+        a_train = self.input_normalizer.encode(a_train)  # apply normalization
+        a_test = self.input_normalizer.encode(
+            a_test
+        )  # apply normalization with mean and std of training data
+
+        self.output_normalizer = UnitGaussianNormalizer(u_train)  # compute mean e std
+        # u_train = self.output_normalizer.encode(u_train)
+        # u_test = self.output_normalizer.encode(u_test)
+
+        # Change number of workers according to your preference
+        num_workers = 0
+
+        self.train_loader = DataLoader(
+            TensorDataset(a_train, u_train),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.val_loader = DataLoader(
+            TensorDataset(a_test, u_test),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.test_loader = DataLoader(
+            TensorDataset(a_test, u_test),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+
+        self.s_in = a_test.shape[2]
+        self.s_out = u_test.shape[2]
