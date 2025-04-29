@@ -6,9 +6,9 @@
 		"learning_rate": 0.0002,
 		"epochs": 5000,
 		"batch_size": 100,
-		"weight_decay": 0.000607,
+		"weight_decay": 9.2e-5,
 		"scheduler_step": 250,
-		"scheduler_gamma": 0.78,
+		"scheduler_gamma": 0.77,
 		"p":2
 	},
 	"resnet_architecture": {
@@ -17,9 +17,9 @@
         "out_channels": 361,
         "hidden_channels": [700, 700, 700],
         "activation_str": "gelu",
-        "n_blocks": 2,
+        "n_blocks": 4,
 		"layer_norm" : false,
-		"dropout_rate": 0.23,
+		"dropout_rate": 0.2,
         "zero_mean": true,
 		"FourierF": 0,
 		"internal_normalization": true,
