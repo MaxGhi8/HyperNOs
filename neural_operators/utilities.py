@@ -529,8 +529,8 @@ def plot_data_bampno(
     normalization: bool = True,
     plotting: bool = False,
 ):
-    if normalization:
-        data_plot = example.output_normalizer.decode(data_plot).squeeze()
+    # if normalization:
+    #     data_plot = example.output_normalizer.decode(data_plot).squeeze()
 
     plot_data_multi_patch(
         example.X_phys, example.Y_phys, data_plot, title, ep, writer, plotting

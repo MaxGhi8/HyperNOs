@@ -23,6 +23,7 @@ def train_bampno(
 
     # Select available device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cpu")
 
     # Load the default hyperparameters for the FNO model
     hyperparams_train, hyperparams_arc = initialize_hyperparameters(
@@ -33,6 +34,18 @@ def train_bampno(
         **hyperparams_train,
         **hyperparams_arc,
     }
+
+    # Define the model builders
+    example = NO_load_data_model(
+        which_example=which_example,
+        no_architecture={
+            "FourierF": default_hyper_params["FourierF"],
+            "retrain": default_hyper_params["retrain_seed"],
+        },
+        batch_size=default_hyper_params["batch_size"],
+        training_samples=default_hyper_params["training_samples"],
+        filename=default_hyper_params["grid_filename"],
+    )
 
     # Define the model builders
     model_builder = lambda config: BAMPNO(
@@ -48,12 +61,17 @@ def train_bampno(
         config["modes"],
         config["fun_act"],
         config["weights_norm"],
-        {int(k): v for k, v in config["zero_BC"].items()},
+        (
+            {int(k): v for k, v in config["zero_BC"].items()}
+            if config["zero_BC"]
+            else None
+        ),
         config["arc"],
         config["RNN"],
         config["same_params"],
         config["FFTnorm"],
         device,
+        example.output_normalizer if config["internal_normalization"] else None,
         config["retrain_seed"],
     )
 
@@ -108,4 +126,4 @@ def train_bampno(
 
 
 if __name__ == "__main__":
-    train_bampno("bampno", "Lshape_domain", "default", "L2")
+    train_bampno("bampno", "O_domain", "default", "L2")

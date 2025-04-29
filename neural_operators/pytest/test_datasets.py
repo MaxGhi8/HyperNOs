@@ -364,7 +364,7 @@ def test_bapno_dataset():
         },
         batch_size=batch_size,
         training_samples=training_samples,
-        filename="Darcy_Lshape_chebyshev_60pts.mat",
+        filename="Darcy_Lshape_chebyshev_43pts.mat",
     )
 
     # Check for the dimensions of the input and output tensors
