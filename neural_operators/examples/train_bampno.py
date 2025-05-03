@@ -98,7 +98,7 @@ def train_bampno(
     )
 
     experiment_name = (
-        f"BAMPNO/{which_example}/loss_{loss_fn_str}_mode_{mode_hyperparams}"
+        f"BAMPNO/{which_domain}/loss_{loss_fn_str}_mode_{mode_hyperparams}"
     )
 
     # Create the right folder if it doesn't exist
@@ -126,4 +126,4 @@ def train_bampno(
 
 
 if __name__ == "__main__":
-    train_bampno("bampno", "O_domain", "default", "L2")
+    train_bampno("bampno", "8_domain", "default", "L2")
