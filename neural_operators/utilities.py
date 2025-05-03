@@ -6,6 +6,7 @@ import json
 import operator
 import os
 import pathlib
+import warnings
 from functools import reduce
 
 import matplotlib.pyplot as plt
@@ -571,13 +572,15 @@ def plot_data_multi_patch(
         ax[i].set_xticklabels([])
         ax[i].set(xlabel="x")
         for patch in range(X.size(0)):
-            im = ax[i].pcolormesh(
-                X[patch, :, :].squeeze(),
-                Y[patch, :, :].squeeze(),
-                data_plot[i, patch, :, :].squeeze(),
-                vmin=vmin[i],
-                vmax=vmax[i],
-            )
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                im = ax[i].pcolormesh(
+                    X[patch, :, :].squeeze(),
+                    Y[patch, :, :].squeeze(),
+                    data_plot[i, patch, :, :].squeeze(),
+                    vmin=vmin[i],
+                    vmax=vmax[i],
+                )
 
         fig.colorbar(im, ax=ax[i])
     if plotting:
