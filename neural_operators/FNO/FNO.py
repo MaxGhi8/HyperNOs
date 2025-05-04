@@ -394,6 +394,15 @@ class FourierLayer(nn.Module):
 #########################################
 # Fourier Neural Operator
 #########################################
+class output_denormalizer_class(nn.Module):
+    def __init__(self, output_normalizer) -> None:
+        super(output_denormalizer_class, self).__init__()
+        self.output_normalizer = output_normalizer
+
+    def forward(self, x):
+        return self.output_normalizer.decode(x)
+
+
 class FNO(nn.Module):
     """
     Fourier Neural Operator for a problem on square domain
@@ -414,6 +423,7 @@ class FNO(nn.Module):
         FFTnorm=None,
         padding: int = 4,
         device: torch.device = torch.device("cpu"),
+        example_output_normalizer=None,
         retrain_fno=-1,
     ):
         """
@@ -471,6 +481,12 @@ class FNO(nn.Module):
         self.padding = padding
         self.retrain_fno = retrain_fno
         self.device = device
+
+        self.output_denormalizer = (
+            nn.Identity()
+            if example_output_normalizer is None
+            else output_denormalizer_class(example_output_normalizer)
+        )
 
         ## Lifting
         # self.p = torch.nn.Linear(self.in_dim, self.d_v)
@@ -751,7 +767,7 @@ class FNO(nn.Module):
 
         x = self.q(x)  # shape --> (n_samples)*(*n_x)*(out_dim)
 
-        return x
+        return self.output_denormalizer(x)
 
     @cache
     def get_grid_3d(self, shape: torch.Size) -> Tensor:
