@@ -109,28 +109,28 @@ def train_model_without_ray(
     )
 
     # Optimizer and scheduler
-    # optimizer = torch.optim.AdamW(
-    #     model.parameters(),
-    #     lr=learning_rate,
-    #     weight_decay=weight_decay,
-    # )
-    optimizer = torch.optim.Adam(
+    optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=learning_rate,
         weight_decay=weight_decay,
     )
-
-    # scheduler = torch.optim.lr_scheduler.StepLR(
-    #     optimizer, step_size=scheduler_step, gamma=scheduler_gamma
+    # optimizer = torch.optim.Adam(
+    #     model.parameters(),
+    #     lr=learning_rate,
+    #     weight_decay=weight_decay,
     # )
-    ntrain = 0
-    for step, (input_batch, _) in enumerate(dataset.train_loader):
-        if step == 0:
-            batch_size = input_batch.shape[0]
-        ntrain += input_batch.shape[0]
 
-    iterations = max_epochs * (ntrain // batch_size)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
+    scheduler = torch.optim.lr_scheduler.StepLR(
+        optimizer, step_size=scheduler_step, gamma=scheduler_gamma
+    )
+    # ntrain = 0
+    # for step, (input_batch, _) in enumerate(dataset.train_loader):
+    #     if step == 0:
+    #         batch_size = input_batch.shape[0]
+    #     ntrain += input_batch.shape[0]
+
+    # iterations = max_epochs * (ntrain // batch_size)
+    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=iterations)
 
     print("🚀 Training Progress 🚀")
     for epoch in range(start_epoch, max_epochs):

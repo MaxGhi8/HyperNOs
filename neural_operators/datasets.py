@@ -19,6 +19,7 @@ from utilities import (
     FourierFeatures1D,
     UnitGaussianNormalizer,
     find_file,
+    minmaxGlobalNormalizer,
 )
 
 
@@ -3026,8 +3027,8 @@ class BAMPNO:
 
         # Validation data
         input_val, output_val = (
-            input[training_samples : training_samples + 200, :, ::s, ::s].unsqueeze(-1),
-            output[training_samples : training_samples + 200, :, ::s, ::s].unsqueeze(
+            input[training_samples : training_samples + 150, :, ::s, ::s].unsqueeze(-1),
+            output[training_samples : training_samples + 150, :, ::s, ::s].unsqueeze(
                 -1
             ),
         )
@@ -3036,8 +3037,8 @@ class BAMPNO:
 
         # Test data
         input_test, output_test = (
-            input[training_samples + 200 :, :, ::s, ::s].unsqueeze(-1),
-            output[training_samples + 200 :, :, ::s, ::s].unsqueeze(-1),
+            input[training_samples + 150 :, :, ::s, ::s].unsqueeze(-1),
+            output[training_samples + 150 :, :, ::s, ::s].unsqueeze(-1),
         )
         input_test = self.input_normalizer.encode(input_test)
         # output_test = self.output_normalizer.encode(output_test)
@@ -3246,6 +3247,7 @@ class Eigenfunction:
         s=1,
         in_dist=True,
         search_path="/",
+        n_eig: int = 100,
     ):
         assert training_samples <= 1200, "Training samples must be less than 3000"
         assert in_dist, "Out-of-distribution testing samples are not available"
@@ -3277,33 +3279,38 @@ class Eigenfunction:
         # Training data
         input_train, output_train = (
             input[:training_samples, ::s, ::s].unsqueeze(-1),
-            output[:training_samples, ::s, ::s, :],
+            output[:training_samples, ::s, ::s, :n_eig],
         )
-        print(input_train.shape, output_train.shape)
 
         # Compute mean and std (for gaussian point-wise normalization)
-        self.input_normalizer = UnitGaussianNormalizer(input_train)
-        self.output_normalizer = UnitGaussianNormalizer(output_train)
+        # self.input_normalizer = UnitGaussianNormalizer(input_train)
+        # self.output_normalizer = UnitGaussianNormalizer(output_train)
+        self.input_normalizer = minmaxGlobalNormalizer(input_train)
+        self.output_normalizer = minmaxGlobalNormalizer(output_train)
 
         # Normalize
         input_train = self.input_normalizer.encode(input_train)
-        # output_train = self.output_normalizer.encode(output_train)
+        output_train = self.output_normalizer.encode(output_train)
 
         # Validation data
         input_val, output_val = (
-            input[training_samples : training_samples + 200, ::s, ::s].unsqueeze(-1),
-            output[training_samples : training_samples + 200, ::s, ::s, :],
+            input[training_samples : training_samples + 150, ::s, ::s].unsqueeze(-1),
+            output[training_samples : training_samples + 150, ::s, ::s, :n_eig],
         )
         input_val = self.input_normalizer.encode(input_val)
-        # output_val = self.output_normalizer.encode(output_val)
+        output_val = self.output_normalizer.encode(output_val)
 
         # Test data
         input_test, output_test = (
-            input[training_samples + 200 :, ::s, ::s].unsqueeze(-1),
-            output[training_samples + 200 :, ::s, ::s, :],
+            input[
+                training_samples + 150 : training_samples + 2 * 150, ::s, ::s
+            ].unsqueeze(-1),
+            output[
+                training_samples + 150 : training_samples + 2 * 150, ::s, ::s, :n_eig
+            ],
         )
         input_test = self.input_normalizer.encode(input_test)
-        # output_test = self.output_normalizer.encode(output_test)
+        output_test = self.output_normalizer.encode(output_test)
 
         self.N_Fourier_F = network_properties["FourierF"]
         if self.N_Fourier_F > 0:
@@ -3343,7 +3350,6 @@ class Eigenfunction:
 
         self.s_in = input_test.shape[2]
         self.s_out = output_test.shape[2]
-        print("sium")
 
     def get_grid(self):
         x = torch.linspace(0, 1, self.s_in)

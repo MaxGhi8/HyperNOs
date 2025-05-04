@@ -32,6 +32,21 @@ def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         **hyperparams_arc,
     }
 
+    example = NO_load_data_model(
+        which_example=which_example,
+        no_architecture={
+            "FourierF": default_hyper_params["FourierF"],
+            "retrain": default_hyper_params["retrain"],
+        },
+        batch_size=default_hyper_params["batch_size"],
+        training_samples=default_hyper_params["training_samples"],
+        filename=(
+            default_hyper_params["filename"]
+            if "filename" in default_hyper_params
+            else None
+        ),
+    )
+
     # Define the model builders
     model_builder = lambda config: FNO(
         config["problem_dim"],
@@ -47,6 +62,11 @@ def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         config["fft_norm"],
         config["padding"],
         device,
+        (
+            example.output_normalizer
+            if ("internal_normalization" in config and config["internal_normalization"])
+            else None
+        ),
         config["retrain"],
     )
     # Wrap the model builder
@@ -61,6 +81,7 @@ def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         },
         batch_size=config["batch_size"],
         training_samples=config["training_samples"],
+        filename=config["filename"] if "filename" in config else None,
     )
 
     # Define the loss function
@@ -90,10 +111,10 @@ def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         dataset_builder,
         loss_fn,
         experiment_name,
-        get_plot_function(which_example, "input"),
-        get_plot_function(which_example, "output"),
+        # get_plot_function(which_example, "input"),
+        # get_plot_function(which_example, "output"),
     )
 
 
 if __name__ == "__main__":
-    train_fno("darcy", "default", "L2")
+    train_fno("eig", "default", "L2")
