@@ -603,7 +603,7 @@ def plot_shear_layer(input_tensor, output_tensor, prediction_tensor, idx):
 
 
 #########################################
-# Plotting shear_layer example
+# Plotting darcy example
 #########################################
 def plot_darcy(input_tensor, output_tensor, prediction_tensor, idx):
     fig, axs = plt.subplots(4, len(idx), figsize=(16, 10))
@@ -645,6 +645,51 @@ def plot_darcy(input_tensor, output_tensor, prediction_tensor, idx):
     plt.tight_layout()
     plt.show()
     # plt.savefig("figure.png")
+
+
+#########################################
+# Plotting eig example
+#########################################
+def plot_eig(input_tensor, output_tensor, prediction_tensor, idx):
+    fig, axs = plt.subplots(4, len(idx), figsize=(16, 10))
+
+    for i in range(4):
+        for j in range(idx.shape[0]):
+            if i == 0:  # input
+                im = axs[i, j].imshow(input_tensor[idx[j], :, :].squeeze())
+                fig.colorbar(im, ax=axs[i, j])
+                if j == 0:
+                    axs[i, j].set_ylabel("Diffusion coefficient a")
+
+            elif i == 1:  # output x
+                im = axs[i, j].imshow(output_tensor[idx[j], :, :, 0].squeeze())
+                fig.colorbar(im, ax=axs[i, j])
+                if j == 0:
+                    axs[i, j].set_ylabel("Exact solution u")
+
+            elif i == 2:  # predicted x
+                im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
+                fig.colorbar(im, ax=axs[i, j])
+                if j == 0:
+                    axs[i, j].set_ylabel("Approx. solution u")
+
+            elif i == 3:  # error x
+                error = torch.abs(
+                    output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
+                )
+                im = axs[i, j].imshow(error.squeeze())
+                fig.colorbar(im, ax=axs[i, j])
+                if j == 0:
+                    axs[i, j].set_ylabel("Error")
+
+            axs[i, j].set_yticklabels([])
+            axs[i, j].set_xticklabels([])
+            # axs[i, j].set_xlabel('x')
+
+    plt.suptitle("Eigenfunctions")  # title
+    # plt.tight_layout()
+    # plt.show()
+    plt.savefig("figure.png")
 
 
 #########################################
@@ -1090,6 +1135,8 @@ def test_plot_samples(
             plot_crosstruss(input_tensor, output_tensor, prediction_tensor, idx)
         case "stiffness_matrix":
             plot_stiffness_matrix(input_tensor, output_tensor, prediction_tensor, idx)
+        case "eig":
+            plot_eig(input_tensor, output_tensor, prediction_tensor, idx)
         case "fhn":
             plot_fhn(input_tensor, output_tensor, prediction_tensor, idx)
         case "hh":

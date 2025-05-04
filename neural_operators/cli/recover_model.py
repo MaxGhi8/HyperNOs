@@ -88,6 +88,7 @@ def parse_arguments():
             "darcy",
             "burgers_zongyi",
             "darcy_zongyi",
+            "eig",
             "fhn",
             "hh",
             "ord",
@@ -174,6 +175,11 @@ try:
             },
             batch_size=default_hyper_params["batch_size"],
             training_samples=default_hyper_params["training_samples"],
+            filename=(
+                default_hyper_params["filename"]
+                if "filename" in default_hyper_params
+                else None
+            ),
         )
 
         match arc:
@@ -192,6 +198,14 @@ try:
                     default_hyper_params["fft_norm"],
                     default_hyper_params["padding"],
                     device,
+                    (
+                        example.output_normalizer
+                        if (
+                            "internal_normalization" in config
+                            and config["internal_normalization"]
+                        )
+                        else None
+                    ),
                     default_hyper_params["retrain"],
                 )
                 model = wrap_model(model, which_example)
@@ -284,6 +298,7 @@ example = NO_load_data_model(
     },
     batch_size,
     training_samples,
+    filename=hyperparams["filename"] if "filename" in hyperparams else None,
 )
 
 train_loader = example.train_loader
@@ -344,33 +359,33 @@ print("")
     output_tensor,
     prediction_tensor,
 ) = get_tensors(model, test_loader, device)
-(
-    train_input_tensor,
-    train_output_tensor,
-    train_prediction_tensor,
-) = get_tensors(model, train_loader, device)
+# (
+#     train_input_tensor,
+#     train_output_tensor,
+#     train_prediction_tensor,
+# ) = get_tensors(model, train_loader, device)
 
 #########################################
 # Compute mean error and print it
 #########################################
 # Error tensors
-train_relative_l1_tensor = LprelLoss(1, None)(
-    train_output_tensor, train_prediction_tensor
-)
+# train_relative_l1_tensor = LprelLoss(1, None)(
+#     train_output_tensor, train_prediction_tensor
+# )
 test_relative_l1_tensor = LprelLoss(1, None)(output_tensor, prediction_tensor)
 
-train_relative_l2_tensor = LprelLoss(2, None)(
-    train_output_tensor, train_prediction_tensor
-)
+# train_relative_l2_tensor = LprelLoss(2, None)(
+#     train_output_tensor, train_prediction_tensor
+# )
 test_relative_l2_tensor = LprelLoss(2, None)(output_tensor, prediction_tensor)
 
 if problem_dim == 1:
-    train_relative_semih1_tensor = H1relLoss_1D(1.0, None, 0.0)(
-        train_output_tensor, train_prediction_tensor
-    )
-    train_relative_h1_tensor = H1relLoss_1D(1.0, None)(
-        train_output_tensor, train_prediction_tensor
-    )
+    # train_relative_semih1_tensor = H1relLoss_1D(1.0, None, 0.0)(
+    #     train_output_tensor, train_prediction_tensor
+    # )
+    # train_relative_h1_tensor = H1relLoss_1D(1.0, None)(
+    #     train_output_tensor, train_prediction_tensor
+    # )
 
     test_relative_semih1_tensor = H1relLoss_1D(1.0, None, 0.0)(
         output_tensor, prediction_tensor
@@ -378,12 +393,12 @@ if problem_dim == 1:
     test_relative_h1_tensor = H1relLoss_1D(1.0, None)(output_tensor, prediction_tensor)
 
 elif problem_dim == 2:
-    train_relative_semih1_tensor = H1relLoss(1.0, None, 0.0)(
-        train_output_tensor, train_prediction_tensor
-    )
-    train_relative_h1_tensor = H1relLoss(1.0, None)(
-        train_output_tensor, train_prediction_tensor
-    )
+    # train_relative_semih1_tensor = H1relLoss(1.0, None, 0.0)(
+    #     train_output_tensor, train_prediction_tensor
+    # )
+    # train_relative_h1_tensor = H1relLoss(1.0, None)(
+    #     train_output_tensor, train_prediction_tensor
+    # )
 
     test_relative_semih1_tensor = H1relLoss(1.0, None, 0.0)(
         output_tensor, prediction_tensor
@@ -543,10 +558,15 @@ def plot_histogram(
 #     "L1",
 #     ["Train error", "Test error"],
 # )
+# plot_histogram(
+#     [train_relative_l2_tensor, test_relative_l2_tensor],
+#     "L2",
+#     ["Train error", "Test error"],
+# )
 plot_histogram(
-    [train_relative_l2_tensor, test_relative_l2_tensor],
+    [test_relative_l2_tensor],
     "L2",
-    ["Train error", "Test error"],
+    ["Test error"],
 )
 # plot_histogram(
 #     [train_relative_semih1_tensor, test_relative_semih1_tensor],
@@ -620,10 +640,15 @@ def plot_boxplot(
 #     "L1",
 #     ["Train error", "Test error"],
 # )
+# plot_boxplot(
+#     [train_relative_l2_tensor, test_relative_l2_tensor],
+#     "L2",
+#     ["Train error", "Test error"],
+# )
 plot_boxplot(
-    [train_relative_l2_tensor, test_relative_l2_tensor],
+    [test_relative_l2_tensor],
     "L2",
-    ["Train error", "Test error"],
+    ["Test error"],
 )
 # plot_boxplot(
 #     [train_relative_semih1_tensor, test_relative_semih1_tensor],
@@ -744,6 +769,11 @@ match which_example:
     case "cont_tran" | "disc_tran" | "airfoil":
         # data does not need to be normalized
         pass
+
+    case "eig":
+        input_tensor = example.input_normalizer.decode(input_tensor)
+        output_tensor = example.output_normalizer.decode(output_tensor)
+        prediction_tensor = example.output_normalizer.decode(prediction_tensor)
 
     case "darcy_zongyi":
         input_tensor = example.a_normalizer.decode(input_tensor)

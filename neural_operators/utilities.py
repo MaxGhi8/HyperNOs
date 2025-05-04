@@ -658,6 +658,34 @@ def plot_data_mishra(
 
 
 #########################################
+# Function to plot the eig example
+#########################################
+def plot_data_eig_input(
+    example,
+    data_plot: Tensor,
+    title: str,
+    ep: int,
+    writer: SummaryWriter,
+    normalization: bool = True,
+    plotting: bool = False,
+):
+    plot_data_generic_2d(data_plot, title, ep, writer, plotting)
+
+
+def plot_data_eig(
+    example,
+    data_plot: Tensor,
+    title: str,
+    ep: int,
+    writer: SummaryWriter,
+    normalization: bool = True,
+    plotting: bool = False,
+):
+
+    plot_data_generic_2d(data_plot, title, ep, writer, plotting)
+
+
+#########################################
 # Function to plot cross-truss example
 #########################################
 def plot_data_crosstruss_input(
@@ -812,6 +840,11 @@ def get_plot_function(
             if "input" in title.lower():
                 return plot_data_bampno_input
             return plot_data_bampno
+
+        case "eig":
+            if "input" in title.lower():
+                return plot_data_eig_input
+            return plot_data_eig
 
         case _:
             print(f"Unknown example: {which_example}")
