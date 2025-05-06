@@ -111,8 +111,8 @@ def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         dataset_builder,
         loss_fn,
         experiment_name,
-        # get_plot_function(which_example, "input"),
-        # get_plot_function(which_example, "output"),
+        get_plot_function(which_example, "input"),
+        get_plot_function(which_example, "output"),
     )
 
 

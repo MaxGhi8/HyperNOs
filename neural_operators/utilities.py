@@ -669,6 +669,9 @@ def plot_data_eig_input(
     normalization: bool = True,
     plotting: bool = False,
 ):
+    if normalization:
+        data_plot = example.input_normalizer.decode(data_plot).squeeze()
+
     plot_data_generic_2d(data_plot, title, ep, writer, plotting)
 
 
@@ -681,6 +684,8 @@ def plot_data_eig(
     normalization: bool = True,
     plotting: bool = False,
 ):
+    if normalization:
+        data_plot = example.output_normalizer.decode(data_plot).squeeze()
 
     plot_data_generic_2d(data_plot, title, ep, writer, plotting)
 
