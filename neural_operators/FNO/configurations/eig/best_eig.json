@@ -13,14 +13,14 @@
 		"beta": 1
 	},
 	"fno_architecture": {
-		"width": 32,
-		"modes": 16,
+		"width": 64,
+		"modes": 24,
 		"n_layers": 4,
 		"padding": 0,
 		"fno_arc": "Classic",
 		"fun_act": "gelu",
 		"in_dim": 1,
-		"out_dim": 20,
+		"out_dim": 50,
 		"fft_norm": null,
 		"FourierF": 0,
 		"RNN": false,

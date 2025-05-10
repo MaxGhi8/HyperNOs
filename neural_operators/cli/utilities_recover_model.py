@@ -662,20 +662,21 @@ def plot_eig(input_tensor, output_tensor, prediction_tensor, idx):
                     axs[i, j].set_ylabel("Diffusion coefficient a")
 
             elif i == 1:  # output x
-                im = axs[i, j].imshow(output_tensor[idx[j], :, :, 0].squeeze())
+                im = axs[i, j].imshow(output_tensor[idx[j], :, :, 49].squeeze())
                 fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Exact solution u")
 
             elif i == 2:  # predicted x
-                im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
+                im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 49].squeeze())
                 fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Approx. solution u")
 
             elif i == 3:  # error x
                 error = torch.abs(
-                    output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
+                    output_tensor[idx[j], :, :, 49]
+                    - prediction_tensor[idx[j], :, :, 49]
                 )
                 im = axs[i, j].imshow(error.squeeze())
                 fig.colorbar(im, ax=axs[i, j])
@@ -1107,7 +1108,7 @@ def test_plot_samples(
         idx = indices[-n_idx:].to("cpu")
         error = error[-n_idx:].to("cpu")
     elif mode == "random":
-        idx = torch.tensor(np.random.randint(0, ntest, size=(n_idx,)))
+        idx = np.random.choice(ntest, size=n_idx, replace=False)
         error = error[idx].to("cpu")
     else:
         raise ValueError("The mode must be 'best', 'worst' or 'random'")

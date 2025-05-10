@@ -687,7 +687,9 @@ def plot_data_eig(
     if normalization:
         data_plot = example.output_normalizer.decode(data_plot).squeeze()
 
-    plot_data_generic_2d(data_plot, title, ep, writer, plotting)
+    plot_data_generic_2d(
+        data_plot[:, :, :, 0], title + " first eigenfunction", ep, writer, plotting
+    )
 
 
 #########################################

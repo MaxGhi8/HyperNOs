@@ -86,6 +86,7 @@ def parse_arguments():
             "darcy",
             "burgers_zongyi",
             "darcy_zongyi",
+            "eig",
             "fhn",
             "hh",
             "ord",
@@ -172,6 +173,11 @@ try:
             },
             batch_size=default_hyper_params["batch_size"],
             training_samples=default_hyper_params["training_samples"],
+            filename=(
+                default_hyper_params["filename"]
+                if "filename" in default_hyper_params
+                else None
+            ),
         )
 
         match arc:
@@ -190,6 +196,14 @@ try:
                     default_hyper_params["fft_norm"],
                     default_hyper_params["padding"],
                     device,
+                    (
+                        example.output_normalizer
+                        if (
+                            "internal_normalization" in default_hyper_params
+                            and default_hyper_params["internal_normalization"]
+                        )
+                        else None
+                    ),
                     default_hyper_params["retrain"],
                 )
                 model = wrap_model(model, which_example)
@@ -282,6 +296,7 @@ example = NO_load_data_model(
     },
     batch_size,
     training_samples,
+    filename=(hyperparams["filename"] if "filename" in hyperparams else None),
 )
 
 train_loader = example.train_loader
@@ -362,6 +377,20 @@ if which_example in ["fhn", "hh", "ord"]:
         output_tensor, prediction_tensor
     )
     test_rel_h1_componentwise = H1relLoss_1D_multiout(1.0, None)(
+        output_tensor, prediction_tensor
+    )
+    print(test_rel_l1_componentwise.size())
+else:
+    test_rel_l1_componentwise = LprelLoss_multiout(1, None)(
+        output_tensor, prediction_tensor
+    )
+    test_rel_l2_componentwise = LprelLoss_multiout(2, None)(
+        output_tensor, prediction_tensor
+    )
+    test_rel_semih1_componentwise = H1relLoss_multiout(0.0, None)(
+        output_tensor, prediction_tensor
+    )
+    test_rel_h1_componentwise = H1relLoss_multiout(1.0, None)(
         output_tensor, prediction_tensor
     )
     print(test_rel_l1_componentwise.size())
@@ -585,19 +614,33 @@ def plot_boxplot(
     # # Resets the style to default
     # plt.style.use("default")
 
-    #! ORd
-    plt.axhline(y=0.0219, color="r", linestyle="--", linewidth=1.5, label="Test error")
-    plt.axhspan(
-        ymin=0.0219 - 0.00004,
-        ymax=0.0219 + 0.00004,
-        color="r",
-        alpha=0.2,  # Transparency (0=invisible, 1=solid)
-    )
+    # #! ORd
+    # plt.axhline(y=0.0219, color="r", linestyle="--", linewidth=1.5, label="Test error")
+    # plt.axhspan(
+    #     ymin=0.0219 - 0.00004,
+    #     ymax=0.0219 + 0.00004,
+    #     color="r",
+    #     alpha=0.2,  # Transparency (0=invisible, 1=solid)
+    # )
+    # # Add labels and title
+    # plt.ylabel("Relative Error", fontsize=18)
+    # plt.xticks(fontsize=18, rotation=90)
+    # plt.yticks([0.0001, 0.001, 0.01, 0.1, 1], fontsize=18)
+    # plt.ylim(0.0001, 5)
+
+    #! Eig
+    plt.axhline(y=0.0174, color="r", linestyle="--", linewidth=1.5, label="Test error")
+    # plt.axhspan(
+    #     ymin=0.0219 - 0.00004,
+    #     ymax=0.0219 + 0.00004,
+    #     color="r",
+    #     alpha=0.2,  # Transparency (0=invisible, 1=solid)
+    # )
     # Add labels and title
     plt.ylabel("Relative Error", fontsize=18)
     plt.xticks(fontsize=18, rotation=90)
-    plt.yticks([0.0001, 0.001, 0.01, 0.1, 1], fontsize=18)
-    plt.ylim(0.0001, 5)
+    plt.yticks([0.01, 0.1, 1], fontsize=18)
+    plt.ylim(0.001, 0.1)
 
     # Improve grid and layout
     plt.grid(True, which="both", ls="-", alpha=0.1, color="black")
@@ -637,6 +680,16 @@ elif which_example == "hh":
         ],
         "L2",
         ["V", "m", "h", "n"],
+    )
+
+elif which_example == "eig":
+    plot_boxplot(
+        [
+            test_rel_l2_componentwise[:, i]
+            for i in range(test_rel_l2_componentwise.shape[1])
+        ],
+        "L2",
+        [f"eig_{i}" for i in range(test_rel_l2_componentwise.shape[-1])],
     )
 
 elif which_example == "ord":

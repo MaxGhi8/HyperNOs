@@ -826,9 +826,9 @@ test_plot_samples(
     output_tensor,
     prediction_tensor,
     test_relative_l1_tensor,
-    "worst",
+    "random",
     which_example,
-    ntest=100,
+    ntest=hyperparams["out_dim"],
     str_norm=loss_fn_str,
     n_idx=5,
 )

@@ -3247,7 +3247,7 @@ class Eigenfunction:
         s=1,
         in_dist=True,
         search_path="/",
-        n_eig: int = 100,
+        n_eig: int = 50,
     ):
         assert training_samples <= 1200, "Training samples must be less than 3000"
         assert in_dist, "Out-of-distribution testing samples are not available"
@@ -3282,6 +3282,17 @@ class Eigenfunction:
             output[:training_samples, ::s, ::s, :n_eig],
         )
 
+        # print(
+        #         torch.max(torch.max(output_train[-15, :, :, 2], dim=1).values, dim=1).values, dim=1
+        # )
+        # print(output_train[-15, :, :, 1])
+        # plot it
+        # plt.imshow(output_train[-15, :, :, 1].detach().numpy())
+        # plt.colorbar()
+        # plt.title("Eigenfunction")
+        # plt.savefig("eigenfunction.png")
+        # return
+
         # Compute mean and std (for gaussian point-wise normalization)
         # self.input_normalizer = UnitGaussianNormalizer(input_train)
         # self.output_normalizer = UnitGaussianNormalizer(output_train)
@@ -3294,8 +3305,8 @@ class Eigenfunction:
 
         # Validation data
         input_val, output_val = (
-            input[training_samples : training_samples + 150, ::s, ::s].unsqueeze(-1),
-            output[training_samples : training_samples + 150, ::s, ::s, :n_eig],
+            input[training_samples : training_samples + 50, ::s, ::s].unsqueeze(-1),
+            output[training_samples : training_samples + 50, ::s, ::s, :n_eig],
         )
         input_val = self.input_normalizer.encode(input_val)
         output_val = self.output_normalizer.encode(output_val)
@@ -3303,11 +3314,9 @@ class Eigenfunction:
         # Test data
         input_test, output_test = (
             input[
-                training_samples + 150 : training_samples + 2 * 150, ::s, ::s
+                training_samples + 50 : training_samples + 2 * 50, ::s, ::s
             ].unsqueeze(-1),
-            output[
-                training_samples + 150 : training_samples + 2 * 150, ::s, ::s, :n_eig
-            ],
+            output[training_samples + 50 : training_samples + 2 * 50, ::s, ::s, :n_eig],
         )
         input_test = self.input_normalizer.encode(input_test)
         output_test = self.output_normalizer.encode(output_test)
