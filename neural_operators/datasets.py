@@ -2981,7 +2981,7 @@ class BAMPNO:
         network_properties: dict,
         batch_size: int,
         training_samples: int,
-        s=3,
+        s=2,
         in_dist=True,
         search_path="/",
     ):
