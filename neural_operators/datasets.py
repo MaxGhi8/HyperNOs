@@ -64,6 +64,8 @@ def NO_load_data_model(
         ###
         "bampno": BAMPNO,
         # "bampno": BAMPNO_old,
+        ##
+        "coeff_rhs": CoeffRHS,
         ###
         "eig": Eigenfunction,
         ###
@@ -2968,10 +2970,154 @@ class StiffnessMatrix(Dataset):
 
 
 # ------------------------------------------------------------------------------
+# CoeffRHS data
+# Training samples (1200)
+# Testing samples (150)
+# Validation samples (150)
+
+
+class CoeffRHS:
+    def __init__(
+        self,
+        filename: str,
+        network_properties: dict,
+        batch_size: int,
+        training_samples: int,
+        s=1,
+        in_dist=True,
+        search_path="/",
+    ):
+        assert training_samples <= 1200, "Training samples must be less than 3000"
+        assert in_dist, "Out-of-distribution testing samples are not available"
+
+        g = torch.Generator()
+
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
+            torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g.manual_seed(retrain)
+
+        self.TrainDataPath = find_file(filename, search_path)
+        reader = mat73.loadmat(self.TrainDataPath)
+        input_coeff = torch.from_numpy(reader["COEFF"]).type(torch.float32)
+        input_rhs = torch.from_numpy(reader["RHS"]).type(torch.float32)
+        output = torch.from_numpy(reader["SOL"]).type(torch.float32)
+        self.X_phys = torch.from_numpy(reader["X_phys"]).type(torch.float32)
+        self.Y_phys = torch.from_numpy(reader["Y_phys"]).type(torch.float32)
+        self.X_phys = self.X_phys[0, ::s, ::s]
+        self.Y_phys = self.Y_phys[0, ::s, ::s]
+
+        # Training data
+        input_train = torch.cat(
+            (
+                input_coeff[:training_samples, 0, ::s, ::s].unsqueeze(-1),
+                input_rhs[:training_samples, 0, ::s, ::s].unsqueeze(-1),
+            ),
+            dim=-1,
+        )
+        output_train = output[:training_samples, 0, ::s, ::s].unsqueeze(-1)
+
+        # Compute mean and std (for gaussian point-wise normalization)
+        self.input_normalizer = UnitGaussianNormalizer(input_train)
+        self.output_normalizer = UnitGaussianNormalizer(output_train)
+
+        # Normalize
+        input_train = self.input_normalizer.encode(input_train)
+        # output_train = self.output_normalizer.encode(output_train)
+
+        # Validation data
+        input_val = torch.cat(
+            (
+                input_coeff[
+                    training_samples : training_samples + 150, 0, ::s, ::s
+                ].unsqueeze(-1),
+                input_rhs[
+                    training_samples : training_samples + 150, 0, ::s, ::s
+                ].unsqueeze(-1),
+            ),
+            dim=-1,
+        )
+        output_val = output[
+            training_samples : training_samples + 150, 0, ::s, ::s
+        ].unsqueeze(-1)
+
+        input_val = self.input_normalizer.encode(input_val)
+        # output_val = self.output_normalizer.encode(output_val)
+
+        # Test data
+        input_test = torch.cat(
+            (
+                input_coeff[training_samples + 150 :, 0, ::s, ::s].unsqueeze(-1),
+                input_rhs[training_samples + 150 :, 0, ::s, ::s].unsqueeze(-1),
+            ),
+            dim=-1,
+        )
+        output_test = output[training_samples + 150 :, 0, ::s, ::s].unsqueeze(-1)
+
+        input_test = self.input_normalizer.encode(input_test)
+        # output_test = self.output_normalizer.encode(output_test)
+
+        self.N_Fourier_F = network_properties["FourierF"]
+        if self.N_Fourier_F > 0:
+            grid = self.get_grid()
+            FF = FourierFeatures(1, self.N_Fourier_F, grid.device)
+            ff_grid = FF(grid)
+            ff_grid = ff_grid.permute(2, 0, 1)
+            inputs = torch.cat((inputs, ff_grid), 0)
+
+        # Change number of workers according to your preference
+        num_workers = 0
+
+        self.train_loader = DataLoader(
+            TensorDataset(input_train, output_train),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.val_loader = DataLoader(
+            TensorDataset(input_val, output_val),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.test_loader = DataLoader(
+            TensorDataset(input_test, output_test),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+
+        self.s_in = input_test.shape[2]
+        self.s_out = output_test.shape[2]
+
+    def get_grid(self):
+        x = torch.linspace(0, 1, self.s_in)
+        y = torch.linspace(0, 1, self.s_in)
+        x_grid, y_grid = torch.meshgrid(x, y, indexing="ij")
+        x_grid = x_grid.unsqueeze(-1)
+        y_grid = y_grid.unsqueeze(-1)
+        grid = torch.cat((x_grid, y_grid), -1)
+        return grid
+
+
+# ------------------------------------------------------------------------------
 # BAMPNO data
-# Training samples (1600)
-# Testing samples (200)
-# Validation samples (200)
+# Training samples (1200)
+# Testing samples (150)
+# Validation samples (150)
 
 
 class BAMPNO:
