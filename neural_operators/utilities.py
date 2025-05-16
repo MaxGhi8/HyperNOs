@@ -603,7 +603,7 @@ def plot_data_generic_2d(
     n_idx = data_plot.size(0)
 
     # plot
-    fig, ax = plt.subplots(1, n_idx, figsize=(18, 4))
+    fig, ax = plt.subplots(1, n_idx, figsize=(18, 5), layout="constrained")
     fig.suptitle(title)
 
     if n_idx == 1:
@@ -655,6 +655,62 @@ def plot_data_mishra(
         ) * data_plot + example.min_model
 
     plot_data_generic_2d(data_plot, title, ep, writer, plotting)
+
+
+#########################################
+# Function to plot the coeff_rhs example
+#########################################
+def plot_data_coeff_rhs_input(
+    example,
+    data_plot: Tensor,
+    title: str,
+    ep: int,
+    writer: SummaryWriter,
+    normalization: bool = True,
+    plotting: bool = False,
+):
+    if normalization:
+        data_plot = example.input_normalizer.decode(data_plot).squeeze()
+
+    # select the data to plot
+    n_idx = data_plot.size(0)
+
+    # plot
+    fig, ax = plt.subplots(2, n_idx, figsize=(18, 10), layout="constrained")
+    fig.suptitle(title)
+
+    if n_idx == 1:
+        ax = [ax]
+
+    for j in range(2):  # row index
+        ax[j, 0].set(ylabel="y")
+
+        for i in range(n_idx):  # column index
+            ax[j, i].set_yticklabels([])
+            ax[j, i].set_xticklabels([])
+            ax[j, i].set(xlabel="x")
+            im = ax[j, i].imshow(data_plot[i, ..., j].squeeze())
+            fig.colorbar(im, ax=ax[j, i])
+
+    if plotting:
+        plt.show()
+    # save the plot on tensorboard
+    writer.add_figure(title, fig, ep)
+
+
+def plot_data_coeff_rhs(
+    example,
+    data_plot: Tensor,
+    title: str,
+    ep: int,
+    writer: SummaryWriter,
+    normalization: bool = True,
+    plotting: bool = False,
+):
+    # if normalization:
+    #     data_plot = example.output_normalizer.decode(data_plot).squeeze()
+
+    plot_data_generic_2d(data_plot[:, :, :, 0], title, ep, writer, plotting)
 
 
 #########################################
@@ -852,6 +908,11 @@ def get_plot_function(
             if "input" in title.lower():
                 return plot_data_eig_input
             return plot_data_eig
+
+        case "coeff_rhs":
+            if "input" in title.lower():
+                return plot_data_coeff_rhs_input
+            return plot_data_coeff_rhs
 
         case _:
             print(f"Unknown example: {which_example}")

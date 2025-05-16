@@ -8,3 +8,4 @@ train_loss/
 *.png
 
 **/BAMPNO/
+**/FNO_lin/
