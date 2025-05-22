@@ -42,6 +42,7 @@ from cli.utilities_recover_model import get_tensors, test_fun, test_plot_samples
 from CNO import CNO
 from datasets import NO_load_data_model
 from FNO import FNO
+from FNO_lin import FNO_lin
 from jaxtyping import Float, jaxtyped
 from loss_fun import (
     H1relLoss,
@@ -89,6 +90,7 @@ def parse_arguments():
             "burgers_zongyi",
             "darcy_zongyi",
             "eig",
+            "coeff_rhs",
             "fhn",
             "hh",
             "ord",
@@ -100,7 +102,7 @@ def parse_arguments():
     parser.add_argument(
         "architecture",
         type=str,
-        choices=["FNO", "CNO", "ResNet"],
+        choices=["FNO", "CNO", "ResNet", "FNO_lin", "BAMPNO"],
         help="Select the architecture to use.",
     )
     parser.add_argument(
@@ -154,10 +156,11 @@ Norm_dict = {"L1": 0, "L2": 1, "H1": 2, "L1_SMOOTH": 3, "MSE": 4}
 folder = f"../tests/{arc}/{which_example}/loss_{loss_fn_str}_mode_{mode_str}/"
 files = os.listdir(folder)
 name_model = folder + [file for file in files if file.startswith("model_")][0]
+print("Model name: ", name_model)
 
 try:
     try:  # For models saved with torch.save(model.state_dict())
-        # Load the default hyperparameters for the FNO model
+        # Load the default hyperparameters for the model
         hyperparams_train, hyperparams_arc = initialize_hyperparameters(
             arc, which_example, mode_str
         )
@@ -201,8 +204,8 @@ try:
                     (
                         example.output_normalizer
                         if (
-                            "internal_normalization" in config
-                            and config["internal_normalization"]
+                            "internal_normalization" in default_hyper_params
+                            and default_hyper_params["internal_normalization"]
                         )
                         else None
                     ),
@@ -249,12 +252,39 @@ try:
                     ),
                 )
 
+            case "FNO_lin":
+                model = FNO_lin(
+                    default_hyper_params["problem_dim"],
+                    default_hyper_params["in_dim"],
+                    default_hyper_params["width"],
+                    default_hyper_params["out_dim"],
+                    default_hyper_params["n_layers"],
+                    default_hyper_params["modes"],
+                    default_hyper_params["fun_act"],
+                    default_hyper_params["weights_norm"],
+                    default_hyper_params["fno_arc"],
+                    default_hyper_params["RNN"],
+                    default_hyper_params["fft_norm"],
+                    default_hyper_params["padding"],
+                    device,
+                    (
+                        example.output_normalizer
+                        if (
+                            "internal_normalization" in default_hyper_params
+                            and default_hyper_params["internal_normalization"]
+                        )
+                        else None
+                    ),
+                    default_hyper_params["retrain"],
+                )
+
         checkpoint = torch.load(name_model, weights_only=True, map_location=device)
         model.load_state_dict(checkpoint["state_dict"])
 
     except Exception:
+        print("Model not found, trying to load the model with torch.load()")
         # save with torch.save(model)
-        model = torch.load(name_model, weights_only=False, map_location=device)
+        # model = torch.load(name_model, weights_only=False, map_location=device)
 
 except Exception:
     raise ValueError(
@@ -291,13 +321,13 @@ loss = loss_selector(loss_fn_str=loss_fn_str, problem_dim=problem_dim, beta=beta
 # Data loader
 #########################################
 example = NO_load_data_model(
-    which_example,
-    {
+    which_example=which_example,
+    no_architecture={
         "FourierF": hyperparams["FourierF"],
         "retrain": hyperparams["retrain"],
     },
-    batch_size,
-    training_samples,
+    batch_size=hyperparams["batch_size"],
+    training_samples=hyperparams["training_samples"],
     filename=hyperparams["filename"] if "filename" in hyperparams else None,
 )
 
@@ -359,11 +389,11 @@ print("")
     output_tensor,
     prediction_tensor,
 ) = get_tensors(model, test_loader, device)
-# (
-#     train_input_tensor,
-#     train_output_tensor,
-#     train_prediction_tensor,
-# ) = get_tensors(model, train_loader, device)
+(
+    train_input_tensor,
+    train_output_tensor,
+    train_prediction_tensor,
+) = get_tensors(model, train_loader, device)
 
 #########################################
 # Compute mean error and print it
@@ -374,9 +404,9 @@ print("")
 # )
 test_relative_l1_tensor = LprelLoss(1, None)(output_tensor, prediction_tensor)
 
-# train_relative_l2_tensor = LprelLoss(2, None)(
-#     train_output_tensor, train_prediction_tensor
-# )
+train_relative_l2_tensor = LprelLoss(2, None)(
+    train_output_tensor, train_prediction_tensor
+)
 test_relative_l2_tensor = LprelLoss(2, None)(output_tensor, prediction_tensor)
 
 if problem_dim == 1:
@@ -558,16 +588,16 @@ def plot_histogram(
 #     "L1",
 #     ["Train error", "Test error"],
 # )
-# plot_histogram(
-#     [train_relative_l2_tensor, test_relative_l2_tensor],
-#     "L2",
-#     ["Train error", "Test error"],
-# )
 plot_histogram(
-    [test_relative_l2_tensor],
+    [train_relative_l2_tensor, test_relative_l2_tensor],
     "L2",
-    ["Test error"],
+    ["Train error", "Test error"],
 )
+# plot_histogram(
+#     [test_relative_l2_tensor],
+#     "L2",
+#     ["Test error"],
+# )
 # plot_histogram(
 #     [train_relative_semih1_tensor, test_relative_semih1_tensor],
 #     "Semi H1",
@@ -610,7 +640,7 @@ def plot_boxplot(
         log_scale=True,
         jitter=0.4,
         edgecolor="black",
-        size=1.5,
+        size=3,
         linewidth=0.15,
     )
     sns.boxplot(error_np, fliersize=0, whis=1.5)
@@ -640,16 +670,16 @@ def plot_boxplot(
 #     "L1",
 #     ["Train error", "Test error"],
 # )
-# plot_boxplot(
-#     [train_relative_l2_tensor, test_relative_l2_tensor],
-#     "L2",
-#     ["Train error", "Test error"],
-# )
 plot_boxplot(
-    [test_relative_l2_tensor],
+    [train_relative_l2_tensor, test_relative_l2_tensor],
     "L2",
-    ["Test error"],
+    ["Train error", "Test error"],
 )
+# plot_boxplot(
+#     [test_relative_l2_tensor],
+#     "L2",
+#     ["Test error"],
+# )
 # plot_boxplot(
 #     [train_relative_semih1_tensor, test_relative_semih1_tensor],
 #     "Semi H1",
@@ -770,6 +800,15 @@ match which_example:
         # data does not need to be normalized
         pass
 
+    case "coeff_rhs":
+        # input_tensor = example.input_normalizer.decode(input_tensor)
+        input_tensor[:, :, :, [0]] = example.input_normalizer_coeff.decode(
+            input_tensor[:, :, :, [0]]
+        )
+        # input_tensor = example.input_normalizer.decode(input_tensor)
+        # output_tensor = example.output_normalizer.decode(output_tensor)
+        # prediction_tensor = example.output_normalizer.decode(prediction_tensor)
+
     case "eig":
         input_tensor = example.input_normalizer.decode(input_tensor)
         output_tensor = example.output_normalizer.decode(output_tensor)
@@ -826,9 +865,9 @@ test_plot_samples(
     output_tensor,
     prediction_tensor,
     test_relative_l1_tensor,
-    "random",
+    "best",
     which_example,
-    ntest=hyperparams["out_dim"],
+    ntest=hyperparams["test_samples"],
     str_norm=loss_fn_str,
     n_idx=5,
 )
