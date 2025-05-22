@@ -648,6 +648,57 @@ def plot_darcy(input_tensor, output_tensor, prediction_tensor, idx):
 
 
 #########################################
+# Plotting coeff_rhs example
+#########################################
+def plot_coeff_rhs(input_tensor, output_tensor, prediction_tensor, idx):
+    fig, axs = plt.subplots(5, len(idx), figsize=(16, 10), layout="constrained")
+
+    for i in range(5):
+        for j in range(idx.shape[0]):
+            if i == 0:  # input
+                im = axs[i, j].imshow(input_tensor[idx[j], :, :, 0].squeeze())
+                fig.colorbar(im, ax=axs[i, j])
+                if j == 0:
+                    axs[i, j].set_ylabel("Diffusion coefficient a")
+
+            if i == 1:  # input
+                im = axs[i, j].imshow(input_tensor[idx[j], :, :, 1].squeeze())
+                fig.colorbar(im, ax=axs[i, j])
+                if j == 0:
+                    axs[i, j].set_ylabel("Right-hand side f")
+
+            elif i == 2:  # output x
+                im = axs[i, j].imshow(output_tensor[idx[j], :, :, 0].squeeze())
+                fig.colorbar(im, ax=axs[i, j])
+                if j == 0:
+                    axs[i, j].set_ylabel("Exact solution u")
+
+            elif i == 3:  # predicted x
+                im = axs[i, j].imshow(prediction_tensor[idx[j], :, :, 0].squeeze())
+                fig.colorbar(im, ax=axs[i, j])
+                if j == 0:
+                    axs[i, j].set_ylabel("Approx. solution u")
+
+            elif i == 4:  # error x
+                error = torch.abs(
+                    output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
+                )
+                im = axs[i, j].imshow(error.squeeze())
+                fig.colorbar(im, ax=axs[i, j])
+                if j == 0:
+                    axs[i, j].set_ylabel("Error")
+
+            axs[i, j].set_yticklabels([])
+            axs[i, j].set_xticklabels([])
+            # axs[i, j].set_xlabel('x')
+
+    # plt.suptitle("Eigenfunctions")  # title
+    # plt.tight_layout()
+    # plt.show()
+    plt.savefig("figure.png")
+
+
+#########################################
 # Plotting eig example
 #########################################
 def plot_eig(input_tensor, output_tensor, prediction_tensor, idx):
@@ -1138,6 +1189,8 @@ def test_plot_samples(
             plot_stiffness_matrix(input_tensor, output_tensor, prediction_tensor, idx)
         case "eig":
             plot_eig(input_tensor, output_tensor, prediction_tensor, idx)
+        case "coeff_rhs":
+            plot_coeff_rhs(input_tensor, output_tensor, prediction_tensor, idx)
         case "fhn":
             plot_fhn(input_tensor, output_tensor, prediction_tensor, idx)
         case "hh":

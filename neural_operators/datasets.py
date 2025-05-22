@@ -2595,7 +2595,7 @@ class AFIETI:
         in_dist=True,
         search_path="/",
     ):
-        assert training_samples <= 16000, "Training samples must be less than 3000"
+        # assert training_samples <= 16000, "Training samples must be less than 3000"
         assert in_dist, "Out-of-distribution testing samples are not available"
         assert s == 1, "Sampling rate must be 1, no subsampling allowed in this example"
 
@@ -3015,54 +3015,47 @@ class CoeffRHS:
         self.Y_phys = self.Y_phys[0, ::s, ::s]
 
         # Training data
-        input_train = torch.cat(
-            (
-                input_coeff[:training_samples, 0, ::s, ::s].unsqueeze(-1),
-                input_rhs[:training_samples, 0, ::s, ::s].unsqueeze(-1),
-            ),
-            dim=-1,
-        )
+        coeff_train = input_coeff[:training_samples, 0, ::s, ::s].unsqueeze(-1)
+        rhs_train = input_rhs[:training_samples, 0, ::s, ::s].unsqueeze(-1)
         output_train = output[:training_samples, 0, ::s, ::s].unsqueeze(-1)
 
         # Compute mean and std (for gaussian point-wise normalization)
-        self.input_normalizer = UnitGaussianNormalizer(input_train)
+        self.input_normalizer_coeff = UnitGaussianNormalizer(coeff_train)
+        self.input_normalizer_rhs = UnitGaussianNormalizer(rhs_train)
         self.output_normalizer = UnitGaussianNormalizer(output_train)
 
         # Normalize
-        input_train = self.input_normalizer.encode(input_train)
+        coeff_train = self.input_normalizer_coeff.encode(coeff_train)
+        # rhs_train = self.input_normalizer_rhs.encode(rhs_train)
         # output_train = self.output_normalizer.encode(output_train)
 
+        input_train = torch.cat((coeff_train, rhs_train), dim=-1)
+
         # Validation data
-        input_val = torch.cat(
-            (
-                input_coeff[
-                    training_samples : training_samples + 150, 0, ::s, ::s
-                ].unsqueeze(-1),
-                input_rhs[
-                    training_samples : training_samples + 150, 0, ::s, ::s
-                ].unsqueeze(-1),
-            ),
-            dim=-1,
-        )
+        coeff_val = input_coeff[
+            training_samples : training_samples + 150, 0, ::s, ::s
+        ].unsqueeze(-1)
+        rhs_val = input_rhs[
+            training_samples : training_samples + 150, 0, ::s, ::s
+        ].unsqueeze(-1)
         output_val = output[
             training_samples : training_samples + 150, 0, ::s, ::s
         ].unsqueeze(-1)
 
-        input_val = self.input_normalizer.encode(input_val)
+        coeff_val = self.input_normalizer_coeff.encode(coeff_val)
+        # rhs_val = self.input_normalizer_rhs.encode(rhs_val)
         # output_val = self.output_normalizer.encode(output_val)
+        input_val = torch.cat((coeff_val, rhs_val), dim=-1)
 
         # Test data
-        input_test = torch.cat(
-            (
-                input_coeff[training_samples + 150 :, 0, ::s, ::s].unsqueeze(-1),
-                input_rhs[training_samples + 150 :, 0, ::s, ::s].unsqueeze(-1),
-            ),
-            dim=-1,
-        )
+        coeff_test = input_coeff[training_samples + 150 :, 0, ::s, ::s].unsqueeze(-1)
+        rhs_test = input_rhs[training_samples + 150 :, 0, ::s, ::s].unsqueeze(-1)
         output_test = output[training_samples + 150 :, 0, ::s, ::s].unsqueeze(-1)
 
-        input_test = self.input_normalizer.encode(input_test)
+        coeff_test = self.input_normalizer_coeff.encode(coeff_test)
+        # rhs_test = self.input_normalizer_rhs.encode(rhs_test)
         # output_test = self.output_normalizer.encode(output_test)
+        input_test = torch.cat((coeff_test, rhs_test), dim=-1)
 
         self.N_Fourier_F = network_properties["FourierF"]
         if self.N_Fourier_F > 0:

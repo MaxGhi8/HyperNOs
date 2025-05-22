@@ -670,7 +670,9 @@ def plot_data_coeff_rhs_input(
     plotting: bool = False,
 ):
     if normalization:
-        data_plot = example.input_normalizer.decode(data_plot).squeeze()
+        data_plot[:, :, :, 0] = example.input_normalizer_coeff.decode(
+            data_plot[:, :, :, [0]]
+        ).squeeze()
 
     # select the data to plot
     n_idx = data_plot.size(0)
