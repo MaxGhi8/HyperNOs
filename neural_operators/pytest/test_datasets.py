@@ -507,7 +507,7 @@ def test_eig_dataset():
     assert X.shape == Y.shape
 
 
-def test_coeff_eig_dataset():
+def test_coeff_rhs_dataset():
     batch_size = 100
     training_samples = 1200
     example = NO_load_data_model(
@@ -565,3 +565,55 @@ def test_coeff_eig_dataset():
     assert X.shape == (example.s_in, example.s_in)
     assert Y.shape == (example.s_in, example.s_in)
     assert X.shape == Y.shape
+
+
+def test_coeff_rhs_1d_dataset():
+    batch_size = 100
+    training_samples = 1200
+    example = NO_load_data_model(
+        which_example="coeff_rhs_1d",
+        no_architecture={
+            "FourierF": 0,
+            "retrain": -1,
+        },
+        batch_size=batch_size,
+        training_samples=training_samples,
+        filename="Darcy_uniform_1d_100pts_coeff_rhs.mat",
+    )
+
+    # Check for the dimensions of the input and output tensors
+    train_batch_input, train_batch_output = next(iter(example.train_loader))
+    assert train_batch_input.shape == (
+        batch_size,
+        example.s_in,
+        2,
+    )
+    assert train_batch_output.shape == (
+        batch_size,
+        example.s_out,
+        1,
+    )
+
+    test_batch_input, test_batch_output = next(iter(example.test_loader))
+    assert test_batch_input.shape == (
+        batch_size,
+        example.s_in,
+        2,
+    )
+    assert test_batch_output.shape == (
+        batch_size,
+        example.s_out,
+        1,
+    )
+
+    val_batch_input, val_batch_output = next(iter(example.val_loader))
+    assert val_batch_input.shape == (batch_size, example.s_in, 2)
+    assert val_batch_output.shape == (
+        batch_size,
+        example.s_out,
+        1,
+    )
+
+    # Check for the dimensions of the physical tensors
+    X = example.X_phys
+    assert X.shape == (example.s_in,)

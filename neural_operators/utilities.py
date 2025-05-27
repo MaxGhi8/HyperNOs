@@ -336,6 +336,58 @@ def plot_data_phield_space(
 
 
 #########################################
+# Function to plot the data of coeff_rhs_1d example
+#########################################
+def plot_data_coeff_rhs_input_1d(
+    example,
+    data_plot: Tensor,
+    title: str,
+    ep: int,
+    writer: SummaryWriter,
+    normalization: bool = True,
+    plotting: bool = False,
+):
+    # Denormalize the data
+    if normalization:
+        data_plot[..., [0]] = example.input_normalizer_coeff.decode(data_plot[..., [0]])
+        data_plot[..., [1]] = example.input_normalizer_rhs.decode(data_plot[..., [1]])
+    # Plot the data
+    plot_data_generic_1d(
+        data_plot[..., 0], 2, title + " a(x)", "a(x)", ep, writer, plotting
+    )
+    plot_data_generic_1d(
+        data_plot[..., 1], 2, title + " f(x)", "f(x)", ep, writer, plotting
+    )
+
+
+def plot_data_coeff_rhs_1d(
+    example,
+    data_plot: Tensor,
+    title: str,
+    ep: int,
+    writer: SummaryWriter,
+    normalization: bool = True,
+    plotting: bool = False,
+):
+    # if normalization:
+    #     data_plot[:, :, [0]] = example.v_normalizer.decode(data_plot[:, :, [0]])
+    #     data_plot[:, :, [1]] = example.m_normalizer.decode(data_plot[:, :, [1]])
+    #     data_plot[:, :, [2]] = example.h_normalizer.decode(data_plot[:, :, [2]])
+    #     data_plot[:, :, [3]] = example.n_normalizer.decode(data_plot[:, :, [3]])
+
+    # Plot the data
+    plot_data_generic_1d(
+        data_plot[..., 0],
+        2,
+        title + " u(x)",
+        "Solution u(x)",
+        ep,
+        writer,
+        plotting,
+    )
+
+
+#########################################
 # Function to plot the data of the FHN example
 #########################################
 def plot_data_fhn_input(
@@ -915,6 +967,11 @@ def get_plot_function(
             if "input" in title.lower():
                 return plot_data_coeff_rhs_input
             return plot_data_coeff_rhs
+
+        case "coeff_rhs_1d":
+            if "input" in title.lower():
+                return plot_data_coeff_rhs_input_1d
+            return plot_data_coeff_rhs_1d
 
         case _:
             print(f"Unknown example: {which_example}")

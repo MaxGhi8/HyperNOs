@@ -66,6 +66,7 @@ def NO_load_data_model(
         # "bampno": BAMPNO_old,
         ##
         "coeff_rhs": CoeffRHS,
+        "coeff_rhs_1d": CoeffRHS_1d,
         ###
         "eig": Eigenfunction,
         ###
@@ -2967,6 +2968,136 @@ class StiffnessMatrix(Dataset):
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
         return grid
+
+
+# ------------------------------------------------------------------------------
+# CoeffRHS_1d data
+# Training samples (1200)
+# Testing samples (150)
+# Validation samples (150)
+
+
+class CoeffRHS_1d:
+    def __init__(
+        self,
+        filename: str,
+        network_properties: dict,
+        batch_size: int,
+        training_samples: int,
+        s=1,
+        in_dist=True,
+        search_path="/",
+    ):
+        assert training_samples <= 1200, "Training samples must be less than 3000"
+        assert in_dist, "Out-of-distribution testing samples are not available"
+
+        g = torch.Generator()
+
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
+            torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g.manual_seed(retrain)
+
+        self.TrainDataPath = find_file(filename, search_path)
+        reader = mat73.loadmat(self.TrainDataPath)
+        input_coeff = torch.from_numpy(reader["COEFF"]).type(torch.float32)
+        input_rhs = torch.from_numpy(reader["RHS"]).type(torch.float32)
+        output = torch.from_numpy(reader["SOL"]).type(torch.float32)
+        self.X_phys = torch.from_numpy(reader["X_phys"]).type(torch.float32)
+        self.X_phys = self.X_phys[::s]
+
+        # Training data
+        coeff_train = input_coeff[:training_samples, ::s].unsqueeze(-1)
+        rhs_train = input_rhs[:training_samples, ::s].unsqueeze(-1)
+        output_train = output[:training_samples, ::s].unsqueeze(-1)
+
+        # Compute mean and std (for gaussian point-wise normalization)
+        self.input_normalizer_coeff = UnitGaussianNormalizer(coeff_train)
+        self.input_normalizer_rhs = UnitGaussianNormalizer(rhs_train)
+        self.output_normalizer = UnitGaussianNormalizer(output_train)
+        # self.output_normalizer = minmaxGlobalNormalizer(output_train)
+
+        # Normalize
+        coeff_train = self.input_normalizer_coeff.encode(coeff_train)
+        # rhs_train = self.input_normalizer_rhs.encode(rhs_train)
+        # output_train = self.output_normalizer.encode(output_train)
+
+        input_train = torch.cat((coeff_train, rhs_train), dim=-1)
+
+        # Validation data
+        coeff_val = input_coeff[
+            training_samples : training_samples + 150, ::s
+        ].unsqueeze(-1)
+        rhs_val = input_rhs[training_samples : training_samples + 150, ::s].unsqueeze(
+            -1
+        )
+        output_val = output[training_samples : training_samples + 150, ::s].unsqueeze(
+            -1
+        )
+
+        coeff_val = self.input_normalizer_coeff.encode(coeff_val)
+        # rhs_val = self.input_normalizer_rhs.encode(rhs_val)
+        # output_val = self.output_normalizer.encode(output_val)
+        input_val = torch.cat((coeff_val, rhs_val), dim=-1)
+
+        # Test data
+        coeff_test = input_coeff[training_samples + 150 :, ::s].unsqueeze(-1)
+        rhs_test = input_rhs[training_samples + 150 :, ::s].unsqueeze(-1)
+        output_test = output[training_samples + 150 :, ::s].unsqueeze(-1)
+
+        coeff_test = self.input_normalizer_coeff.encode(coeff_test)
+        # rhs_test = self.input_normalizer_rhs.encode(rhs_test)
+        # output_test = self.output_normalizer.encode(output_test)
+        input_test = torch.cat((coeff_test, rhs_test), dim=-1)
+
+        self.N_Fourier_F = network_properties["FourierF"]
+        if self.N_Fourier_F > 0:
+            grid = self.get_grid()
+            FF = FourierFeatures(1, self.N_Fourier_F, grid.device)
+            ff_grid = FF(grid)
+            ff_grid = ff_grid.permute(2, 0, 1)
+            inputs = torch.cat((inputs, ff_grid), 0)
+
+        # Change number of workers according to your preference
+        num_workers = 0
+
+        self.train_loader = DataLoader(
+            TensorDataset(input_train, output_train),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.val_loader = DataLoader(
+            TensorDataset(input_val, output_val),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.test_loader = DataLoader(
+            TensorDataset(input_test, output_test),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+
+        self.s_in = input_test.shape[1]
+        self.s_out = output_test.shape[1]
+
+    def get_grid(self, res):
+        return torch.linspace(0, 1, res).unsqueeze(-1)
 
 
 # ------------------------------------------------------------------------------
