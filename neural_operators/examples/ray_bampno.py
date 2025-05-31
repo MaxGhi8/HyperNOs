@@ -36,7 +36,7 @@ def ray_bampno(
         "scheduler_gamma": tune.quniform(0.75, 0.99, 0.01),
         "d_v": tune.choice([4, 8, 16, 32, 64, 96, 128, 160, 192]),
         "L": tune.randint(1, 6),
-        "modes": tune.choice([2, 4, 8, 12, 16, 20, 24, 28, 32]),  # modes1 = modes2
+        "modes": tune.choice([2, 4, 8, 12, 16]),  # modes1 = modes2
         "fun_act": tune.choice(["tanh", "relu", "gelu", "leaky_relu"]),
         "arc": tune.choice(["Classic", "Zongyi", "Residual"]),
     }
