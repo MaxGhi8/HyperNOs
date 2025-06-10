@@ -350,7 +350,7 @@ def plot_data_coeff_rhs_input_1d(
     # Denormalize the data
     if normalization:
         data_plot[..., [0]] = example.input_normalizer_coeff.decode(data_plot[..., [0]])
-        data_plot[..., [1]] = example.input_normalizer_rhs.decode(data_plot[..., [1]])
+        # data_plot[..., [1]] = example.input_normalizer_rhs.decode(data_plot[..., [1]])
     # Plot the data
     plot_data_generic_1d(
         data_plot[..., 0], 2, title + " a(x)", "a(x)", ep, writer, plotting
@@ -370,10 +370,6 @@ def plot_data_coeff_rhs_1d(
     plotting: bool = False,
 ):
     # if normalization:
-    #     data_plot[:, :, [0]] = example.v_normalizer.decode(data_plot[:, :, [0]])
-    #     data_plot[:, :, [1]] = example.m_normalizer.decode(data_plot[:, :, [1]])
-    #     data_plot[:, :, [2]] = example.h_normalizer.decode(data_plot[:, :, [2]])
-    #     data_plot[:, :, [3]] = example.n_normalizer.decode(data_plot[:, :, [3]])
 
     # Plot the data
     plot_data_generic_1d(
@@ -925,6 +921,11 @@ def get_plot_function(
                 return plot_data_ord_input
             return plot_data_ord
 
+        case "coeff_rhs_1d":
+            if "input" in title.lower():
+                return plot_data_coeff_rhs_input_1d
+            return plot_data_coeff_rhs_1d
+
         # 2D problem
         case "crosstruss":
             if "input" in title.lower():
@@ -967,11 +968,6 @@ def get_plot_function(
             if "input" in title.lower():
                 return plot_data_coeff_rhs_input
             return plot_data_coeff_rhs
-
-        case "coeff_rhs_1d":
-            if "input" in title.lower():
-                return plot_data_coeff_rhs_input_1d
-            return plot_data_coeff_rhs_1d
 
         case _:
             print(f"Unknown example: {which_example}")
