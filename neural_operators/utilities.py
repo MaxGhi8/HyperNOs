@@ -608,7 +608,7 @@ def plot_data_multi_patch(
         vmax = torch.max(vmax, dim=1).values
 
     # plot
-    fig, ax = plt.subplots(1, n_idx, figsize=(18, 4), layout="constrained")
+    fig, ax = plt.subplots(1, n_idx, figsize=(18, 6), layout="constrained")
     fig.suptitle(title)
 
     if n_idx == 1:
