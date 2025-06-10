@@ -3018,6 +3018,11 @@ class CoeffRHS_1d:
         rhs_train = input_rhs[:training_samples, ::s].unsqueeze(-1)
         output_train = output[:training_samples, ::s].unsqueeze(-1)
 
+        # for FNO_lin
+        rhs_train = rhs_train.reshape(rhs_train.shape[0], 1, rhs_train.shape[1])
+        rhs_train = torch.fft.fft(rhs_train)
+        rhs_train = rhs_train.reshape(rhs_train.shape[0], rhs_train.shape[2], 1)
+
         # Compute mean and std (for gaussian point-wise normalization)
         self.input_normalizer_coeff = UnitGaussianNormalizer(coeff_train)
         self.input_normalizer_rhs = UnitGaussianNormalizer(rhs_train)
@@ -3026,7 +3031,7 @@ class CoeffRHS_1d:
 
         # Normalize
         coeff_train = self.input_normalizer_coeff.encode(coeff_train)
-        # rhs_train = self.input_normalizer_rhs.encode(rhs_train)
+        rhs_train = self.input_normalizer_rhs.encode(rhs_train)
         # output_train = self.output_normalizer.encode(output_train)
 
         input_train = torch.cat((coeff_train, rhs_train), dim=-1)
@@ -3041,9 +3046,13 @@ class CoeffRHS_1d:
         output_val = output[training_samples : training_samples + 150, ::s].unsqueeze(
             -1
         )
+        # for FNO_lin
+        rhs_val = rhs_val.reshape(rhs_val.shape[0], 1, rhs_val.shape[1])
+        rhs_val = torch.fft.fft(rhs_val)
+        rhs_val = rhs_val.reshape(rhs_val.shape[0], rhs_val.shape[2], 1)
 
         coeff_val = self.input_normalizer_coeff.encode(coeff_val)
-        # rhs_val = self.input_normalizer_rhs.encode(rhs_val)
+        rhs_val = self.input_normalizer_rhs.encode(rhs_val)
         # output_val = self.output_normalizer.encode(output_val)
         input_val = torch.cat((coeff_val, rhs_val), dim=-1)
 
@@ -3052,8 +3061,13 @@ class CoeffRHS_1d:
         rhs_test = input_rhs[training_samples + 150 :, ::s].unsqueeze(-1)
         output_test = output[training_samples + 150 :, ::s].unsqueeze(-1)
 
+        # for FNO_lin
+        rhs_test = rhs_test.reshape(rhs_test.shape[0], 1, rhs_test.shape[1])
+        rhs_test = torch.fft.fft(rhs_test)
+        rhs_test = rhs_test.reshape(rhs_test.shape[0], rhs_test.shape[2], 1)
+
         coeff_test = self.input_normalizer_coeff.encode(coeff_test)
-        # rhs_test = self.input_normalizer_rhs.encode(rhs_test)
+        rhs_test = self.input_normalizer_rhs.encode(rhs_test)
         # output_test = self.output_normalizer.encode(output_test)
         input_test = torch.cat((coeff_test, rhs_test), dim=-1)
 

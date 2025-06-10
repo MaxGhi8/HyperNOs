@@ -117,4 +117,4 @@ def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    train_fno("coeff_rhs", "default", "L2")
+    train_fno("coeff_rhs_1d", "default", "L2")

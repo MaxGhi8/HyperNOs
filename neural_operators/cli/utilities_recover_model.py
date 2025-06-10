@@ -698,6 +698,70 @@ def plot_coeff_rhs(input_tensor, output_tensor, prediction_tensor, idx):
     plt.savefig("figure.png")
 
 
+##########################################
+# Plotting coeff_rhs_1d example
+##########################################
+def plot_coeff_rhs_1d(input_tensor, output_tensor, prediction_tensor, idx):
+    fig, axs = plt.subplots(5, len(idx), figsize=(16, 10), layout="constrained")
+    xgrid = np.linspace(0, 2, input_tensor.shape[1])
+
+    for i in range(5):
+        for j in range(idx.shape[0]):
+            if i == 0:  # input
+                im = axs[i, j].plot(
+                    xgrid,
+                    input_tensor[idx[j], :, 0].squeeze(),
+                    label="Diffusion coeff a",
+                )
+                if j == 0:
+                    axs[i, j].set_ylabel("Diffusion coefficient a")
+
+            if i == 1:  # input
+                im = axs[i, j].plot(
+                    xgrid,
+                    input_tensor[idx[j], :, 1].squeeze(),
+                    label="Right-hand side f",
+                )
+                if j == 0:
+                    axs[i, j].set_ylabel("Right-hand side f")
+
+            elif i == 2:  # output x
+                im = axs[i, j].plot(
+                    xgrid,
+                    output_tensor[idx[j], :, 0].squeeze(),
+                    label="Exact solution u",
+                )
+                if j == 0:
+                    axs[i, j].set_ylabel("Exact solution u")
+
+            elif i == 3:  # predicted x
+                im = axs[i, j].plot(
+                    xgrid,
+                    prediction_tensor[idx[j], :, 0].squeeze(),
+                    label="Approx. solution u",
+                )
+                if j == 0:
+                    axs[i, j].set_ylabel("Approx. solution u")
+
+            elif i == 4:  # error x
+                error = torch.abs(
+                    output_tensor[idx[j], :, 0] - prediction_tensor[idx[j], :, 0]
+                )
+                im = axs[i, j].plot(xgrid, error.squeeze(), label="Error")
+                if j == 0:
+                    axs[i, j].set_ylabel("Error")
+
+            # axs[i, j].set_yticklabels([])
+            # axs[i, j].set_xticklabels([])
+            # axs[i, j].set_xlabel('x')
+            axs[i, j].grid()
+
+    # plt.suptitle("Eigenfunctions")  # title
+    # plt.tight_layout()
+    # plt.show()
+    plt.savefig("figure.png")
+
+
 #########################################
 # Plotting eig example
 #########################################
@@ -808,6 +872,7 @@ def plot_fhn(input_tensor, output_tensor, prediction_tensor, idx):
                 )
                 if j == 0:
                     axs[i, j].set_ylabel("$I_app$(t)")
+
             elif i == 1:  # v approximation
                 axs[i, j].plot(
                     x_grid, output_tensor[idx[j], :, 0].squeeze(), label="sol"
@@ -820,6 +885,7 @@ def plot_fhn(input_tensor, output_tensor, prediction_tensor, idx):
                 )
                 if j == 0:
                     axs[i, j].set_ylabel("$v$(t)")
+
             else:  # w approximation
                 axs[i, j].plot(
                     x_grid, output_tensor[idx[j], :, 1].squeeze(), label="sol"
@@ -1191,6 +1257,8 @@ def test_plot_samples(
             plot_eig(input_tensor, output_tensor, prediction_tensor, idx)
         case "coeff_rhs":
             plot_coeff_rhs(input_tensor, output_tensor, prediction_tensor, idx)
+        case "coeff_rhs_1d":
+            plot_coeff_rhs_1d(input_tensor, output_tensor, prediction_tensor, idx)
         case "fhn":
             plot_fhn(input_tensor, output_tensor, prediction_tensor, idx)
         case "hh":

@@ -26,8 +26,8 @@
 		"include_grid": 1,
 		"weights_norm": "Kaiming",
 		"retrain": 4,
-		"filename": "Darcy_Square_uniform_60pts_coeff_rhs.mat",
+		"filename": "Darcy_uniform_1d_100pts_coeff_rhs.mat",
 		"internal_normalization": true,
-		"problem_dim": 2
+		"problem_dim": 1
 	}
 }

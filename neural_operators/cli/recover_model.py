@@ -91,6 +91,7 @@ def parse_arguments():
             "darcy_zongyi",
             "eig",
             "coeff_rhs",
+            "coeff_rhs_1d",
             "fhn",
             "hh",
             "ord",
@@ -804,6 +805,15 @@ match which_example:
         # input_tensor = example.input_normalizer.decode(input_tensor)
         input_tensor[:, :, :, [0]] = example.input_normalizer_coeff.decode(
             input_tensor[:, :, :, [0]]
+        )
+        # input_tensor = example.input_normalizer.decode(input_tensor)
+        # output_tensor = example.output_normalizer.decode(output_tensor)
+        # prediction_tensor = example.output_normalizer.decode(prediction_tensor)
+
+    case "coeff_rhs_1d":
+        # input_tensor = example.input_normalizer.decode(input_tensor)
+        input_tensor[:, :, [0]] = example.input_normalizer_coeff.decode(
+            input_tensor[:, :, [0]]
         )
         # input_tensor = example.input_normalizer.decode(input_tensor)
         # output_tensor = example.output_normalizer.decode(output_tensor)
