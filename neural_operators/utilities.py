@@ -587,6 +587,43 @@ def plot_data_bampno(
 
 
 #########################################
+# Function to plot the data for BAMPNO_continuation
+#########################################
+def plot_data_bampno_continuation_input(
+    example,
+    data_plot: Tensor,
+    title: str,
+    ep: int,
+    writer: SummaryWriter,
+    normalization: bool = True,
+    plotting: bool = False,
+):
+    if normalization:
+        data_plot = example.input_normalizer.decode(data_plot).squeeze()
+
+    data_plot.masked_fill_(example.mask.unsqueeze(0) == 0, float("nan"))
+
+    plot_data_generic_2d(data_plot, title, ep, writer, plotting)
+
+
+def plot_data_bampno_continuation(
+    example,
+    data_plot: Tensor,
+    title: str,
+    ep: int,
+    writer: SummaryWriter,
+    normalization: bool = True,
+    plotting: bool = False,
+):
+    # if normalization:
+    #     data_plot = example.output_normalizer.decode(data_plot).squeeze()
+
+    data_plot = data_plot.squeeze()
+    data_plot.masked_fill_(example.mask.unsqueeze(0) == 0, float("nan"))
+    plot_data_generic_2d(data_plot, title, ep, writer, plotting)
+
+
+#########################################
 # Function to plot a generic multi-patch data
 #########################################
 def plot_data_multi_patch(
@@ -958,6 +995,11 @@ def get_plot_function(
             if "input" in title.lower():
                 return plot_data_bampno_input
             return plot_data_bampno
+
+        case "bampno_continuation":
+            if "input" in title.lower():
+                return plot_data_bampno_continuation_input
+            return plot_data_bampno_continuation
 
         case "eig":
             if "input" in title.lower():

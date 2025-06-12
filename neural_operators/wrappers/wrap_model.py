@@ -1,4 +1,5 @@
 from .AirfoilWrapper import AirfoilWrapper
+from .BAMPNO_Continuation_Wrapper import BAMPNO_Continuation_Wrapper
 from .CrossTrussWrapper import CrossTrussWrapper
 from .StiffnessMatrixWrapper import StiffnessMatrixWrapper
 
@@ -13,6 +14,8 @@ def wrap_model(model, which_example):
             return CrossTrussWrapper(model)
         case "stiffness_matrix":
             return StiffnessMatrixWrapper(model)
+        case "bampno_continuation":
+            return BAMPNO_Continuation_Wrapper(model)
         case _:
             return model
 

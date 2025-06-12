@@ -109,6 +109,6 @@ def train_resnet(which_example: str, filename: str, mode_hyperparams: str):
 if __name__ == "__main__":
     train_resnet(
         "afieti_homogeneous_neumann",
-        "dataset_homogeneous_Neumann_l_3_deg_3.mat",
+        "dataset_homogeneous_Neumann_rhs_fixed_l_5_deg_3.mat",
         "default",
     )
