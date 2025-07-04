@@ -1,0 +1,28 @@
+{
+	"training_properties": {
+		"training_samples": 16000,
+		"val_samples": 2000,
+		"test_samples": 2000,
+		"learning_rate": 0.0001,
+		"epochs": 5000,
+		"batch_size": 100,
+		"weight_decay": 0.000102,
+		"scheduler_step": 250,
+		"scheduler_gamma": 0.98,
+		"p": 2
+	},
+	"resnet_architecture": {
+		"problem_dim": 1,
+		"in_channels": 1225,
+		"out_channels": 1225,
+		"hidden_channels": [1000, 1000],
+		"activation_str": "relu",
+		"n_blocks": 2,
+		"layer_norm": false,
+		"dropout_rate": 0.16,
+		"zero_mean": true,
+		"FourierF": 0,
+		"internal_normalization": true,
+		"retrain": 4
+	}
+}
