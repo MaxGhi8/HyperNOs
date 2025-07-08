@@ -57,6 +57,21 @@ def ray_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         }
     ]
 
+    example = NO_load_data_model(
+        which_example=which_example,
+        no_architecture={
+            "FourierF": default_hyper_params[0]["FourierF"],
+            "retrain": default_hyper_params[0]["retrain"],
+        },
+        batch_size=default_hyper_params[0]["batch_size"],
+        training_samples=default_hyper_params[0]["training_samples"],
+        filename=(
+            default_hyper_params[0]["filename"]
+            if "filename" in default_hyper_params[0]
+            else None
+        ),
+    )
+
     # Define the model builders
     model_builder = lambda config: FNO(
         config["problem_dim"],
@@ -72,6 +87,11 @@ def ray_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         config["fft_norm"],
         config["padding"],
         device,
+        (
+            example.output_normalizer
+            if ("internal_normalization" in config and config["internal_normalization"])
+            else None
+        ),
         config["retrain"],
     )
     # Wrap the model builder
@@ -86,6 +106,7 @@ def ray_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         },
         batch_size=config["batch_size"],
         training_samples=config["training_samples"],
+        filename=(config["filename"] if "filename" in config else None),
     )
 
     # Define the loss function
@@ -102,10 +123,10 @@ def ray_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         dataset_builder,
         loss_fn,
         default_hyper_params,
-        runs_per_cpu=8.0,
-        runs_per_gpu=0.5,
+        runs_per_cpu=16.0,
+        runs_per_gpu=1.0,
     )
 
 
 if __name__ == "__main__":
-    ray_fno("cont_tran", "default", "L1")
+    ray_fno("bampno_continuation", "default", "L2")
