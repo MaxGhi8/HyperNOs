@@ -134,7 +134,7 @@ try:
             batch_size=default_hyper_params["batch_size"],
             training_samples=default_hyper_params["training_samples"],
             filename=(
-                "dataset_homogeneous_Neumann_rhs_fixed_l_5_deg_3.mat"
+                "dataset_homogeneous_Neumann_rhs_fixed_l_5_deg_3_NEW.mat"
                 if which_example == "afieti_homogeneous_neumann"
                 else None
             ),
