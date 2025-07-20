@@ -145,6 +145,31 @@ class lpLoss:
             raise ValueError("size_mean must be a boolean or None")
 
 
+class MSELoss:
+    """Mean Squared Error loss for vectors"""
+
+    def __init__(self, size_mean=False):
+        self.size_mean = size_mean
+
+    @jaxtyped(typechecker=beartype)
+    def __call__(
+        self,
+        x: Float[Tensor, "n_samples *n"],
+        y: Float[Tensor, "n_samples *n"],
+    ) -> Float[Tensor, "*n_samples"]:
+        # Calculate squared differences and mean across feature dimensions
+        mse_per_sample = torch.mean((x - y) ** 2, dim=1)
+
+        if self.size_mean is True:
+            return torch.mean(mse_per_sample)  # Average MSE across samples
+        elif self.size_mean is False:
+            return torch.sum(mse_per_sample)  # Sum MSE across samples
+        elif self.size_mean is None:
+            return mse_per_sample  # MSE per sample, no reduction
+        else:
+            raise ValueError("size_mean must be a boolean or None")
+
+
 #########################################
 # L^p relative loss for N-D functions
 #########################################
