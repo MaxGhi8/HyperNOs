@@ -126,4 +126,4 @@ def train_bampno(
 
 
 if __name__ == "__main__":
-    train_bampno("bampno", "8_domain", "best", "L2_cheb")
+    train_bampno("bampno", "8_domain", "best", "L2_cheb_mp")

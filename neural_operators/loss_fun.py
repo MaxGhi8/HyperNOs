@@ -22,6 +22,10 @@ def loss_selector(loss_fn_str: str, problem_dim: int, beta: float = 1.0):
             loss = ChebyshevLprelLoss(1, False)
         case "L2_CHEB":
             loss = ChebyshevLprelLoss(2, False)
+        case "L1_CHEB_MP":
+            loss = ChebyshevLprelLoss_mp(1, False)
+        case "L2_CHEB_MP":
+            loss = ChebyshevLprelLoss_mp(2, False)
         case "l2":
             loss = lpLoss(2, False)
         case "H1":
@@ -56,7 +60,7 @@ class SmoothL1Loss_rel:
     @jaxtyped(typechecker=beartype)
     def __call__(
         self,
-        x: Float[Tensor, "n_samples *n out_dim"],
+        x: Float[Tensor, "n_samples *n out_dim"], # type: ignore
         y: Float[Tensor, "n_samples *n out_dim"],
     ) -> Float[Tensor, "*n_samples"]:
 
@@ -224,6 +228,76 @@ class LprelLoss:
         for i in range(out_dim):
             acc += self.rel(x[..., [i]], y[..., [i]])
         return acc / out_dim
+
+
+#########################################
+# L^p relative loss for N-D functions for multiple patches
+########################################
+class LprelLoss_mp(LprelLoss):
+    def __init__(self, p: int, size_mean=False):
+        """
+        Args:
+            p: norm order
+            size_mean: whether to take mean (True), sum (False), or no reduction (None)
+        """
+        super().__init__(p, size_mean)
+        
+    @jaxtyped(typechecker=beartype)
+    def abs(
+        self,
+        x: Float[Tensor, "n_samples *n {1}"],
+        size_mean = False,
+    ) -> Float[Tensor, "*n_samples"]:
+        num_examples = x.size(0)
+
+        norms = torch.norm(x.reshape(num_examples, -1), p=self.p, dim=1)
+
+        if size_mean is True:
+            return torch.mean(norms)
+        elif size_mean is False:
+            return torch.sum(norms)  # sum along batchsize
+        elif size_mean is None:
+            return norms  # no reduction
+        else:
+            raise ValueError("size_mean must be a boolean or None")
+
+    @jaxtyped(typechecker=beartype) 
+    def __call__(
+        self,
+        x: Float[Tensor, "n_samples n_patches *n out_dim"],
+        y: Float[Tensor, "n_samples n_patches *n out_dim"],
+    ) -> Float[Tensor, "*n_samples"]:
+        """
+        Compute relative error averaged over output dimensions and patches
+        """
+        out_dim = x.size(-1)
+        n_patches = x.size(1)
+        acc = 0
+        
+        for i in range(out_dim):
+            diff = torch.zeros(x.size(0), device=x.device, dtype=x.dtype)
+            den = torch.zeros(x.size(0), device=x.device, dtype=x.dtype)
+            for p in range(n_patches):
+                diff += self.abs(x[:, p, ..., [i]] - y[:, p, ..., [i]], size_mean=None)
+                den += self.abs(y[:, p, ..., [i]], size_mean=None)
+
+            # Check division by zero
+            if torch.any(den <= 1e-5):
+                raise ValueError("Division by zero in denominator norm")
+            
+            acc += diff / den
+            
+        if self.size_mean is True:
+            return torch.mean(acc) # mean over batch dimension
+        elif self.size_mean is False:
+            return torch.sum(acc)  # sum along batch dimension
+        elif self.size_mean is None:
+            return acc # no reduction
+        else:
+            raise ValueError("size_mean must be a boolean or None")
+
+
+
 
 #########################################
 # L^p relative loss for N-D functions on Chebyshev grids
@@ -414,6 +488,84 @@ class ChebyshevLprelLoss:
             acc += self.rel(x[..., [i]], y[..., [i]])
             
         return acc / out_dim
+
+##########################################
+# L^p relative loss for Chebyshev grids and multi patches
+##########################################
+class ChebyshevLprelLoss_mp(ChebyshevLprelLoss):
+    def __init__(self, p: int, size_mean=False):
+        """
+        Args:
+            p: norm order
+            size_mean: whether to take mean (True), sum (False), or no reduction (None)
+        """
+        super().__init__(p, size_mean)
+
+    @jaxtyped(typechecker=beartype)
+    def abs(
+        self,
+        x: Float[Tensor, "n_samples *n {1}"],
+        size_mean = False,
+    ) -> Float[Tensor, "*n_samples"]:
+        """
+        Compute absolute norm Chebyshev quadrature
+        """
+        self._update_device_dtype(x)
+        
+        # Get spatial dimensions
+        spatial_shape = x.shape[1:-1]  # Exclude batch and output dims
+        
+        # Get quadrature weights
+        weights = self._get_nd_weights(spatial_shape)
+        
+        # Compute weighted norms
+        diff_norms = self.weighted_norm(x, weights)
+
+        if size_mean is True:
+            return torch.mean(diff_norms) # mean over batch dimension
+        elif size_mean is False:
+            return torch.sum(diff_norms)  # sum along batch dimension
+        elif size_mean is None:
+            return diff_norms  # no reduction
+        else:
+            raise ValueError("size_mean must be a boolean or None")
+
+    @jaxtyped(typechecker=beartype) 
+    def __call__(
+        self,
+        x: Float[Tensor, "n_samples n_patches *n out_dim"],
+        y: Float[Tensor, "n_samples n_patches *n out_dim"],
+    ) -> Float[Tensor, "*n_samples"]:
+        """
+        Compute relative error averaged over output dimensions and patches
+        """
+        out_dim = x.size(-1)
+        n_patches = x.size(1)
+        acc = 0
+        
+        for i in range(out_dim):
+            diff = torch.zeros(x.size(0), device=x.device, dtype=x.dtype)
+            den = torch.zeros(x.size(0), device=x.device, dtype=x.dtype)
+            for p in range(n_patches):
+                diff += self.abs(x[:, p, ..., [i]] - y[:, p, ..., [i]], size_mean=None)
+                den += self.abs(y[:, p, ..., [i]], size_mean=None)
+
+            # Check division by zero
+            if torch.any(den <= 1e-5):
+                raise ValueError("Division by zero in denominator norm")
+            
+            acc += diff / den
+            
+        if self.size_mean is True:
+            return torch.mean(acc) # mean over batch dimension
+        elif self.size_mean is False:
+            return torch.sum(acc)  # sum along batch dimension
+        elif self.size_mean is None:
+            return acc# no reduction
+        else:
+            raise ValueError("size_mean must be a boolean or None")
+
+
 
 #########################################
 # L^p relative loss for N-D functions and different output channels
