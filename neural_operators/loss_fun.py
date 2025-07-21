@@ -7,6 +7,7 @@ from beartype import beartype
 from jaxtyping import Complex, Float, jaxtyped
 from torch import Tensor
 import numpy as np
+from BAMPNO import chebyshev_utilities as cheb
 
 
 #########################################
@@ -250,7 +251,7 @@ class LprelLoss_mp(LprelLoss):
     ) -> Float[Tensor, "*n_samples"]:
         num_examples = x.size(0)
 
-        norms = torch.norm(x.reshape(num_examples, -1), p=self.p, dim=1)
+        norms = torch.pow(torch.norm(x.reshape(num_examples, -1), p=self.p, dim=1), self.p)
 
         if size_mean is True:
             return torch.mean(norms)
@@ -280,6 +281,9 @@ class LprelLoss_mp(LprelLoss):
             for p in range(n_patches):
                 diff += self.abs(x[:, p, ..., [i]] - y[:, p, ..., [i]], size_mean=None)
                 den += self.abs(y[:, p, ..., [i]], size_mean=None)
+
+            diff = torch.pow(diff, 1.0 / self.p)
+            den = torch.pow(den, 1.0 / self.p)
 
             # Check division by zero
             if torch.any(den <= 1e-5):
@@ -418,6 +422,7 @@ class ChebyshevLprelLoss:
         self,
         x: Float[Tensor, "n_samples *n {1}"],
         weights: Float[Tensor, "*n"],
+        last_power : bool = True,
     ) -> Float[Tensor, "n_samples"]:
         """
         Compute weighted L^p norm using quadrature weights
@@ -431,9 +436,11 @@ class ChebyshevLprelLoss:
         # Compute weighted norm: ||f||_p = (\int |f|^p w dx)^(1/p)
         weighted_values = torch.abs(x_flat) ** self.p * weights_flat.unsqueeze(0)
         integrals = torch.sum(weighted_values, dim=1)  # Sum over spatial points
-        norms = torch.pow(integrals, 1.0 / self.p)
+
+        if last_power:
+            return torch.pow(integrals, 1.0 / self.p)
         
-        return norms
+        return integrals 
 
     @jaxtyped(typechecker=beartype)
     def rel(
@@ -519,7 +526,7 @@ class ChebyshevLprelLoss_mp(ChebyshevLprelLoss):
         weights = self._get_nd_weights(spatial_shape)
         
         # Compute weighted norms
-        diff_norms = self.weighted_norm(x, weights)
+        diff_norms = self.weighted_norm(x, weights, last_power=False)
 
         if size_mean is True:
             return torch.mean(diff_norms) # mean over batch dimension
@@ -550,6 +557,8 @@ class ChebyshevLprelLoss_mp(ChebyshevLprelLoss):
                 diff += self.abs(x[:, p, ..., [i]] - y[:, p, ..., [i]], size_mean=None)
                 den += self.abs(y[:, p, ..., [i]], size_mean=None)
 
+            diff = torch.pow(diff, 1.0 / self.p)
+            den = torch.pow(den, 1.0 / self.p)
             # Check division by zero
             if torch.any(den <= 1e-5):
                 raise ValueError("Division by zero in denominator norm")
@@ -815,3 +824,90 @@ class H1relLoss_multiout:
             ],
             dim=-1,
         )
+
+#########################################
+# H1 relative loss function
+#########################################
+class H1relLoss_cheb:
+    """
+    Relative H^1 = W^{1,2} norm with Chebyshev transform.
+    """
+
+    def __init__(self, beta: float = 1.0):
+        self.beta = beta
+
+    @jaxtyped(typechecker=beartype)
+    def rel(
+        self, x: Float[Tensor, "n_samples dx dy"], y: Float[Tensor, "n_samples dx dy"]
+    ) -> tuple[Float[Tensor, "n_samples"], Float[Tensor, "n_samples"]]:
+        batch_size = x.size()[0]
+
+        diff_norms = (
+            torch.norm(x.reshape(batch_size, -1) - y.reshape(batch_size, -1), 2, 1) ** 2
+        )
+        y_norms = torch.norm(y.reshape(batch_size, -1), 2, 1) ** 2
+
+        return diff_norms, y_norms
+
+    def resize(self, x: Tensor, i: int) -> Tensor:
+        if i == 1:
+            return x[:, :-1, 1:]  # non repeting points on the internal boundary
+        else:
+            return x
+
+    @jaxtyped(typechecker=beartype)
+    def __call__(
+        self,
+        x: Float[Tensor, "n_sample n_patch n_x n_y"],
+        y: Float[Tensor, "n_samples n_patch n_x n_y"],
+    ) -> Float[Tensor, ""]:
+        n_patch = x.size(1)
+        for i in range(n_patch):
+            x_p, y_p = x[:, i, :, :], y[:, i, :, :]
+
+            # relative L^2 norm
+            diff, y_norm = self.rel(self.resize(x_p, i), self.resize(y_p, i))
+            x_p = cheb.batched_values_to_coefficients(
+                x_p.unsqueeze(-1)
+            )  # c=1 as last dimension (required channel dimension)
+            y_p = cheb.batched_values_to_coefficients(y_p.unsqueeze(-1))
+
+            # derivative in x
+            x_p_dx = cheb.batched_coefficients_to_values(
+                cheb.batched_differentiate(x_p, 1)
+            ).squeeze(-1)
+            y_p_dx = cheb.batched_coefficients_to_values(
+                cheb.batched_differentiate(y_p, 1)
+            ).squeeze(-1)
+            diff_dx, y_p_dx = self.rel(x_p_dx, y_p_dx)
+
+            # derivative in y
+            x_p_dy = cheb.batched_coefficients_to_values(
+                cheb.batched_differentiate(x_p, 0)
+            ).squeeze(-1)
+            y_p_dy = cheb.batched_coefficients_to_values(
+                cheb.batched_differentiate(y_p, 0)
+            ).squeeze(-1)
+            diff_dy, y_p_dy = self.rel(x_p_dy, y_p_dy)
+
+            if i == 0:
+                diff_tot = diff
+                diff_dx_tot = diff_dx
+                diff_dy_tot = diff_dy
+                y_tot = y_norm
+                y_p_dx_tot = y_p_dx
+                y_p_dy_tot = y_p_dy
+            else:
+                diff_tot += diff
+                diff_dx_tot += diff_dx
+                diff_dy_tot += diff_dy
+                y_tot += y_norm
+                y_p_dx_tot += y_p_dx
+                y_p_dy_tot += y_p_dy
+
+        diff_tot = torch.sqrt(diff_tot) + self.beta * torch.sqrt(
+            diff_dx_tot + diff_dy_tot
+        )
+        y_tot = torch.sqrt(y_tot) + self.beta * torch.sqrt(y_p_dx_tot + y_p_dy_tot)
+
+        return torch.sum(diff_tot / y_tot)
