@@ -61,6 +61,7 @@ def NO_load_data_model(
         "ord": OHaraRudy,
         ###
         "afieti_homogeneous_neumann": AFIETI,
+        "afieti_fno": AFIETI_FNO,
         ###
         "bampno": BAMPNO,
         "bampno_continuation": BAMPNO_continuation,
@@ -2699,6 +2700,123 @@ class AFIETI:
 
     def get_grid(self, res):
         return torch.linspace(0, 1, res).unsqueeze(-1)
+
+
+# ------------------------------------------------------------------------------
+# AFIETI_FNO data
+# Training samples (1600)
+# Testing samples (200)
+# Validation samples (200)
+
+
+class AFIETI_FNO:
+    def __init__(
+        self,
+        filename: str,
+        network_properties: dict,
+        batch_size: int,
+        training_samples: int,
+        s=1,
+        in_dist=True,
+        search_path="/",
+    ):
+        assert training_samples <= 1600, "Training samples must be less than 3000"
+        assert in_dist, "Out-of-distribution testing samples are not available"
+
+        g = torch.Generator()
+
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
+            torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g.manual_seed(retrain)
+
+        self.TrainDataPath = find_file(filename, search_path)
+        reader = mat73.loadmat(self.TrainDataPath)
+        input_rhs = torch.from_numpy(reader["rhs"]).type(torch.float32).permute(2, 0, 1)
+        output = torch.from_numpy(reader["output"]).type(torch.float32).permute(2, 0, 1)
+
+        # Training data
+        rhs_train = input_rhs[:training_samples, ::s, ::s].unsqueeze(-1)
+        output_train = output[:training_samples, ::s, ::s].unsqueeze(-1)
+
+        # Compute mean and std (for gaussian point-wise normalization)
+        self.input_normalizer_rhs = UnitGaussianNormalizer(rhs_train)
+        self.output_normalizer = UnitGaussianNormalizer(output_train)
+
+        # Normalize
+        # rhs_train = self.input_normalizer_rhs.encode(rhs_train)
+        # output_train = self.output_normalizer.encode(output_train)
+
+        # Validation data
+        rhs_val = input_rhs[
+            training_samples : training_samples + 200, ::s, ::s
+        ].unsqueeze(-1)
+        # rhs_val = self.input_normalizer_rhs.encode(rhs_val)
+        output_val = output[
+            training_samples : training_samples + 200, ::s, ::s
+        ].unsqueeze(-1)
+        # output_val = self.output_normalizer.encode(output_val)
+
+        # Test data
+        rhs_test = input_rhs[training_samples + 200 :, ::s, ::s].unsqueeze(-1)
+        # rhs_test = self.input_normalizer_rhs.encode(rhs_test)
+        output_test = output[training_samples + 200 :, ::s, ::s].unsqueeze(-1)
+        # output_test = self.output_normalizer.encode(output_test)
+
+        self.N_Fourier_F = network_properties["FourierF"]
+        if self.N_Fourier_F > 0:
+            grid = self.get_grid()
+            FF = FourierFeatures(1, self.N_Fourier_F, grid.device)
+            ff_grid = FF(grid)
+            ff_grid = ff_grid.permute(2, 0, 1)
+            inputs = torch.cat((inputs, ff_grid), 0)
+
+        # Change number of workers according to your preference
+        num_workers = 0
+
+        self.train_loader = DataLoader(
+            TensorDataset(rhs_train, output_train),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.val_loader = DataLoader(
+            TensorDataset(rhs_val, output_val),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.test_loader = DataLoader(
+            TensorDataset(rhs_test, output_test),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+
+        self.s_in = rhs_test.shape[2]
+        self.s_out = output_test.shape[2]
+
+    def get_grid(self):
+        x = torch.linspace(0, 1, self.s_in)
+        y = torch.linspace(0, 1, self.s_in)
+        x_grid, y_grid = torch.meshgrid(x, y, indexing="ij")
+        x_grid = x_grid.unsqueeze(-1)
+        y_grid = y_grid.unsqueeze(-1)
+        grid = torch.cat((x_grid, y_grid), -1)
+        return grid
 
 
 # ------------------------------------------------------------------------------
