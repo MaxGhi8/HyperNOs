@@ -1012,7 +1012,7 @@ def get_plot_function(
             return plot_data_coeff_rhs
 
         case _:
-            print(f"Unknown example: {which_example}")
+            print(f"Unknown example for plotting: {which_example}")
             return None
 
 
