@@ -2743,11 +2743,11 @@ class AFIETI_FNO:
         output = torch.from_numpy(reader["output"]).type(torch.float32).permute(2, 0, 1)
 
         # Training data
-        rhs_train = input_rhs[:training_samples, ::s, ::s].unsqueeze(-1)
+        rhs_train = input_rhs[:training_samples, ::s, ::s]
         output_train = output[:training_samples, ::s, ::s].unsqueeze(-1)
 
         # Compute mean and std (for gaussian point-wise normalization)
-        self.input_normalizer_rhs = UnitGaussianNormalizer(rhs_train)
+        self.input_normalizer_rhs = UnitGaussianNormalizer(rhs_train.unsqueeze(-1))
         self.output_normalizer = UnitGaussianNormalizer(output_train)
 
         # Normalize
@@ -2755,9 +2755,7 @@ class AFIETI_FNO:
         # output_train = self.output_normalizer.encode(output_train)
 
         # Validation data
-        rhs_val = input_rhs[
-            training_samples : training_samples + 200, ::s, ::s
-        ].unsqueeze(-1)
+        rhs_val = input_rhs[training_samples : training_samples + 200, ::s, ::s]
         # rhs_val = self.input_normalizer_rhs.encode(rhs_val)
         output_val = output[
             training_samples : training_samples + 200, ::s, ::s
@@ -2765,7 +2763,7 @@ class AFIETI_FNO:
         # output_val = self.output_normalizer.encode(output_val)
 
         # Test data
-        rhs_test = input_rhs[training_samples + 200 :, ::s, ::s].unsqueeze(-1)
+        rhs_test = input_rhs[training_samples + 200 :, ::s, ::s]
         # rhs_test = self.input_normalizer_rhs.encode(rhs_test)
         output_test = output[training_samples + 200 :, ::s, ::s].unsqueeze(-1)
         # output_test = self.output_normalizer.encode(output_test)

@@ -224,24 +224,14 @@ dummy_input = next(iter(example.train_loader))[0].to("cpu")
 print(f"Dummy input shape: {dummy_input.shape}")
 
 # Export the model to ONNX
-try:
-    torch.onnx.export(
-        model,
-        dummy_input,
-        f"{name_model.split('/')[-1]}.onnx",
-        input_names=["input"],
-        output_names=["output"],
-        export_params=True,
-    )
-except:
-    torch.onnx.export(
-        model,
-        dummy_input,
-        f"{name_model.split('/')[-1]}.onnx",
-        input_names=["input"],
-        output_names=["output"],
-        export_params=True,
-        dynamo=True,
-    )
+torch.onnx.export(
+    model,
+    dummy_input,
+    f"{name_model[:-4]}.onnx",
+    input_names=["input"],
+    output_names=["output"],
+    export_params=True,
+    # dynamo=True,
+)
 
 print(f"\n 🤖 Model saved to {name_model[:-4]}.onnx")

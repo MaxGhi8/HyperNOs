@@ -4,7 +4,7 @@
 		"val_samples": 200,
 		"test_samples": 200,
 		"learning_rate": 0.001,
-		"epochs": 50,
+		"epochs": 2,
 		"batch_size": 32,
 		"weight_decay": 0.0001,
 		"scheduler_step": 10,
