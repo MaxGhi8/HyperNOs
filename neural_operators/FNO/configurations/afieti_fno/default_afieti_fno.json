@@ -1,0 +1,33 @@
+{
+	"training_properties": {
+		"training_samples": 1600,
+		"val_samples": 200,
+		"test_samples": 200,
+		"learning_rate": 0.001,
+		"epochs": 50,
+		"batch_size": 32,
+		"weight_decay": 0.0001,
+		"scheduler_step": 10,
+		"scheduler_gamma": 0.98,
+		"beta": 1
+	},
+	"fno_architecture": {
+		"width": 32,
+		"modes": 16,
+		"n_layers": 4,
+		"padding": 0,
+		"fno_arc": "Zongyi",
+		"fun_act": "gelu",
+		"in_dim": 1,
+		"out_dim": 1,
+		"fft_norm": null,
+		"FourierF": 0,
+		"RNN": false,
+		"include_grid": 1,
+		"weights_norm": "Kaiming",
+		"retrain": 4,
+		"filename": "dataset_homogeneous_Neumann_FNO.mat",
+		"internal_normalization": true,
+		"problem_dim": 2
+	}
+}

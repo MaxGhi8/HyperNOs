@@ -681,3 +681,56 @@ def test_coeff_rhs_1d_dataset():
     # Check for the dimensions of the physical tensors
     X = example.X_phys
     assert X.shape == (example.s_in,)
+
+
+def test_afieti_fno_dataset():
+    batch_size = 100
+    training_samples = 1600
+    example = NO_load_data_model(
+        which_example="afieti_fno",
+        no_architecture={
+            "FourierF": 0,
+            "retrain": -1,
+        },
+        batch_size=batch_size,
+        training_samples=training_samples,
+        filename="dataset_homogeneous_Neumann_FNO.mat",
+    )
+
+    # Check for the dimensions of the input and output tensors
+    train_batch_input, train_batch_output = next(iter(example.train_loader))
+    assert train_batch_input.shape == (
+        batch_size,
+        example.s_in,
+        example.s_in,
+        1,
+    )
+    assert train_batch_output.shape == (
+        batch_size,
+        example.s_out,
+        example.s_out,
+        1,
+    )
+
+    test_batch_input, test_batch_output = next(iter(example.test_loader))
+    assert test_batch_input.shape == (
+        batch_size,
+        example.s_in,
+        example.s_in,
+        1,
+    )
+    assert test_batch_output.shape == (
+        batch_size,
+        example.s_out,
+        example.s_out,
+        1,
+    )
+
+    val_batch_input, val_batch_output = next(iter(example.val_loader))
+    assert val_batch_input.shape == (batch_size, example.s_in, example.s_in, 1)
+    assert val_batch_output.shape == (
+        batch_size,
+        example.s_out,
+        example.s_out,
+        1,
+    )
