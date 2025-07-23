@@ -121,7 +121,7 @@ def train_bampno(
         experiment_name,
         get_plot_function(which_example, "input"),
         get_plot_function(which_example, "output"),
-        full_validation=False,
+        full_validation=True,
     )
 
 

@@ -5,9 +5,11 @@ import torch
 from loss_fun import (
     H1relLoss,
     H1relLoss_1D,
+    H1relLoss_cheb_mp,
     H1relLoss_1D_multiout,
     H1relLoss_multiout,
     LprelLoss,
+    ChebyshevLprelLoss_mp,
     LprelLoss_multiout,
 )
 from tensorboardX import SummaryWriter
@@ -459,31 +461,44 @@ def validate_epoch(
             # compute the output
             output_pred_batch = model.forward(input_batch)
 
-            # compute the relative L^1 error
-            loss_f = LprelLoss(1, False)(output_pred_batch, output_batch)
+            #! compute the relative L^1 error
+            # loss_f = LprelLoss(1, False)(output_pred_batch, output_batch) # L1 relative loss
+            loss_f = ChebyshevLprelLoss_mp(1, False)(output_pred_batch, output_batch) # L1 relative loss mp and cheb
             # loss_f = torch.mean(abs(output_pred_batch - output_batch)) / torch.mean(abs(output_batch)) #!! Mishra implementation of L1 rel loss
             test_relative_l1 += loss_f.item()
 
-            # compute the relative L^2 error
-            test_relative_l2 += LprelLoss(2, False)(
+            #! compute the relative L^2 error
+            # test_relative_l2 += LprelLoss(2, False)(
+            #     output_pred_batch, output_batch
+            # ).item()
+            # Chebyshev mp version
+            test_relative_l2 += ChebyshevLprelLoss_mp(2, False)(
                 output_pred_batch, output_batch
             ).item()
 
-            # compute the relative semi-H^1 error and H^1 error
-            if problem_dim == 1:
-                test_relative_semih1 += H1relLoss_1D(1.0, False, 0.0)(
-                    output_pred_batch, output_batch
-                ).item()
-                test_relative_h1 += H1relLoss_1D(1.0, False)(
-                    output_pred_batch, output_batch
-                ).item()  # beta = 1.0 in test loss
-            elif problem_dim == 2:
-                test_relative_semih1 += H1relLoss(1.0, False, 0.0)(
-                    output_pred_batch, output_batch
-                ).item()
-                test_relative_h1 += H1relLoss(1.0, False)(
-                    output_pred_batch, output_batch
-                ).item()  # beta = 1.0 in test loss
+            #! compute the relative semi-H^1 error and H^1 error
+            # if problem_dim == 1:
+            #     test_relative_semih1 += H1relLoss_1D(1.0, False, 0.0)(
+            #         output_pred_batch, output_batch
+            #     ).item()
+            #     test_relative_h1 += H1relLoss_1D(1.0, False)(
+            #         output_pred_batch, output_batch
+            #     ).item()  # beta = 1.0 in test loss
+            # elif problem_dim == 2:
+            #     test_relative_semih1 += H1relLoss(1.0, False, 0.0)(
+            #         output_pred_batch, output_batch
+            #     ).item()
+            #     test_relative_h1 += H1relLoss(1.0, False)(
+            #         output_pred_batch, output_batch
+            #     ).item()  # beta = 1.0 in test loss
+            # Chebyshev mp version (2D problem)
+            assert problem_dim == 2, "ChebyshevLprelLoss_mp is only implemented for 2D problems"
+            test_relative_semih1 += H1relLoss_cheb_mp(0.0, 1.0, False)(
+                output_pred_batch, output_batch
+            ).item()
+            test_relative_h1 += H1relLoss_cheb_mp(1.0, 1.0, False)(
+                output_pred_batch, output_batch
+            ).item()
 
         ## Compute loss on the training set
         for input_batch, output_batch in train_loader:

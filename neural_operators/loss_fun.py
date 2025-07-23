@@ -34,6 +34,8 @@ def loss_selector(loss_fn_str: str, problem_dim: int, beta: float = 1.0):
                 loss = H1relLoss_1D(beta, False, 1.0)
             elif problem_dim == 2:
                 loss = H1relLoss(beta, False, 1.0)
+        case "H1_CHEB_MP":
+            loss = H1relLoss_cheb_mp(1.0, beta, False)
         case "L1_SMOOTH":
             loss = torch.nn.SmoothL1Loss()  # L^1 smooth loss (Mishra)
         case "MSE":
@@ -292,15 +294,13 @@ class LprelLoss_mp(LprelLoss):
             acc += diff / den
             
         if self.size_mean is True:
-            return torch.mean(acc) # mean over batch dimension
+            return torch.mean(acc/out_dim) # mean over batch dimension
         elif self.size_mean is False:
-            return torch.sum(acc)  # sum along batch dimension
+            return torch.sum(acc/out_dim) # sum along batch dimension
         elif self.size_mean is None:
-            return acc # no reduction
+            return acc/out_dim # no reduction
         else:
             raise ValueError("size_mean must be a boolean or None")
-
-
 
 
 #########################################
@@ -553,9 +553,9 @@ class ChebyshevLprelLoss_mp(ChebyshevLprelLoss):
         for i in range(out_dim):
             diff = torch.zeros(x.size(0), device=x.device, dtype=x.dtype)
             den = torch.zeros(x.size(0), device=x.device, dtype=x.dtype)
-            for p in range(n_patches):
-                diff += self.abs(x[:, p, ..., [i]] - y[:, p, ..., [i]], size_mean=None)
-                den += self.abs(y[:, p, ..., [i]], size_mean=None)
+            for patch in range(n_patches):
+                diff += self.abs(x[:, patch, ..., [i]] - y[:, patch, ..., [i]], size_mean=None)
+                den += self.abs(y[:, patch, ..., [i]], size_mean=None)
 
             diff = torch.pow(diff, 1.0 / self.p)
             den = torch.pow(den, 1.0 / self.p)
@@ -566,11 +566,11 @@ class ChebyshevLprelLoss_mp(ChebyshevLprelLoss):
             acc += diff / den
             
         if self.size_mean is True:
-            return torch.mean(acc) # mean over batch dimension
+            return torch.mean(acc/out_dim) # mean over batch dimension
         elif self.size_mean is False:
-            return torch.sum(acc)  # sum along batch dimension
+            return torch.sum(acc/out_dim) # sum along batch dimension
         elif self.size_mean is None:
-            return acc# no reduction
+            return acc/out_dim # no reduction
         else:
             raise ValueError("size_mean must be a boolean or None")
 
@@ -828,76 +828,88 @@ class H1relLoss_multiout:
 #########################################
 # H1 relative loss function
 #########################################
-class H1relLoss_cheb:
+class H1relLoss_cheb_mp(ChebyshevLprelLoss):
     """
     Relative H^1 = W^{1,2} norm with Chebyshev transform.
     """
-
-    def __init__(self, beta: float = 1.0):
+    def __init__(self, alpha:float = 1.0, beta:float = 1.0, size_mean = False):
+        """
+        Args:
+            beta: weight for the derivative term
+        """
+        super().__init__(p=2, size_mean=size_mean)
+        self.alpha = alpha
         self.beta = beta
 
     @jaxtyped(typechecker=beartype)
-    def rel(
-        self, x: Float[Tensor, "n_samples dx dy"], y: Float[Tensor, "n_samples dx dy"]
+    def abs(
+        self,
+        x: Float[Tensor, "n_samples n_x n_y {1}"],
+        y: Float[Tensor, "n_samples n_x n_y {1}"],
     ) -> tuple[Float[Tensor, "n_samples"], Float[Tensor, "n_samples"]]:
-        batch_size = x.size()[0]
-
-        diff_norms = (
-            torch.norm(x.reshape(batch_size, -1) - y.reshape(batch_size, -1), 2, 1) ** 2
-        )
-        y_norms = torch.norm(y.reshape(batch_size, -1), 2, 1) ** 2
+        """
+        Compute errors using Chebyshev quadrature
+        """
+        self._update_device_dtype(x)
+        
+        # Get spatial dimensions
+        spatial_shape = x.shape[1:-1]  # Exclude batch and output dims
+        
+        # Get quadrature weights
+        weights = self._get_nd_weights(spatial_shape)
+        
+        # Compute weighted norms
+        diff_norms = self.weighted_norm(x - y, weights, last_power=False)
+        y_norms = self.weighted_norm(y, weights, last_power=False)
 
         return diff_norms, y_norms
 
-    def resize(self, x: Tensor, i: int) -> Tensor:
-        if i == 1:
-            return x[:, :-1, 1:]  # non repeting points on the internal boundary
-        else:
-            return x
 
     @jaxtyped(typechecker=beartype)
     def __call__(
         self,
-        x: Float[Tensor, "n_sample n_patch n_x n_y"],
-        y: Float[Tensor, "n_samples n_patch n_x n_y"],
+        x: Float[Tensor, "n_sample n_patch n_x n_y out_dim"],
+        y: Float[Tensor, "n_samples n_patch n_x n_y out_dim"],
     ) -> Float[Tensor, ""]:
+
         n_patch = x.size(1)
-        for i in range(n_patch):
-            x_p, y_p = x[:, i, :, :], y[:, i, :, :]
+        out_dim = x.size(-1)
+        acc = torch.zeros(x.size(0), device=x.device, dtype=x.dtype)
+        
+        for out in range(out_dim):
+            diff_tot = torch.zeros(x.size(0), device=x.device, dtype=x.dtype)
+            diff_dx_tot = torch.zeros(x.size(0), device=x.device, dtype=x.dtype)
+            diff_dy_tot = torch.zeros(x.size(0), device=x.device, dtype=x.dtype)
+            y_tot = torch.zeros(x.size(0), device=x.device, dtype=x.dtype)
+            y_p_dx_tot = torch.zeros(x.size(0), device=x.device, dtype=x.dtype)
+            y_p_dy_tot = torch.zeros(x.size(0), device=x.device, dtype=x.dtype)
 
-            # relative L^2 norm
-            diff, y_norm = self.rel(self.resize(x_p, i), self.resize(y_p, i))
-            x_p = cheb.batched_values_to_coefficients(
-                x_p.unsqueeze(-1)
-            )  # c=1 as last dimension (required channel dimension)
-            y_p = cheb.batched_values_to_coefficients(y_p.unsqueeze(-1))
+            for i in range(n_patch):
+                x_p, y_p = x[:, i, ..., [out]], y[:, i, ..., [out]]
 
-            # derivative in x
-            x_p_dx = cheb.batched_coefficients_to_values(
-                cheb.batched_differentiate(x_p, 1)
-            ).squeeze(-1)
-            y_p_dx = cheb.batched_coefficients_to_values(
-                cheb.batched_differentiate(y_p, 1)
-            ).squeeze(-1)
-            diff_dx, y_p_dx = self.rel(x_p_dx, y_p_dx)
+                # absative L^2 norm
+                diff, y_norm = self.abs(x_p, y_p)
+                x_p = cheb.batched_values_to_coefficients(x_p)
+                y_p = cheb.batched_values_to_coefficients(y_p)
 
-            # derivative in y
-            x_p_dy = cheb.batched_coefficients_to_values(
-                cheb.batched_differentiate(x_p, 0)
-            ).squeeze(-1)
-            y_p_dy = cheb.batched_coefficients_to_values(
-                cheb.batched_differentiate(y_p, 0)
-            ).squeeze(-1)
-            diff_dy, y_p_dy = self.rel(x_p_dy, y_p_dy)
+                # derivative in x
+                x_p_dx = cheb.batched_coefficients_to_values(
+                    cheb.batched_differentiate(x_p, 1)
+                )
+                y_p_dx = cheb.batched_coefficients_to_values(
+                    cheb.batched_differentiate(y_p, 1)
+                )
+                diff_dx, y_p_dx = self.abs(x_p_dx, y_p_dx)
 
-            if i == 0:
-                diff_tot = diff
-                diff_dx_tot = diff_dx
-                diff_dy_tot = diff_dy
-                y_tot = y_norm
-                y_p_dx_tot = y_p_dx
-                y_p_dy_tot = y_p_dy
-            else:
+                # derivative in y
+                x_p_dy = cheb.batched_coefficients_to_values(
+                    cheb.batched_differentiate(x_p, 0)
+                )
+                y_p_dy = cheb.batched_coefficients_to_values(
+                    cheb.batched_differentiate(y_p, 0)
+                )
+                diff_dy, y_p_dy = self.abs(x_p_dy, y_p_dy)
+
                 diff_tot += diff
                 diff_dx_tot += diff_dx
                 diff_dy_tot += diff_dy
@@ -905,9 +917,19 @@ class H1relLoss_cheb:
                 y_p_dx_tot += y_p_dx
                 y_p_dy_tot += y_p_dy
 
-        diff_tot = torch.sqrt(diff_tot) + self.beta * torch.sqrt(
-            diff_dx_tot + diff_dy_tot
-        )
-        y_tot = torch.sqrt(y_tot) + self.beta * torch.sqrt(y_p_dx_tot + y_p_dy_tot)
+            diff_tot = self.alpha*torch.sqrt(diff_tot) + self.beta * torch.sqrt(
+                diff_dx_tot + diff_dy_tot
+            )
+            y_tot = torch.sqrt(y_tot) + self.beta * torch.sqrt(y_p_dx_tot + y_p_dy_tot)
 
-        return torch.sum(diff_tot / y_tot)
+            acc += diff_tot / y_tot
+
+
+        if self.size_mean is True:
+            return torch.mean(acc/out_dim) # mean over batch dimension
+        elif self.size_mean is False:
+            return torch.sum(acc/out_dim) # sum along batch dimension
+        elif self.size_mean is None:
+            return acc/out_dim # no reduction
+        else:
+            raise ValueError("size_mean must be a boolean or None")
