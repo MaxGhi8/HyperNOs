@@ -23,7 +23,7 @@ torch.set_default_dtype(torch.float32)  # default tensor dtype
 #########################################
 # activation function
 #########################################
-@jaxtyped(typechecker=beartype)
+# @jaxtyped(typechecker=beartype)
 def activation(
     x: Float[Tensor, "n_samples *n d"], activation_str: str
 ) -> Float[Tensor, "n_samples *n d"]:
@@ -65,7 +65,7 @@ class MLP(nn.Module):
         self.mlp2 = torch.nn.Linear(mid_channels, out_channels)
         self.fun_act = fun_act
 
-    @jaxtyped(typechecker=beartype)
+    # @jaxtyped(typechecker=beartype)
     def forward(
         self, x: Float[Tensor, "n_samples *d_x {self.in_channels}"]
     ) -> Float[Tensor, "n_samples *d_x {self.out_channels}"]:
@@ -103,7 +103,7 @@ class MLP_conv(nn.Module):
 
         self.fun_act = fun_act
 
-    @jaxtyped(typechecker=beartype)
+    # @jaxtyped(typechecker=beartype)
     def forward(
         self, x: Float[Tensor, "n_samples {self.in_channels} *d_x"]
     ) -> Float[Tensor, "n_samples {self.out_channels} *d_x"]:
@@ -142,6 +142,7 @@ class FourierLayer(nn.Module):
         self.FFTnorm = FFTnorm
 
         if self.problem_dim == 1:
+            # todo
             self.scale = 1 / (in_channels * out_channels)
             self.weights = nn.Parameter(
                 self.scale
@@ -160,29 +161,6 @@ class FourierLayer(nn.Module):
             #         a = 0, mode = 'fan_in', nonlinearity = self.fun_act)
 
         elif self.problem_dim == 2:
-            #### ORIGINAL FNO
-            # self.scale = 1 / (in_channels * out_channels)
-            # self.weights1 = nn.Parameter(
-            #     self.scale
-            #     * torch.rand(
-            #         in_channels,
-            #         out_channels,
-            #         self.modes,
-            #         self.modes,
-            #         dtype=torch.cfloat,
-            #     )
-            # )
-            # self.weights2 = nn.Parameter(
-            #     self.scale
-            #     * torch.rand(
-            #         in_channels,
-            #         out_channels,
-            #         self.modes,
-            #         self.modes,
-            #         dtype=torch.cfloat,
-            #     )
-            # )
-
             #### Modified FNO with rfft2 and irfft2 implemented as matrix multiplication
             self.scale = 1 / (in_channels * out_channels)
             self.weights1 = nn.Parameter(
@@ -226,6 +204,7 @@ class FourierLayer(nn.Module):
             #         a = 0, mode = 'fan_in', nonlinearity = self.fun_act)
 
         elif self.problem_dim == 3:
+            # todo
             self.scale = 1 / (in_channels * out_channels)
             self.weights1 = nn.Parameter(
                 self.scale
@@ -272,7 +251,7 @@ class FourierLayer(nn.Module):
                 )
             )
 
-    @jaxtyped(typechecker=beartype)
+    # @jaxtyped(typechecker=beartype)
     def tensor_mul_1d(
         self,
         input: Complex[Tensor, "n_batch {self.in_channels} {self.modes}"],
@@ -282,19 +261,7 @@ class FourierLayer(nn.Module):
         # (batch, in_channel, modes), (in_channel, out_channel, modes) -> (batch, out_channel, modes)
         return torch.einsum("bim,iom->bom", input, weights)
 
-    @jaxtyped(typechecker=beartype)
-    def tensor_mul_2d(
-        self,
-        input: Complex[Tensor, "n_batch {self.in_channels} {self.modes} {self.modes}"],
-        weights: Complex[
-            Tensor, "{self.in_channels} {self.out_channels} {self.modes} {self.modes}"
-        ],
-    ) -> Complex[Tensor, "n_batch {self.out_channels} {self.modes} {self.modes}"]:
-        """Multiplication between complex numbers"""
-        # (batch, in_channel, x, y), (in_channel, out_channel, x, y) -> (batch, out_channel, x,y)
-        return torch.einsum("bixy,ioxy->boxy", input, weights)
-
-    @jaxtyped(typechecker=beartype)
+    # @jaxtyped(typechecker=beartype)
     def tensor_mul_2d_mod(
         self,
         input: Float[Tensor, "n_batch {self.in_channels} {self.modes} {self.modes}"],
@@ -306,7 +273,7 @@ class FourierLayer(nn.Module):
         # (batch, in_channel, x, y), (in_channel, out_channel, x, y) -> (batch, out_channel, x,y)
         return torch.einsum("bixy,ioxy->boxy", input, weights)
 
-    @jaxtyped(typechecker=beartype)
+    # @jaxtyped(typechecker=beartype)
     def tensor_mul_3d(
         self,
         input: Complex[
@@ -323,7 +290,7 @@ class FourierLayer(nn.Module):
         # (batch, in_channel, x, y, z), (in_channel, out_channel, x, y, z) -> (batch, out_channel, x, y, z)
         return torch.einsum("bixyz,ioxyz->boxyz", input, weights)
 
-    @jaxtyped(typechecker=beartype)
+    # @jaxtyped(typechecker=beartype)
     def forward(
         self, x: Float[Tensor, "n_batch {self.in_channels} *n_x"]
     ) -> Float[Tensor, "n_batch {self.out_channels} *n_x"]:
@@ -340,47 +307,10 @@ class FourierLayer(nn.Module):
         batchsize = x.shape[0]
 
         if self.problem_dim == 1:
-            # Fourier transform
-            x_ft = torch.fft.rfft(x, norm=self.FFTnorm)
-
-            # Multiply relevant Fourier modes
-            out_ft = torch.zeros(
-                batchsize,
-                self.out_channels,
-                x.size(-1) // 2 + 1,
-                dtype=torch.cfloat,
-                device=x.device,
-            )
-            out_ft[:, :, : self.modes] = self.tensor_mul_1d(
-                x_ft[:, :, : self.modes], self.weights
-            )
-
-            # Inverse Fourier transform
-            x = torch.fft.irfft(out_ft, n=x.size(-1), norm=self.FFTnorm)
+            pass
+            # todo
 
         elif self.problem_dim == 2:
-            #### ORIGINAL FNO
-            # # Fourier transform
-            # x_ft = torch.fft.rfft2(x, norm=self.FFTnorm)
-
-            # # Multiply relevant Fourier modes
-            # out_ft = torch.zeros(
-            #     batchsize,
-            #     self.out_channels,
-            #     x.size(-2),
-            #     x.size(-1),
-            #     dtype=torch.cfloat,
-            #     device=x.device,
-            # )
-            # out_ft[:, :, : self.modes, : self.modes] = self.tensor_mul_2d(
-            #     x_ft[:, :, : self.modes, : self.modes], self.weights1
-            # )
-            # out_ft[:, :, -self.modes :, : self.modes] = self.tensor_mul_2d(
-            #     x_ft[:, :, -self.modes :, : self.modes], self.weights2
-            # )
-
-            # # Inverse Fourier transform
-            # x = torch.fft.irfft2(out_ft, s=(x.size(-2), x.size(-1)), norm=self.FFTnorm)
 
             #### FNO with rfft2 and irfft2 implemented as matrix multiplication
             rfft2 = MatrixRFFT2(x.size(-2), x.size(-1), device=x.device)
@@ -416,51 +346,8 @@ class FourierLayer(nn.Module):
             x = irfft2(out_ft)
 
         elif self.problem_dim == 3:
-            # Fourier transform
-            x_ft = torch.fft.rfftn(x, dim=(-3, -2, -1), norm=self.FFTnorm)
-
-            # Multiply relevant Fourier modes
-            out_ft = torch.zeros(
-                batchsize,
-                self.out_channels,
-                x.size(-3),
-                x.size(-2),
-                x.size(-1) // 2 + 1,
-                dtype=torch.cfloat,
-                device=x.device,
-            )
-
-            # first corner
-            out_ft[:, :, : self.modes, : self.modes, : self.modes] = self.tensor_mul_3d(
-                x_ft[:, :, : self.modes, : self.modes, : self.modes], self.weights1
-            )
-            # second corner
-            out_ft[:, :, -self.modes :, : self.modes, : self.modes] = (
-                self.tensor_mul_3d(
-                    x_ft[:, :, -self.modes :, : self.modes, : self.modes], self.weights2
-                )
-            )
-            # third corner
-            out_ft[:, :, : self.modes, -self.modes :, : self.modes] = (
-                self.tensor_mul_3d(
-                    x_ft[:, :, : self.modes, -self.modes :, : self.modes], self.weights3
-                )
-            )
-            # fourth corner
-            out_ft[:, :, -self.modes :, -self.modes :, : self.modes] = (
-                self.tensor_mul_3d(
-                    x_ft[:, :, -self.modes :, -self.modes :, : self.modes],
-                    self.weights4,
-                )
-            )
-
-            # Inverse Fourier transform
-            x = torch.fft.irfftn(
-                out_ft,
-                dim=(-3, -2, -1),
-                s=(x.size(-3), x.size(-2), x.size(-1)),
-                norm=self.FFTnorm,
-            )
+            # todo
+            pass
 
         return x
 
@@ -477,7 +364,7 @@ class output_denormalizer_class(nn.Module):
         return self.output_normalizer.decode(x)
 
 
-class FNO(nn.Module):
+class FNO_ONNX(nn.Module):
     """
     Fourier Neural Operator for a problem on square domain
     """
@@ -540,7 +427,7 @@ class FNO(nn.Module):
         retrain_fno: int
             seed for retraining (if is equal to -1, no retraining is performed)
         """
-        super(FNO, self).__init__()
+        super(FNO_ONNX, self).__init__()
         self.problem_dim = problem_dim
         self.in_dim = in_dim + self.problem_dim
         self.d_v = d_v
@@ -846,7 +733,7 @@ class FNO(nn.Module):
 
         return self.output_denormalizer(x)
 
-    @cache
+    # @cache
     def get_grid_3d(self, shape: torch.Size) -> Tensor:
         batchsize, size_x, size_y, size_z = shape[0], shape[1], shape[2], shape[3]
         # grid for x
@@ -866,18 +753,18 @@ class FNO(nn.Module):
         )
         return torch.cat((gridx, gridy, gridz), dim=-1)
 
-    @cache
+    # @cache
     def get_grid_2d(self, shape: torch.Size) -> Tensor:
         batchsize, size_x, size_y = shape[0], shape[1], shape[2]
         # grid for x
-        gridx = torch.tensor(np.linspace(0, 1, size_x), dtype=torch.float)
+        gridx = torch.linspace(0, 1, size_x, dtype=torch.float)
         gridx = gridx.reshape(1, size_x, 1, 1).repeat([batchsize, 1, size_y, 1])
         # grid for y
-        gridy = torch.tensor(np.linspace(0, 1, size_y), dtype=torch.float)
+        gridy = torch.linspace(0, 1, size_y, dtype=torch.float)
         gridy = gridy.reshape(1, 1, size_y, 1).repeat([batchsize, size_x, 1, 1])
         return torch.cat((gridx, gridy), dim=-1)
 
-    @cache
+    # @cache
     def get_grid_1d(self, shape: torch.Size) -> Tensor:
         batchsize, size_x = shape[0], shape[1]
         # grid for x

@@ -602,6 +602,9 @@ class CNO(nn.Module):
         self, x: Float[Tensor, "batch *size {self.in_dim}"]
     ) -> Float[Tensor, "batch *size {self.out_dim}"]:
 
+        # Only for AFIETI case
+        # x = x.unsqueeze(-1)
+
         if self.problem_dim == 1:
             x = self.lift(x.permute(0, 2, 1))  # Execute Lift
         elif self.problem_dim == 2:
