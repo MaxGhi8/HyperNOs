@@ -37,17 +37,21 @@ sys.path.append("..")
 import matplotlib.pyplot as plt
 import seaborn as sns
 import torch
+from BAMPNO import BAMPNO
 from beartype import beartype
 from cli.utilities_recover_model import get_tensors, test_fun, test_plot_samples
 from CNO import CNO
 from datasets import NO_load_data_model
 from FNO import FNO
-from FNO_lin import FNO_lin
+
+# from FNO_lin import FNO_lin
 from jaxtyping import Float, jaxtyped
 from loss_fun import (
+    ChebyshevLprelLoss_mp,
     H1relLoss,
     H1relLoss_1D,
     H1relLoss_1D_multiout,
+    H1relLoss_cheb_mp,
     H1relLoss_multiout,
     LprelLoss,
     LprelLoss_multiout,
@@ -97,6 +101,8 @@ def parse_arguments():
             "ord",
             "crosstruss",
             "afieti_homogeneous_neumann",
+            "bampno_8_domain",
+            "bampno_continuation",
         ],
         help="Select the example to run.",
     )
@@ -109,7 +115,7 @@ def parse_arguments():
     parser.add_argument(
         "loss_fn_str",
         type=str,
-        choices=["L1", "L2", "H1", "L1_smooth", "l2"],
+        choices=["L1", "L2", "H1", "L1_smooth", "l2", "L2_cheb_mp"],
         help="Select the relative loss function to use during the training process.",
     )
     parser.add_argument(
@@ -253,6 +259,38 @@ try:
                     ),
                 )
 
+            case "BAMPNO":
+                model = BAMPNO(
+                    default_hyper_params["problem_dim"],
+                    default_hyper_params["n_patch"],
+                    default_hyper_params["continuity_condition"],
+                    default_hyper_params["n_pts"],
+                    default_hyper_params["grid_filename"],
+                    default_hyper_params["in_dim"],
+                    default_hyper_params["d_v"],
+                    default_hyper_params["out_dim"],
+                    default_hyper_params["L"],
+                    default_hyper_params["modes"],
+                    default_hyper_params["fun_act"],
+                    default_hyper_params["weights_norm"],
+                    (
+                        {int(k): v for k, v in default_hyper_params["zero_BC"].items()}
+                        if default_hyper_params["zero_BC"]
+                        else None
+                    ),
+                    default_hyper_params["arc"],
+                    default_hyper_params["RNN"],
+                    default_hyper_params["same_params"],
+                    default_hyper_params["FFTnorm"],
+                    device,
+                    (
+                        example.output_normalizer
+                        if default_hyper_params["internal_normalization"]
+                        else None
+                    ),
+                    default_hyper_params["retrain_seed"],
+                )
+
             case "FNO_lin":
                 model = FNO_lin(
                     default_hyper_params["problem_dim"],
@@ -310,10 +348,18 @@ except KeyError:
     beta = 1.0  # default value
 FourierF = hyperparams["FourierF"]
 problem_dim = hyperparams["problem_dim"]
-retrain = hyperparams["retrain"]
+try:
+    retrain = hyperparams["retrain"]
+except KeyError:
+    retrain = hyperparams["retrain_seed"]
 val_samples = hyperparams["val_samples"]
 test_samples = hyperparams["test_samples"]
 training_samples = hyperparams["training_samples"]
+filename = None
+try:
+    filename = hyperparams["filename"]
+except KeyError:
+    filename = hyperparams["grid_filename"]
 
 # Loss function
 loss = loss_selector(loss_fn_str=loss_fn_str, problem_dim=problem_dim, beta=beta)
@@ -325,11 +371,11 @@ example = NO_load_data_model(
     which_example=which_example,
     no_architecture={
         "FourierF": hyperparams["FourierF"],
-        "retrain": hyperparams["retrain"],
+        "retrain": retrain,
     },
     batch_size=hyperparams["batch_size"],
     training_samples=hyperparams["training_samples"],
-    filename=hyperparams["filename"] if "filename" in hyperparams else None,
+    filename=filename,
 )
 
 train_loader = example.train_loader
@@ -358,29 +404,29 @@ print(f"Total Model Size: {total_bytes:,} bytes ({total_mb:.2f} MB)")
 #########################################
 # Compute train error and print it
 #########################################
-(
-    val_relative_l1,
-    val_relative_l2,
-    val_relative_semih1,
-    val_relative_h1,
-    train_loss,
-) = test_fun(
-    model,
-    val_loader,
-    train_loader,
-    loss,
-    problem_dim,
-    loss_fn_str,
-    device,
-    statistic=True,
-)
+# (
+#     val_relative_l1,
+#     val_relative_l2,
+#     val_relative_semih1,
+#     val_relative_h1,
+#     train_loss,
+# ) = test_fun(
+#     model,
+#     val_loader,
+#     train_loader,
+#     loss,
+#     problem_dim,
+#     loss_fn_str,
+#     device,
+#     statistic=True,
+# )
 
-print("Train loss: ", train_loss)
-print("Validation mean relative l1 norm: ", val_relative_l1)
-print("Validation mean relative l2 norm: ", val_relative_l2)
-print("Validation mean relative semi h1 norm: ", val_relative_semih1)
-print("Validation mean relative h1 norm: ", val_relative_h1)
-print("")
+# print("Train loss: ", train_loss)
+# print("Validation mean relative l1 norm: ", val_relative_l1)
+# print("Validation mean relative l2 norm: ", val_relative_l2)
+# print("Validation mean relative semi h1 norm: ", val_relative_semih1)
+# print("Validation mean relative h1 norm: ", val_relative_h1)
+# print("")
 
 #########################################
 # Get the tensors
@@ -399,66 +445,80 @@ print("")
 #########################################
 # Compute mean error and print it
 #########################################
-# Error tensors
-# train_relative_l1_tensor = LprelLoss(1, None)(
-#     train_output_tensor, train_prediction_tensor
-# )
-test_relative_l1_tensor = LprelLoss(1, None)(output_tensor, prediction_tensor)
-
-train_relative_l2_tensor = LprelLoss(2, None)(
-    train_output_tensor, train_prediction_tensor
-)
-test_relative_l2_tensor = LprelLoss(2, None)(output_tensor, prediction_tensor)
-
-if problem_dim == 1:
-    # train_relative_semih1_tensor = H1relLoss_1D(1.0, None, 0.0)(
-    #     train_output_tensor, train_prediction_tensor
-    # )
-    # train_relative_h1_tensor = H1relLoss_1D(1.0, None)(
-    #     train_output_tensor, train_prediction_tensor
-    # )
-
-    test_relative_semih1_tensor = H1relLoss_1D(1.0, None, 0.0)(
+if arc == "BAMPNO":
+    train_relative_l2_tensor = ChebyshevLprelLoss_mp(2, None)(
+        train_output_tensor, train_prediction_tensor
+    )
+    test_relative_l2_tensor = ChebyshevLprelLoss_mp(2, None)(
         output_tensor, prediction_tensor
     )
-    test_relative_h1_tensor = H1relLoss_1D(1.0, None)(output_tensor, prediction_tensor)
-
-elif problem_dim == 2:
-    # train_relative_semih1_tensor = H1relLoss(1.0, None, 0.0)(
-    #     train_output_tensor, train_prediction_tensor
-    # )
-    # train_relative_h1_tensor = H1relLoss(1.0, None)(
-    #     train_output_tensor, train_prediction_tensor
-    # )
-
-    test_relative_semih1_tensor = H1relLoss(1.0, None, 0.0)(
+    test_relative_h1_tensor = H1relLoss_cheb_mp(1.0, 1.0, None)(
         output_tensor, prediction_tensor
     )
-    test_relative_h1_tensor = H1relLoss(1.0, None)(output_tensor, prediction_tensor)
 
-# Error mean
-test_mean_l1 = test_relative_l1_tensor.mean().item()
-test_mean_l2 = test_relative_l2_tensor.mean().item()
-test_mean_semih1 = test_relative_semih1_tensor.mean().item()
-test_mean_h1 = test_relative_h1_tensor.mean().item()
+else:
+    # Error tensors
+    # train_relative_l1_tensor = LprelLoss(1, None)(
+    #     train_output_tensor, train_prediction_tensor
+    # )
+    test_relative_l1_tensor = LprelLoss(1, None)(output_tensor, prediction_tensor)
 
-# Error median
-test_median_l1 = torch.median(test_relative_l1_tensor).item()
-test_median_l2 = torch.median(test_relative_l2_tensor).item()
-test_median_semih1 = torch.median(test_relative_semih1_tensor).item()
-test_median_h1 = torch.median(test_relative_h1_tensor).item()
+    train_relative_l2_tensor = LprelLoss(2, None)(
+        train_output_tensor, train_prediction_tensor
+    )
+    test_relative_l2_tensor = LprelLoss(2, None)(output_tensor, prediction_tensor)
 
-print("Test mean relative l1 norm: ", test_mean_l1)
-print("Test mean relative l2 norm: ", test_mean_l2)
-print("Test mean relative semi h1 norm: ", test_mean_semih1)
-print("Test mean relative h1 norm: ", test_mean_h1)
-print("")
+    if problem_dim == 1:
+        # train_relative_semih1_tensor = H1relLoss_1D(1.0, None, 0.0)(
+        #     train_output_tensor, train_prediction_tensor
+        # )
+        # train_relative_h1_tensor = H1relLoss_1D(1.0, None)(
+        #     train_output_tensor, train_prediction_tensor
+        # )
 
-print("Test median relative l1 norm: ", test_median_l1)
-print("Test median relative l2 norm: ", test_median_l2)
-print("Test median relative semi h1 norm: ", test_median_semih1)
-print("Test median relative h1 norm: ", test_median_h1)
-print("")
+        test_relative_semih1_tensor = H1relLoss_1D(1.0, None, 0.0)(
+            output_tensor, prediction_tensor
+        )
+        test_relative_h1_tensor = H1relLoss_1D(1.0, None)(
+            output_tensor, prediction_tensor
+        )
+
+    elif problem_dim == 2:
+        # train_relative_semih1_tensor = H1relLoss(1.0, None, 0.0)(
+        #     train_output_tensor, train_prediction_tensor
+        # )
+        # train_relative_h1_tensor = H1relLoss(1.0, None)(
+        #     train_output_tensor, train_prediction_tensor
+        # )
+
+        test_relative_semih1_tensor = H1relLoss(1.0, None, 0.0)(
+            output_tensor, prediction_tensor
+        )
+        test_relative_h1_tensor = H1relLoss(1.0, None)(output_tensor, prediction_tensor)
+
+    # Error mean
+    test_mean_l1 = test_relative_l1_tensor.mean().item()
+    test_mean_l2 = test_relative_l2_tensor.mean().item()
+    test_mean_semih1 = test_relative_semih1_tensor.mean().item()
+    test_mean_h1 = test_relative_h1_tensor.mean().item()
+
+    # Error median
+    test_median_l1 = torch.median(test_relative_l1_tensor).item()
+    test_median_l2 = torch.median(test_relative_l2_tensor).item()
+    test_median_semih1 = torch.median(test_relative_semih1_tensor).item()
+    test_median_h1 = torch.median(test_relative_h1_tensor).item()
+
+    print("Test mean relative l1 norm: ", test_mean_l1)
+    print("Test mean relative l2 norm: ", test_mean_l2)
+    print("Test mean relative semi h1 norm: ", test_mean_semih1)
+    print("Test mean relative h1 norm: ", test_mean_h1)
+    print("")
+
+    print("Test median relative l1 norm: ", test_median_l1)
+    print("Test median relative l2 norm: ", test_median_l2)
+    print("Test median relative semi h1 norm: ", test_median_semih1)
+    print("Test median relative h1 norm: ", test_median_h1)
+    print("")
 
 #########################################
 # Compute mean error component per component
@@ -616,7 +676,11 @@ plot_histogram(
 #########################################
 @jaxtyped(typechecker=beartype)
 def plot_boxplot(
-    errors: list[Float[Tensor, "n_samples"]], str_norm: str, legends: list[str] = None
+    errors: list[Float[Tensor, "n_samples"]],
+    str_norm: str,
+    legends: list[str] = None,
+    y_min: float = None,
+    y_max: float = None,
 ):
 
     if legends != None:
@@ -651,6 +715,8 @@ def plot_boxplot(
     plt.xticks(fontsize=18)
     plt.yticks(fontsize=18)
     plt.grid(True, which="both", ls="-", alpha=0.1, color="black")
+    if y_min and y_max:
+        plt.ylim(y_min, y_max)
     # plt.title(
     #     f"boxplot of the Relative Error in Norm {str_norm}", fontsize=20, pad=20
     # )
@@ -672,9 +738,11 @@ def plot_boxplot(
 #     ["Train error", "Test error"],
 # )
 plot_boxplot(
-    [train_relative_l2_tensor, test_relative_l2_tensor],
+    [train_relative_l2_tensor, test_relative_l2_tensor, test_relative_h1_tensor],
     "L2",
-    ["Train error", "Test error"],
+    ["Train L^2", "Test L^2", "Test H^1"],
+    y_min=3e-4,
+    y_max=1.2e-1,
 )
 # plot_boxplot(
 #     [test_relative_l2_tensor],
@@ -859,6 +927,9 @@ match which_example:
                 example.dict_normalizers[example.fields_to_concat[i]].std
             )
 
+    case "bampno_8_domain" | "bampno_continuation":
+        input_tensor = example.input_normalizer.decode(input_tensor)
+
     case _:
         raise ValueError("The example chosen is not allowed")
 
@@ -870,17 +941,32 @@ if stats_to_save:
     print(f"Data saved in {str_file}")
 
 # call the function to plot data
-test_plot_samples(
-    input_tensor,
-    output_tensor,
-    prediction_tensor,
-    test_relative_l1_tensor,
-    "best",
-    which_example,
-    ntest=hyperparams["test_samples"],
-    str_norm=loss_fn_str,
-    n_idx=5,
-)
+if which_example == "bampno_8_domain":
+    test_plot_samples(
+        input_tensor,
+        output_tensor,
+        prediction_tensor,
+        test_relative_l2_tensor,
+        "worst",
+        which_example,
+        ntest=hyperparams["test_samples"],
+        str_norm=loss_fn_str,
+        n_idx=5,
+        X=example.X_phys,
+        Y=example.Y_phys,
+    )
+else:
+    test_plot_samples(
+        input_tensor,
+        output_tensor,
+        prediction_tensor,
+        test_relative_l2_tensor,
+        "best",
+        which_example,
+        ntest=hyperparams["test_samples"],
+        str_norm=loss_fn_str,
+        n_idx=5,
+    )
 
 
 #########################################
@@ -1004,8 +1090,8 @@ def save_tensor(
         print(f"Data saved in {str_file}")
 
     else:
-        # raise ValueError("The example chosen is not allowed")
-        pass
+        raise ValueError("The example chosen is not allowed")
+        # pass
 
 
 # call the function to save tensors

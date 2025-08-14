@@ -17,7 +17,7 @@ import seaborn as sns
 def plot_loss_curves(
     train_files_list: list[str],
     test_files_list: list[str],
-    test_L1: list[str],
+    # test_L1: list[str],
     test_H1: list[str],
     path: str = None,
     y_min: float = None,
@@ -41,7 +41,7 @@ def plot_loss_curves(
     """
     train_dfs = []
     test_dfs = []
-    L1_dfs = []
+    # L1_dfs = []
     H1_dfs = []
 
     for train_file in train_files_list:
@@ -52,9 +52,9 @@ def plot_loss_curves(
         df = pd.read_csv(test_file)
         test_dfs.append(df)
 
-    for test_file in test_L1:
-        df = pd.read_csv(test_file)
-        L1_dfs.append(df)
+    # for test_file in test_L1:
+    #     df = pd.read_csv(test_file)
+    #     L1_dfs.append(df)
 
     for test_file in test_H1:
         df = pd.read_csv(test_file)
@@ -66,7 +66,7 @@ def plot_loss_curves(
     # Extract y values for all files
     y_train_values = np.array([df[df.columns[2]].values for df in train_dfs])
     y_test_values = np.array([df[df.columns[2]].values for df in test_dfs])
-    y_L1_values = np.array([df[df.columns[2]].values for df in L1_dfs])
+    # y_L1_values = np.array([df[df.columns[2]].values for df in L1_dfs])
     y_H1_values = np.array([df[df.columns[2]].values for df in H1_dfs])
 
     # Calculate mean and std
@@ -74,8 +74,8 @@ def plot_loss_curves(
     train_std = np.std(y_train_values, axis=0)
     test_mean = np.mean(y_test_values, axis=0)
     test_std = np.std(y_test_values, axis=0)
-    L1_mean = np.mean(y_L1_values, axis=0)
-    L1_std = np.std(y_L1_values, axis=0)
+    # L1_mean = np.mean(y_L1_values, axis=0)
+    # L1_std = np.std(y_L1_values, axis=0)
     H1_mean = np.mean(y_H1_values, axis=0)
     H1_std = np.std(y_H1_values, axis=0)
 
@@ -84,25 +84,15 @@ def plot_loss_curves(
     plt.figure(figsize=(8, 6), layout="constrained")
     plt.rcParams["text.usetex"] = True
 
-    plt.plot(x, L1_mean, label=r"Test loss (relative $L^1$)", color="#2ca02c")
-    plt.fill_between(
-        x,
-        L1_mean - L1_std,
-        L1_mean + L1_std,
-        alpha=0.2,
-        color="#2ca02c",
-        # label="Test (±std)",
-    )
-
-    plt.plot(x, H1_mean, label=r"Test loss (relative $H^1$)", color="#d62728")
-    plt.fill_between(
-        x,
-        H1_mean - H1_std,
-        H1_mean + H1_std,
-        alpha=0.2,
-        color="#d62728",
-        # label="Test (±std)",
-    )
+    # plt.plot(x, L1_mean, label=r"Test loss (relative $L^1$)", color="#2ca02c")
+    # plt.fill_between(
+    #     x,
+    #     L1_mean - L1_std,
+    #     L1_mean + L1_std,
+    #     alpha=0.2,
+    #     color="#2ca02c",
+    #     # label="Test (±std)",
+    # )
 
     plt.plot(x, train_mean, label=r"Train loss (relative $L^2$)", color="#1f77b4")
     plt.fill_between(
@@ -121,6 +111,16 @@ def plot_loss_curves(
         test_mean + test_std,
         alpha=0.2,
         color="#ff7f0e",
+        # label="Test (±std)",
+    )
+
+    plt.plot(x, H1_mean, label=r"Test loss (relative $H^1$)", color="#d62728")
+    plt.fill_between(
+        x,
+        H1_mean - H1_std,
+        H1_mean + H1_std,
+        alpha=0.2,
+        color="#d62728",
         # label="Test (±std)",
     )
 
@@ -145,49 +145,54 @@ def plot_loss_curves(
 
 if __name__ == "__main__":
 
-    example = "hh"  # select the example
-    mode = "best_500k"  # select the mode of the test (best or best_500k)
-    title = "Unconstrained optimization"  # select the title of the figure
+    example = "FNO"  # select the example
+    title = "FNO with continuation techniques"  # select the title of the figure
     fontsize = 14
-    example2name = {"fhn": "FitzHughNagumo", "hh": "HodgkinHuxley", "ord": "OHaraRudy"}
-    example2min = {"fhn": 2e-3, "hh": 8e-3, "ord": 5e-2}
-    example2max = {"fhn": 1.5, "hh": 1.5, "ord": 1.5}
+    example2min = {"FNO": 4e-4, "BAMPNO": 4e-4}
+    example2max = {"FNO": 0.7, "BAMPNO": 0.7}
 
     train_files = [
-        f"train_loss/{example}_{mode}/0/FNO_1D_{example2name[example]}_Train loss.csv",
-        f"train_loss/{example}_{mode}/1/FNO_1D_{example2name[example]}_Train loss.csv",
-        f"train_loss/{example}_{mode}/2/FNO_1D_{example2name[example]}_Train loss.csv",
-        f"train_loss/{example}_{mode}/3/FNO_1D_{example2name[example]}_Train loss.csv",
-        f"train_loss/{example}_{mode}/4/FNO_1D_{example2name[example]}_Train loss.csv",
+        f"train_loss/{example}/{i}/{example}_2D_{example}_Train loss.csv"
+        for i in [0, 1, 4]
     ]
     test_files = [
-        f"train_loss/{example}_{mode}/0/FNO_1D_{example2name[example]}_Test rel. L^2 error.csv",
-        f"train_loss/{example}_{mode}/1/FNO_1D_{example2name[example]}_Test rel. L^2 error.csv",
-        f"train_loss/{example}_{mode}/2/FNO_1D_{example2name[example]}_Test rel. L^2 error.csv",
-        f"train_loss/{example}_{mode}/3/FNO_1D_{example2name[example]}_Test rel. L^2 error.csv",
-        f"train_loss/{example}_{mode}/4/FNO_1D_{example2name[example]}_Test rel. L^2 error.csv",
-    ]
-    test_L1 = [
-        f"train_loss/{example}_{mode}/0/FNO_1D_{example2name[example]}_Test rel. L^1 error.csv",
-        f"train_loss/{example}_{mode}/1/FNO_1D_{example2name[example]}_Test rel. L^1 error.csv",
-        f"train_loss/{example}_{mode}/2/FNO_1D_{example2name[example]}_Test rel. L^1 error.csv",
-        f"train_loss/{example}_{mode}/3/FNO_1D_{example2name[example]}_Test rel. L^1 error.csv",
-        f"train_loss/{example}_{mode}/4/FNO_1D_{example2name[example]}_Test rel. L^1 error.csv",
+        f"train_loss/{example}/{i}/{example}_2D_{example}_Test rel. L^2 error.csv"
+        for i in [0, 1, 4]
     ]
     test_H1 = [
-        f"train_loss/{example}_{mode}/0/FNO_1D_{example2name[example]}_Test rel. H^1 error.csv",
-        f"train_loss/{example}_{mode}/1/FNO_1D_{example2name[example]}_Test rel. H^1 error.csv",
-        f"train_loss/{example}_{mode}/2/FNO_1D_{example2name[example]}_Test rel. H^1 error.csv",
-        f"train_loss/{example}_{mode}/3/FNO_1D_{example2name[example]}_Test rel. H^1 error.csv",
-        f"train_loss/{example}_{mode}/4/FNO_1D_{example2name[example]}_Test rel. H^1 error.csv",
+        f"train_loss/{example}/{i}/{example}_2D_{example}_Test rel. H^1 error.csv"
+        for i in [0, 1, 4]
     ]
+
+    # example = "hh"  # select the example
+    # mode = "best_500k"  # select the mode of the test (best or best_500k)
+    # title = "Unconstrained optimization"  # select the title of the figure
+    # fontsize = 14
+    # example2name = {"fhn": "FitzHughNagumo", "hh": "HodgkinHuxley", "ord": "OHaraRudy"}
+    # example2min = {"fhn": 2e-3, "hh": 8e-3, "ord": 5e-2}
+    # example2max = {"fhn": 1.5, "hh": 1.5, "ord": 1.5}
+
+    # train_files = [
+    #     f"train_loss/{example}_{mode}/{i}/FNO_1D_{example2name[example]}_Train loss.csv"
+    #     for i in range(5)
+    # ]
+    # test_files = [
+    #     f"train_loss/{example}_{mode}/{i}/FNO_1D_{example2name[example]}_Test rel. L^2 error.csv" for i in range(5)
+    # ]
+    # test_L1 = [
+    #     f"train_loss/{example}_{mode}/{i}/FNO_1D_{example2name[example]}_Test rel. L^1 error.csv" for i in range(5)
+    # ]
+    # test_H1 = [
+    #     f"train_loss/{example}_{mode}/{i}/FNO_1D_{example2name[example]}_Test rel. H^1 error.csv" for i in range(5)
+    # ]
 
     plot_loss_curves(
         train_files,
         test_files,
-        test_L1,
+        # test_L1,
         test_H1,
-        f"train_loss/loss_function_{example.upper()}_{mode}.png",
+        # f"train_loss/loss_function_{example.upper()}_{mode}.png",
+        f"train_loss/loss_function_{example.upper()}.png",
         example2min[example],
         example2max[example],
         title,

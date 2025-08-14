@@ -878,7 +878,7 @@ class H1relLoss_cheb_mp(ChebyshevLprelLoss):
         self,
         x: Float[Tensor, "n_sample n_patch n_x n_y out_dim"],
         y: Float[Tensor, "n_samples n_patch n_x n_y out_dim"],
-    ) -> Float[Tensor, ""]:
+    ) -> Float[Tensor, "*n_samples"]:
 
         n_patch = x.size(1)
         out_dim = x.size(-1)

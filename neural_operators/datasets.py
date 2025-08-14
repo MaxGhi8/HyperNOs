@@ -64,6 +64,7 @@ def NO_load_data_model(
         "afieti_fno": AFIETI_FNO,
         ###
         "bampno": BAMPNO,
+        "bampno_8_domain": BAMPNO,
         "bampno_continuation": BAMPNO_continuation,
         # "bampno": BAMPNO_old,
         ##

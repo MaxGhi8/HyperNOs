@@ -7,6 +7,8 @@ import sys
 
 sys.path.append("..")
 
+import warnings
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -20,6 +22,7 @@ from loss_fun import (
     LprelLoss,
     LprelLoss_multiout,
 )
+from matplotlib.colors import LogNorm
 from torch import Tensor
 
 
@@ -648,6 +651,187 @@ def plot_darcy(input_tensor, output_tensor, prediction_tensor, idx):
 
 
 #########################################
+# Plotting darcy example
+#########################################
+def plot_data_multi_patch(
+    X: Tensor,
+    Y: Tensor,
+    data_plot: Tensor,
+    title: str,
+):
+    # select the data to plot
+    n_idx = data_plot.size(0)
+
+    vmin = data_plot
+    vmax = data_plot
+    for _ in range(data_plot.dim() - 1):
+        vmin = torch.min(vmin, dim=1).values
+        vmax = torch.max(vmax, dim=1).values
+
+    # plot
+    fig, ax = plt.subplots(1, n_idx, figsize=(18, 6), layout="constrained")
+    fig.suptitle(title)
+
+    if n_idx == 1:
+        ax = [ax]
+
+    ax[0].set(ylabel="y")
+    for i in range(n_idx):
+        ax[i].set_yticklabels([])
+        ax[i].set_xticklabels([])
+        ax[i].set(xlabel="x")
+        for patch in range(X.size(0)):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                im = ax[i].pcolormesh(
+                    X[patch, :, :].squeeze(),
+                    Y[patch, :, :].squeeze(),
+                    data_plot[i, patch, :, :].squeeze(),
+                    vmin=vmin[i],
+                    vmax=vmax[i],
+                )
+
+        fig.colorbar(im, ax=ax[i])
+
+    plt.savefig("figure.png")
+    # plt.show()
+
+
+def plot_bampno(X, Y, input_tensor, output_tensor, prediction_tensor, idx):
+    fig, axs = plt.subplots(1, 4, figsize=(12, 2), layout="constrained")
+
+    # Create the mask once
+    tensor_mask = input_tensor[idx[0], :, :].squeeze()
+    zero_mask = tensor_mask == 0
+
+    # Extract tensors once (make copies to avoid modifying originals)
+    input_plot = input_tensor[idx[0], :, :].squeeze().clone()
+    output_plot = output_tensor[idx[0], ...].squeeze().clone()
+    prediction_plot = prediction_tensor[idx[0], ...].squeeze().clone()
+    common_vmin = min(output_plot.min().item(), prediction_plot.min().item())
+    common_vmax = max(output_plot.max().item(), prediction_plot.max().item())
+
+    # Calculate error BEFORE applying NaN masking
+    error = torch.abs(output_plot - prediction_plot)
+
+    for i in range(4):
+        if i == 0:  # input
+            input_plot[zero_mask] = float("nan")
+            for patch in range(X.size(0)):
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", UserWarning)
+                    im = axs[i].pcolormesh(
+                        X[patch, :, :].squeeze(),
+                        Y[patch, :, :].squeeze(),
+                        input_plot[patch, :, :].squeeze(),
+                    )
+            # im = axs[i].imshow(input_plot)
+            fig.colorbar(im, ax=axs[i])
+            axs[i].set_ylabel("Diffusion coefficiet (a)")
+        elif i == 1:  # output
+            output_plot[zero_mask] = float("nan")
+            for patch in range(X.size(0)):
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", UserWarning)
+                    im = axs[i].pcolormesh(
+                        X[patch, :, :].squeeze(),
+                        Y[patch, :, :].squeeze(),
+                        output_plot[patch, :, :].squeeze(),
+                        vmin=common_vmin,
+                        vmax=common_vmax,
+                    )
+            # im = axs[i].imshow(output_plot, vmin=common_vmin, vmax=common_vmax)
+            fig.colorbar(im, ax=axs[i])
+            axs[i].set_ylabel("Exact solution (u)")
+        elif i == 2:  # predicted
+            prediction_plot[zero_mask] = float("nan")
+            for patch in range(X.size(0)):
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", UserWarning)
+                    im = axs[i].pcolormesh(
+                        X[patch, :, :].squeeze(),
+                        Y[patch, :, :].squeeze(),
+                        prediction_plot[patch, :, :].squeeze(),
+                        vmin=common_vmin,
+                        vmax=common_vmax,
+                    )
+            # im = axs[i].imshow(prediction_plot, vmin=common_vmin, vmax=common_vmax)
+            fig.colorbar(im, ax=axs[i])
+            axs[i].set_ylabel("BAMPNO approximation (u)")
+        elif i == 3:  # error
+            error[zero_mask] = float("nan")
+            for patch in range(X.size(0)):
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", UserWarning)
+                    im = axs[i].pcolormesh(
+                        X[patch, :, :].squeeze(),
+                        Y[patch, :, :].squeeze(),
+                        error[patch, :, :].squeeze(),
+                        norm=LogNorm(vmin=1e-6, vmax=1e-2),
+                    )
+            # im = axs[i].imshow(
+            #     error,
+            #     norm=LogNorm(vmin=1e-5, vmax=1e-2),
+            # )
+            fig.colorbar(im, ax=axs[i])
+            axs[i].set_ylabel("Error (log scale)")
+
+        axs[i].set_yticklabels([])
+        axs[i].set_xticklabels([])
+
+    plt.savefig("figure.png")
+    # plt.show()
+
+
+def plot_bampno_continuation(input_tensor, output_tensor, prediction_tensor, idx):
+    fig, axs = plt.subplots(1, 4, figsize=(12, 2), layout="constrained")
+
+    # Create the mask once
+    tensor_mask = input_tensor[idx[0], :, :].squeeze()
+    zero_mask = tensor_mask == 0
+
+    # Extract tensors once (make copies to avoid modifying originals)
+    input_plot = input_tensor[idx[0], :, :].squeeze().clone()
+    output_plot = output_tensor[idx[0], :, :].squeeze().clone()
+    prediction_plot = prediction_tensor[idx[0], :, :, 0].squeeze().clone()
+    common_vmin = min(output_plot.min().item(), prediction_plot.min().item())
+    common_vmax = max(output_plot.max().item(), prediction_plot.max().item())
+
+    # Calculate error BEFORE applying NaN masking
+    error = torch.abs(output_plot - prediction_plot)
+
+    for i in range(4):
+        if i == 0:  # input
+            input_plot[zero_mask] = float("nan")
+            im = axs[i].imshow(input_plot)
+            fig.colorbar(im, ax=axs[i])
+            axs[i].set_ylabel("Diffusion coefficiet (a)")
+        elif i == 1:  # output
+            output_plot[zero_mask] = float("nan")
+            im = axs[i].imshow(output_plot, vmin=common_vmin, vmax=common_vmax)
+            fig.colorbar(im, ax=axs[i])
+            axs[i].set_ylabel("Exact solution (u)")
+        elif i == 2:  # predicted
+            prediction_plot[zero_mask] = float("nan")
+            im = axs[i].imshow(prediction_plot, vmin=common_vmin, vmax=common_vmax)
+            fig.colorbar(im, ax=axs[i])
+            axs[i].set_ylabel("FNO approximation (u)")
+        elif i == 3:  # error
+            error[zero_mask] = float("nan")
+            im = axs[i].imshow(
+                error,
+                norm=LogNorm(vmin=1e-6, vmax=1e-2),
+            )
+            fig.colorbar(im, ax=axs[i])
+            axs[i].set_ylabel("Error (log scale)")
+
+        axs[i].set_yticklabels([])
+        axs[i].set_xticklabels([])
+
+    plt.savefig("figure.png")
+
+
+#########################################
 # Plotting coeff_rhs example
 #########################################
 def plot_coeff_rhs(input_tensor, output_tensor, prediction_tensor, idx):
@@ -1209,6 +1393,8 @@ def test_plot_samples(
     ntest: int,
     str_norm: str,
     n_idx: int = 5,
+    X=None,
+    Y=None,
 ):
     """
     Function to plot the worst and best samples in the test set.
@@ -1218,6 +1404,8 @@ def test_plot_samples(
     error, indices = torch.sort(
         error, descending=True
     )  # Sort the error in descending order
+    if which_example == "bampno":
+        n_idx = 1
     if mode == "worst":
         idx = indices[:n_idx].to("cpu")
         error = error[:n_idx].to("cpu")
@@ -1265,5 +1453,12 @@ def test_plot_samples(
             plot_hh(input_tensor, output_tensor, prediction_tensor, idx)
         case "ord":
             plot_ord(input_tensor, output_tensor, prediction_tensor, idx)
+        case "bampno_8_domain":
+            plot_bampno(X, Y, input_tensor, output_tensor, prediction_tensor, idx)
+        case "bampno_continuation":
+            plot_bampno_continuation(
+                input_tensor, output_tensor, prediction_tensor, idx
+            )
         case _:
+            raise ValueError(f"Unsupported example type: {which_example}.")
             raise ValueError(f"Unsupported example type: {which_example}.")
