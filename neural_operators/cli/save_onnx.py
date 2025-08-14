@@ -13,7 +13,7 @@ sys.path.append("..")
 
 from CNO import CNO
 from datasets import NO_load_data_model
-from FNO import FNO
+from FNO import FNO_ONNX
 from ResNet import ResidualNetwork
 from utilities import initialize_hyperparameters
 from wrappers import wrap_model
@@ -139,7 +139,8 @@ try:
 
         match arc:
             case "FNO":
-                model = FNO(
+                print("Loading FNO ONNX model.")
+                model = FNO_ONNX(
                     default_hyper_params["problem_dim"],
                     default_hyper_params["in_dim"],
                     default_hyper_params["width"],
@@ -221,7 +222,6 @@ model.to("cpu")
 
 # Create dummy input
 dummy_input = next(iter(example.train_loader))[0].to("cpu")
-print(f"Dummy input shape: {dummy_input.shape}")
 
 # Export the model to ONNX
 torch.onnx.export(

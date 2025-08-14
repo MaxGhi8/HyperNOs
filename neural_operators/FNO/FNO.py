@@ -670,6 +670,9 @@ class FNO(nn.Module):
         self, x: Float[Tensor, "n_batch *n_x {self.in_dim-self.problem_dim}"]
     ) -> Float[Tensor, "n_batch *n_x {self.out_dim}"]:
 
+        #### Only for AFIETI_FNO
+        # x = x.unsqueeze(-1)
+
         ## Grid and initialization
         if self.problem_dim == 1:
             grid = self.get_grid_1d(x.shape).to(x.device)
