@@ -38,7 +38,7 @@ def ray_samedof_bampno(
     }
     # Approximate the total number of parameters (constant factor can be dropped)
     # total_default_params = count_params_bampno(fixed_params, accurate=False)
-    total_default_params = 20_000_000
+    total_default_params = 2_000_000
 
     # Define the hyperparameter search space
     config_space = {
@@ -141,8 +141,8 @@ def ray_samedof_bampno(
         reduction_factor=4,
         max_epochs=1000,
         checkpoint_freq=1000,
-        runs_per_cpu=16.0,
-        runs_per_gpu=0.5,
+        runs_per_cpu=12.0,
+        runs_per_gpu=1.0,
     )
 
 
