@@ -961,7 +961,7 @@ else:
         output_tensor,
         prediction_tensor,
         test_relative_l2_tensor,
-        "best",
+        "worst",
         which_example,
         ntest=hyperparams["test_samples"],
         str_norm=loss_fn_str,

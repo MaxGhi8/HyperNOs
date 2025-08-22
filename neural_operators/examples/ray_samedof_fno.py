@@ -34,8 +34,8 @@ def ray_samedof_fno(
         **hyperparams_arc,
     }
     # Approximate the total number of parameters (constant factor can be dropped)
-    total_default_params = count_params_fno(fixed_params, accurate=False)
-    # total_default_params = 500000
+    # total_default_params = count_params_fno(fixed_params, accurate=False)
+    total_default_params = 2_000_000
 
     # Define the hyperparameter search space
     config_space = {
@@ -92,6 +92,7 @@ def ray_samedof_fno(
         },
         batch_size=config["batch_size"],
         training_samples=config["training_samples"],
+        filename=config["filename"],
     )
 
     # Define the loss function
@@ -114,4 +115,4 @@ def ray_samedof_fno(
 
 
 if __name__ == "__main__":
-    ray_samedof_fno("poisson", "default", "L2", 33)
+    ray_samedof_fno("bampno_continuation", "default", "L2", 42)

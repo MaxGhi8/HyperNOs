@@ -698,7 +698,7 @@ def plot_data_multi_patch(
 
 
 def plot_bampno(X, Y, input_tensor, output_tensor, prediction_tensor, idx):
-    fig, axs = plt.subplots(1, 4, figsize=(12, 2), layout="constrained")
+    fig, axs = plt.subplots(1, 4, figsize=(16, 4), layout="constrained")
 
     # Create the mask once
     tensor_mask = input_tensor[idx[0], :, :].squeeze()
@@ -784,7 +784,7 @@ def plot_bampno(X, Y, input_tensor, output_tensor, prediction_tensor, idx):
 
 
 def plot_bampno_continuation(input_tensor, output_tensor, prediction_tensor, idx):
-    fig, axs = plt.subplots(1, 4, figsize=(12, 2), layout="constrained")
+    fig, axs = plt.subplots(1, 4, figsize=(16, 4), layout="constrained")
 
     # Create the mask once
     tensor_mask = input_tensor[idx[0], :, :].squeeze()

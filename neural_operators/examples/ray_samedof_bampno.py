@@ -142,7 +142,7 @@ def ray_samedof_bampno(
         max_epochs=1000,
         checkpoint_freq=1000,
         runs_per_cpu=16.0,
-        runs_per_gpu=0.5,
+        runs_per_gpu=1.0,
     )
 
 
