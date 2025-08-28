@@ -1,0 +1,33 @@
+{
+	"training_properties": {
+		"training_samples": 1200,
+		"val_samples": 150,
+		"test_samples": 150,
+		"learning_rate": 0.00593,
+		"epochs": 1000,
+		"batch_size": 32,
+		"weight_decay": 0.000948,
+		"scheduler_step": 10,
+		"scheduler_gamma": 0.79,
+		"beta": 1
+	},
+	"fno_architecture": {
+		"width": 64,
+		"modes": 20,
+		"n_layers": 5,
+		"padding": 7,
+		"fno_arc": "Zongyi",
+		"fun_act": "leaky_relu",
+		"in_dim": 1,
+		"out_dim": 1,
+		"fft_norm": null,
+		"FourierF": 0,
+		"RNN": false,
+		"include_grid": 1,
+		"weights_norm": "Kaiming",
+		"retrain": 4,
+		"filename": "Darcy_8_uniform_95pts_fourier_continuation.mat",
+		"internal_normalization": true,
+		"problem_dim": 2
+	}
+}

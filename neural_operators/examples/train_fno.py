@@ -118,4 +118,4 @@ def train_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    train_fno("afieti_fno", "default", "L2")
+    train_fno("bampno_continuation", "best", "L2")
