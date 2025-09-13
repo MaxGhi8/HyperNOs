@@ -131,9 +131,81 @@ class UnitGaussianNormalizer(object):
     """
 
     def __init__(self, x, eps=1e-5):
+        # see if nan or inf in x
+        if not torch.isfinite(x).all():
+            raise RuntimeError(
+                f"Non-finite values as input of the normalization: "
+                f"NaN={torch.isnan(x).any().item()}, Inf={torch.isinf(x).any().item()}, "
+                f"absmax={x.abs().max().item()}"
+            )
         self.mean = torch.mean(x, 0).to(x.device)
         self.std = torch.std(x, 0).to(x.device)
         self.eps = torch.tensor(eps).to(x.device)
+        # see if nan or inf in mean or std
+        if not torch.isfinite(self.mean).all():
+            raise RuntimeError(
+                f"Non-finite values in mean of the normalizer: "
+                f"NaN={torch.isnan(self.mean).any().item()}, Inf={torch.isinf(self.mean).any().item()}, "
+                f"absmax={self.mean.abs().max().item()}"
+            )
+        if not torch.isfinite(self.std).all():
+            raise RuntimeError(
+                f"Non-finite values in std of the normalizer: "
+                f"NaN={torch.isnan(self.std).any().item()}, Inf={torch.isinf(self.std).any().item()}, "
+                f"absmax={self.std.abs().max().item()}"
+            )
+
+    @jaxtyped(typechecker=beartype)
+    def encode(self, x: Float[Tensor, "n_samples *n"]) -> Float[Tensor, "n_samples *n"]:
+        x = (x - self.mean.to(x.device)) / (
+            self.std.to(x.device) + self.eps.to(x.device)
+        )
+        return x
+
+    @jaxtyped(typechecker=beartype)
+    def decode(self, x: Float[Tensor, "n_samples *n"]) -> Float[Tensor, "n_samples *n"]:
+        mean = self.mean.to(x.device)
+        std = self.std.to(x.device)
+        eps = self.eps.to(x.device)
+        x = x * (std + eps) + mean
+        return x
+
+
+class MaskedUnitGaussianNormalizer(object):
+    """
+    Initial normalization is the point-wise gaussian normalization over the tensor x
+    with a mask that indicates the valid points where to compute the statistics (1 for valid points, 0 for invalid points)
+    dimension of x: (n_samples)*(nx)*(ny)
+    dimension of mask: (nx)*(ny)
+    """
+
+    def __init__(self, x, mask, eps=1):
+        # see if nan or inf in x
+        if not torch.isfinite(x).all():
+            raise RuntimeError(
+                f"Non-finite values as input of the normalization: "
+                f"NaN={torch.isnan(x).any().item()}, Inf={torch.isinf(x).any().item()}, "
+                f"absmax={x.abs().max().item()}"
+            )
+
+        self.mask = mask.unsqueeze(-1)
+        self.mean = self.mask * torch.mean(x, 0).to(x.device)
+        self.std = self.mask * torch.std(x, 0).to(x.device)
+        self.eps = torch.tensor(eps).to(x.device)
+
+        # see if nan or inf in mean or std
+        if not torch.isfinite(self.mean).all():
+            raise RuntimeError(
+                f"Non-finite values in mean of the normalizer: "
+                f"NaN={torch.isnan(self.mean).any().item()}, Inf={torch.isinf(self.mean).any().item()}, "
+                f"absmax={self.mean.abs().max().item()}"
+            )
+        if not torch.isfinite(self.std).all():
+            raise RuntimeError(
+                f"Non-finite values in std of the normalizer: "
+                f"NaN={torch.isnan(self.std).any().item()}, Inf={torch.isinf(self.std).any().item()}, "
+                f"absmax={self.std.abs().max().item()}"
+            )
 
     @jaxtyped(typechecker=beartype)
     def encode(self, x: Float[Tensor, "n_samples *n"]) -> Float[Tensor, "n_samples *n"]:
@@ -157,8 +229,28 @@ class minmaxNormalizer(object):
     """
 
     def __init__(self, x):
+        # see if nan or inf in x
+        if not torch.isfinite(x).all():
+            raise RuntimeError(
+                f"Non-finite values as input of the normalization: "
+                f"NaN={torch.isnan(x).any().item()}, Inf={torch.isinf(x).any().item()}, "
+                f"absmax={x.abs().max().item()}"
+            )
         self.min = torch.min(x, 0).values.to(x.device)
         self.max = torch.max(x, 0).values.to(x.device)
+        # see if nan or inf in min or max
+        if not torch.isfinite(self.min).all():
+            raise RuntimeError(
+                f"Non-finite values in min of the normalizer: "
+                f"NaN={torch.isnan(self.min).any().item()}, Inf={torch.isinf(self.min).any().item()}, "
+                f"absmax={self.min.abs().max().item()}"
+            )
+        if not torch.isfinite(self.max).all():
+            raise RuntimeError(
+                f"Non-finite values in max of the normalizer: "
+                f"NaN={torch.isnan(self.max).any().item()}, Inf={torch.isinf(self.max).any().item()}, "
+                f"absmax={self.max.abs().max().item()}"
+            )
 
     @jaxtyped(typechecker=beartype)
     def encode(self, x: Float[Tensor, "n_samples *n"]) -> Float[Tensor, "n_samples *n"]:
@@ -181,11 +273,31 @@ class minmaxGlobalNormalizer(object):
     """
 
     def __init__(self, x):
+        # see if nan or inf in x
+        if not torch.isfinite(x).all():
+            raise RuntimeError(
+                f"Non-finite values as input of the normalization: "
+                f"NaN={torch.isnan(x).any().item()}, Inf={torch.isinf(x).any().item()}, "
+                f"absmax={x.abs().max().item()}"
+            )
         self.min = x
         self.max = x
         for _ in range(x.dim()):
             self.min = torch.min(self.min, dim=0).values
             self.max = torch.max(self.max, dim=0).values
+        # see if nan or inf in min or max
+        if not torch.isfinite(self.min).all():
+            raise RuntimeError(
+                f"Non-finite values in min of the normalizer: "
+                f"NaN={torch.isnan(self.min).any().item()}, Inf={torch.isinf(self.min).any().item()}, "
+                f"absmax={self.min.abs().max().item()}"
+            )
+        if not torch.isfinite(self.max).all():
+            raise RuntimeError(
+                f"Non-finite values in max of the normalizer: "
+                f"NaN={torch.isnan(self.max).any().item()}, Inf={torch.isinf(self.max).any().item()}, "
+                f"absmax={self.max.abs().max().item()}"
+            )
 
     @jaxtyped(typechecker=beartype)
     def encode(self, x: Float[Tensor, "n_samples *n"]) -> Float[Tensor, "n_samples *n"]:
