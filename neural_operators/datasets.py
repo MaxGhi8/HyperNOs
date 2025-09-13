@@ -17,6 +17,7 @@ from torch.utils.data import DataLoader, Dataset, TensorDataset
 from utilities import (
     FourierFeatures,
     FourierFeatures1D,
+    MaskedUnitGaussianNormalizer,
     UnitGaussianNormalizer,
     find_file,
     minmaxGlobalNormalizer,
@@ -3390,13 +3391,29 @@ class BAMPNO_continuation:
 
         self.TrainDataPath = find_file(filename, search_path)
         reader = mat73.loadmat(self.TrainDataPath)
-        input = torch.from_numpy(reader["COEFF"]).type(torch.float32)
-        output = torch.from_numpy(reader["SOL"]).type(torch.float32)
-        self.X_phys = torch.from_numpy(reader["X_phys"]).type(torch.float32)
-        self.Y_phys = torch.from_numpy(reader["Y_phys"]).type(torch.float32)
-        self.mask = torch.from_numpy(reader["mask"]).type(torch.float32)
-        self.X_phys = self.X_phys[::s, ::s]
-        self.Y_phys = self.Y_phys[::s, ::s]
+        input = torch.from_numpy(reader["COEFF"]).type(torch.float32).flip(-1)
+        output = torch.from_numpy(reader["SOL"]).type(torch.float32).flip(-1)
+        # self.X_phys = torch.from_numpy(reader["X_phys"]).type(torch.float32)
+        # self.Y_phys = torch.from_numpy(reader["Y_phys"]).type(torch.float32)
+        # self.X_phys = self.X_phys[::s, ::s]
+        # self.Y_phys = self.Y_phys[::s, ::s]
+        self.mask = torch.from_numpy(reader["mask"]).type(torch.float32).flip(-1)
+        self.mask = self.mask[::s, ::s]
+
+        # Handle non-finite values in input and output tensors
+        non_finite_mask = ~torch.isfinite(input)
+        if non_finite_mask.any():
+            print(
+                f"Non-finite values found in input tensor x: {input[non_finite_mask]}"
+            )
+        input = input.masked_fill(non_finite_mask, 0.0)
+
+        non_finite_mask = ~torch.isfinite(output)
+        if non_finite_mask.any():
+            print(
+                f"Non-finite values found in output tensor y: {output[non_finite_mask]}"
+            )
+        output = output.masked_fill(non_finite_mask, 0.0)
 
         # Training data
         input_train, output_train = (
@@ -3405,8 +3422,10 @@ class BAMPNO_continuation:
         )
 
         # Compute mean and std (for gaussian point-wise normalization)
-        self.input_normalizer = UnitGaussianNormalizer(input_train)
-        self.output_normalizer = UnitGaussianNormalizer(output_train)
+        self.input_normalizer = MaskedUnitGaussianNormalizer(input_train, self.mask)
+        self.output_normalizer = MaskedUnitGaussianNormalizer(output_train, self.mask)
+        # self.input_normalizer = minmaxGlobalNormalizer(input_train)
+        # self.output_normalizer = minmaxGlobalNormalizer(output_train)
 
         # Normalize
         input_train = self.input_normalizer.encode(input_train)

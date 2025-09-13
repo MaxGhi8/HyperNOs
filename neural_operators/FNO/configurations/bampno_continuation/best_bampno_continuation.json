@@ -26,7 +26,7 @@
 		"include_grid": 1,
 		"weights_norm": "Kaiming",
 		"retrain": 4,
-		"filename": "Darcy_8_uniform_95pts_fourier_continuation.mat",
+		"filename": "Darcy_S_uniform_95pts_fourier_continuation.mat",
 		"internal_normalization": true,
 		"problem_dim": 2
 	}
