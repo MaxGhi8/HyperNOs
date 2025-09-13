@@ -17,7 +17,7 @@ def wrap_model(model, which_example):
         case "bampno_continuation":
             return BAMPNO_Continuation_Wrapper(model)
         case _:
-            return model
+            print(f"No wrapper defined for {which_example}, returning the original model")
 
     return model
 
