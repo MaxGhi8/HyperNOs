@@ -35,7 +35,7 @@ def ray_samedof_fno(
     }
     # Approximate the total number of parameters (constant factor can be dropped)
     # total_default_params = count_params_fno(fixed_params, accurate=False)
-    total_default_params = 2_000_000
+    total_default_params = 20_000_000
 
     # Define the hyperparameter search space
     config_space = {
@@ -63,6 +63,17 @@ def ray_samedof_fno(
         }
     ]
 
+    example = NO_load_data_model(
+        which_example=which_example,
+        no_architecture={
+            "FourierF": fixed_params["FourierF"],
+            "retrain": fixed_params["retrain"],
+        },
+        batch_size=fixed_params["batch_size"],
+        training_samples=fixed_params["training_samples"],
+        filename=fixed_params["filename"],
+    )
+
     # Define the model builders
     model_builder = lambda config: FNO(
         config["problem_dim"],
@@ -78,6 +89,11 @@ def ray_samedof_fno(
         config["fft_norm"],
         config["padding"],
         device,
+        (
+            example.output_normalizer
+            if ("internal_normalization" in config and config["internal_normalization"])
+            else None
+        ),
         config["retrain"],
     )
     # Wrap the model builder
@@ -110,7 +126,7 @@ def ray_samedof_fno(
         loss_fn,
         default_hyper_params,
         runs_per_cpu=8.0,
-        runs_per_gpu=0.5,
+        runs_per_gpu=1.0,
     )
 
 
