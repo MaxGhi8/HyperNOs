@@ -13,7 +13,7 @@
 	},
 	"fno_architecture": {
 		"width": 64,
-		"modes": 20,
+		"modes": 15,
 		"n_layers": 5,
 		"padding": 7,
 		"fno_arc": "Zongyi",
@@ -25,7 +25,7 @@
 		"RNN": false,
 		"include_grid": 1,
 		"weights_norm": "Kaiming",
-		"retrain": 4,
+		"retrain": 1,
 		"filename": "Darcy_8_uniform_95pts_fourier_continuation.mat",
 		"internal_normalization": true,
 		"problem_dim": 2
