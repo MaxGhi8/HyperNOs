@@ -670,6 +670,14 @@ class FNO(nn.Module):
         self, x: Float[Tensor, "n_batch *n_x {self.in_dim-self.problem_dim}"]
     ) -> Float[Tensor, "n_batch *n_x {self.out_dim}"]:
 
+        # Sanity checks before applying FNO
+        if not torch.isfinite(x).all():
+            raise RuntimeError(
+                f"Non-finite values as input of the model: "
+                f"NaN={torch.isnan(x).any().item()}, Inf={torch.isinf(x).any().item()}, "
+                f"absmax={x.abs().max().item()}"
+            )
+
         #### Only for AFIETI_FNO
         # x = x.unsqueeze(-1)
 
@@ -768,9 +776,18 @@ class FNO(nn.Module):
         elif self.problem_dim == 3:
             x = x.permute(0, 2, 3, 4, 1)
 
-        x = self.q(x)  # shape --> (n_samples)*(*n_x)*(out_dim)
+        x = self.output_denormalizer(
+            self.q(x)
+        )  # shape --> (n_samples)*(*n_x)*(out_dim)
 
-        return self.output_denormalizer(x)
+        # see if nan or inf in output
+        if not torch.isfinite(x).all():
+            raise RuntimeError(
+                f"Non-finite values in output before self.output_denormalizer: "
+                f"NaN={torch.isnan(x).any().item()}, Inf={torch.isinf(x).any().item()}, "
+                f"absmax={x.abs().max().item()}"
+            )
+        return x
 
     @cache
     def get_grid_3d(self, shape: torch.Size) -> Tensor:
