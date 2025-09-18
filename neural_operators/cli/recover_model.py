@@ -355,11 +355,14 @@ except KeyError:
 val_samples = hyperparams["val_samples"]
 test_samples = hyperparams["test_samples"]
 training_samples = hyperparams["training_samples"]
-filename = None
+
 try:
     filename = hyperparams["filename"]
 except KeyError:
-    filename = hyperparams["grid_filename"]
+    try:
+        filename = hyperparams["grid_filename"]
+    except KeyError:
+        filename = None
 
 # Loss function
 loss = loss_selector(loss_fn_str=loss_fn_str, problem_dim=problem_dim, beta=beta)
@@ -375,7 +378,9 @@ example = NO_load_data_model(
     },
     batch_size=hyperparams["batch_size"],
     training_samples=hyperparams["training_samples"],
-    filename=filename,
+    filename=(
+        default_hyper_params["filename"] if "filename" in default_hyper_params else None
+    ),
 )
 
 train_loader = example.train_loader
@@ -961,11 +966,11 @@ else:
         output_tensor,
         prediction_tensor,
         test_relative_l2_tensor,
-        "worst",
+        "random",
         which_example,
         ntest=hyperparams["test_samples"],
         str_norm=loss_fn_str,
-        n_idx=5,
+        n_idx=2,
     )
 
 

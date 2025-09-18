@@ -365,7 +365,9 @@ def plot_poisson(input_tensor, output_tensor, prediction_tensor, idx):
                 error = torch.abs(
                     output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
                 )
-                im = axs[i, j].imshow(error.squeeze())
+                im = axs[i, j].imshow(
+                    error.squeeze(), norm=LogNorm(vmin=1e-6, vmax=1e-2)
+                )
                 fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Error")
@@ -410,7 +412,9 @@ def plot_wave_0_5(input_tensor, output_tensor, prediction_tensor, idx):
                 error = torch.abs(
                     output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
                 )
-                im = axs[i, j].imshow(error.squeeze())
+                im = axs[i, j].imshow(
+                    error.squeeze(), norm=LogNorm(vmin=1e-6, vmax=1e-2)
+                )
                 fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Error")
@@ -429,7 +433,7 @@ def plot_wave_0_5(input_tensor, output_tensor, prediction_tensor, idx):
 # Plotting cont_tran example
 #########################################
 def plot_cont_tran(input_tensor, output_tensor, prediction_tensor, idx):
-    fig, axs = plt.subplots(4, len(idx), figsize=(16, 10))
+    fig, axs = plt.subplots(4, len(idx), figsize=(8, 10))
 
     for i in range(4):
         for j in range(idx.shape[0]):
@@ -455,7 +459,9 @@ def plot_cont_tran(input_tensor, output_tensor, prediction_tensor, idx):
                 error = torch.abs(
                     output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
                 )
-                im = axs[i, j].imshow(error.squeeze())
+                im = axs[i, j].imshow(
+                    error.squeeze(), norm=LogNorm(vmin=1e-6, vmax=5e-2)
+                )
                 fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Error")
@@ -466,8 +472,8 @@ def plot_cont_tran(input_tensor, output_tensor, prediction_tensor, idx):
 
     plt.suptitle("Transport equation with continuous quantities")  # title
     plt.tight_layout()
-    plt.show()
-    # plt.savefig("figure.png")
+    # plt.show()
+    plt.savefig("figure.png")
 
 
 #########################################
@@ -500,7 +506,9 @@ def plot_disc_tran(input_tensor, output_tensor, prediction_tensor, idx):
                 error = torch.abs(
                     output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
                 )
-                im = axs[i, j].imshow(error.squeeze())
+                im = axs[i, j].imshow(
+                    error.squeeze(), norm=LogNorm(vmin=1e-6, vmax=1e-2)
+                )
                 fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Error")
@@ -545,7 +553,9 @@ def plot_allen(input_tensor, output_tensor, prediction_tensor, idx):
                 error = torch.abs(
                     output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
                 )
-                im = axs[i, j].imshow(error.squeeze())
+                im = axs[i, j].imshow(
+                    error.squeeze(), norm=LogNorm(vmin=1e-6, vmax=1e-2)
+                )
                 fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Error")
@@ -590,7 +600,9 @@ def plot_shear_layer(input_tensor, output_tensor, prediction_tensor, idx):
                 error = torch.abs(
                     output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
                 )
-                im = axs[i, j].imshow(error.squeeze())
+                im = axs[i, j].imshow(
+                    error.squeeze(), norm=LogNorm(vmin=1e-6, vmax=1e-2)
+                )
                 fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Error")
@@ -635,7 +647,9 @@ def plot_darcy(input_tensor, output_tensor, prediction_tensor, idx):
                 error = torch.abs(
                     output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
                 )
-                im = axs[i, j].imshow(error.squeeze())
+                im = axs[i, j].imshow(
+                    error.squeeze(), norm=LogNorm(vmin=1e-6, vmax=1e-2)
+                )
                 fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Error")
@@ -867,7 +881,9 @@ def plot_coeff_rhs(input_tensor, output_tensor, prediction_tensor, idx):
                 error = torch.abs(
                     output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
                 )
-                im = axs[i, j].imshow(error.squeeze())
+                im = axs[i, j].imshow(
+                    error.squeeze(), norm=LogNorm(vmin=1e-6, vmax=1e-2)
+                )
                 fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Error")
@@ -977,7 +993,9 @@ def plot_eig(input_tensor, output_tensor, prediction_tensor, idx):
                     output_tensor[idx[j], :, :, 49]
                     - prediction_tensor[idx[j], :, :, 49]
                 )
-                im = axs[i, j].imshow(error.squeeze())
+                im = axs[i, j].imshow(
+                    error.squeeze(), norm=LogNorm(vmin=1e-6, vmax=1e-2)
+                )
                 fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Error")
@@ -1022,7 +1040,9 @@ def plot_airfoil(input_tensor, output_tensor, prediction_tensor, idx):
                 error = torch.abs(
                     output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
                 )
-                im = axs[i, j].imshow(error.squeeze())
+                im = axs[i, j].imshow(
+                    error.squeeze(), norm=LogNorm(vmin=1e-6, vmax=1e-2)
+                )
                 fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Error")
@@ -1296,7 +1316,9 @@ def plot_crosstruss(input_tensor, output_tensor, prediction_tensor, idx):
                 error = torch.abs(
                     output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
                 )
-                im = axs[i, j].imshow(error.squeeze())
+                im = axs[i, j].imshow(
+                    error.squeeze(), norm=LogNorm(vmin=1e-6, vmax=1e-2)
+                )
                 colorbar = fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("error x")
@@ -1319,7 +1341,9 @@ def plot_crosstruss(input_tensor, output_tensor, prediction_tensor, idx):
                 error = torch.abs(
                     output_tensor[idx[j], :, :, 1] - prediction_tensor[idx[j], :, :, 1]
                 )
-                im = axs[i, j].imshow(error.squeeze())
+                im = axs[i, j].imshow(
+                    error.squeeze(), norm=LogNorm(vmin=1e-6, vmax=1e-2)
+                )
                 colorbar = fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("error y")
@@ -1367,7 +1391,9 @@ def plot_stiffness_matrix(input_tensor, output_tensor, prediction_tensor, idx):
                 error = torch.abs(
                     output_tensor[idx[j], :, :, 0] - prediction_tensor[idx[j], :, :, 0]
                 )
-                im = axs[i, j].imshow(error.squeeze())
+                im = axs[i, j].imshow(
+                    error.squeeze(), norm=LogNorm(vmin=1e-6, vmax=1e-2)
+                )
                 colorbar = fig.colorbar(im, ax=axs[i, j])
                 if j == 0:
                     axs[i, j].set_ylabel("Error")
@@ -1460,5 +1486,4 @@ def test_plot_samples(
                 input_tensor, output_tensor, prediction_tensor, idx
             )
         case _:
-            raise ValueError(f"Unsupported example type: {which_example}.")
             raise ValueError(f"Unsupported example type: {which_example}.")
