@@ -9,8 +9,8 @@ import torch
 
 sys.path.append("..")
 
+from architectures import FNO
 from datasets import SinFrequency
-from FNO import FNO
 from loss_fun import loss_selector
 from loss_fun_with_physics import PoissonResidualFiniteDiff
 from train import train_fixed_model
@@ -32,6 +32,15 @@ def train_fno_with_phys(mode_hyperparams: str, loss_fn_str: str, alpha_phys: flo
         **hyperparams_arc,
     }
 
+    example = SinFrequency(
+        {
+            "FourierF": default_hyper_params["FourierF"],
+            "retrain": default_hyper_params["retrain"],
+        },
+        batch_size=default_hyper_params["batch_size"],
+        training_samples=default_hyper_params["training_samples"],
+    )
+
     # Define the model builders
     model_builder = lambda config: FNO(
         config["problem_dim"],
@@ -47,6 +56,11 @@ def train_fno_with_phys(mode_hyperparams: str, loss_fn_str: str, alpha_phys: flo
         config["fft_norm"],
         config["padding"],
         device,
+        (
+            example.output_normalizer
+            if ("internal_normalization" in config and config["internal_normalization"])
+            else None
+        ),
         config["retrain"],
     )
 

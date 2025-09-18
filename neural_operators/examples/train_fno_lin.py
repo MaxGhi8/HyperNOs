@@ -9,8 +9,8 @@ import torch
 
 sys.path.append("..")
 
+from architectures import FNO_lin
 from datasets import NO_load_data_model
-from FNO_lin import FNO_lin
 from loss_fun import loss_selector
 from train import train_fixed_model
 from utilities import get_plot_function, initialize_hyperparameters

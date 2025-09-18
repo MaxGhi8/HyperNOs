@@ -3,7 +3,7 @@ import sys
 sys.path.append("..")
 
 import torch
-from BAMPNO import BAMPNO
+from architectures import BAMPNO
 from utilities import initialize_hyperparameters
 
 torch.set_default_dtype(torch.float32)

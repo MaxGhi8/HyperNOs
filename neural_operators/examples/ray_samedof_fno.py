@@ -9,8 +9,8 @@ import torch
 
 sys.path.append("..")
 
+from architectures import FNO, compute_modes, count_params_fno
 from datasets import NO_load_data_model
-from FNO import FNO, compute_modes, count_params_fno
 from loss_fun import loss_selector
 from ray import tune
 from tune import tune_hyperparameters

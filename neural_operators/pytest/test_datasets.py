@@ -331,7 +331,7 @@ def test_afieti_dataset():
         batch_size=batch_size,
         training_samples=training_samples,
         in_dist=True,
-        filename="dataset_homogeneous_Neumann_rhs_fixed.mat",
+        filename="dataset_homogeneous_Neumann_rhs_fixed_l_3_deg_3.mat",
     )
 
     train_batch_input, train_batch_output = next(iter(example.train_loader))
@@ -703,13 +703,11 @@ def test_afieti_fno_dataset():
         batch_size,
         example.s_in,
         example.s_in,
-        1,
     )
     assert train_batch_output.shape == (
         batch_size,
         example.s_out,
         example.s_out,
-        1,
     )
 
     test_batch_input, test_batch_output = next(iter(example.test_loader))
@@ -717,20 +715,17 @@ def test_afieti_fno_dataset():
         batch_size,
         example.s_in,
         example.s_in,
-        1,
     )
     assert test_batch_output.shape == (
         batch_size,
         example.s_out,
         example.s_out,
-        1,
     )
 
     val_batch_input, val_batch_output = next(iter(example.val_loader))
-    assert val_batch_input.shape == (batch_size, example.s_in, example.s_in, 1)
+    assert val_batch_input.shape == (batch_size, example.s_in, example.s_in)
     assert val_batch_output.shape == (
         batch_size,
         example.s_out,
         example.s_out,
-        1,
     )

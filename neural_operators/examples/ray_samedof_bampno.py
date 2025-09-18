@@ -9,7 +9,7 @@ import torch
 
 sys.path.append("..")
 
-from BAMPNO import BAMPNO, compute_modes, count_params_bampno
+from architectures import BAMPNO, compute_modes, count_params_bampno
 from datasets import NO_load_data_model
 from loss_fun import loss_selector
 from ray import tune

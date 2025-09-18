@@ -4,7 +4,7 @@ sys.path.append("..")
 
 import pytest
 import torch
-from CNO import CNO
+from architectures import CNO
 from utilities import initialize_hyperparameters
 from wrappers import wrap_model
 

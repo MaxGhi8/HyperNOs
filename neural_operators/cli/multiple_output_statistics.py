@@ -38,11 +38,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import torch
+from architectures import CNO, FNO, ResidualNetwork
 from beartype import beartype
 from cli.utilities_recover_model import get_tensors, test_fun, test_plot_samples
-from CNO import CNO
 from datasets import NO_load_data_model
-from FNO import FNO
 from jaxtyping import Float, jaxtyped
 from loss_fun import (
     H1relLoss_1D_multiout,
@@ -50,7 +49,6 @@ from loss_fun import (
     LprelLoss_multiout,
     loss_selector,
 )
-from ResNet import ResidualNetwork
 from scipy.io import savemat
 from torch import Tensor
 from utilities import count_params, initialize_hyperparameters

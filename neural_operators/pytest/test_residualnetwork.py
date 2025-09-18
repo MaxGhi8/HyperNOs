@@ -3,8 +3,8 @@ import sys
 sys.path.append("..")
 
 import torch
+from architectures import ResidualNetwork, centered_softmax, zero_mean_imposition
 from datasets import NO_load_data_model
-from ResNet import ResidualNetwork, centered_softmax, zero_mean_imposition
 
 torch.set_default_dtype(torch.float64)
 
@@ -65,7 +65,7 @@ def test_residual_normalization():
         },
         batch_size=batch_size,
         training_samples=training_samples,
-        in_dist=True,
+        filename="dataset_homogeneous_Neumann_l_3_deg_3.mat",
     )
 
     in_channels = example.s_in

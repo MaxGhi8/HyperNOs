@@ -37,14 +37,12 @@ sys.path.append("..")
 import matplotlib.pyplot as plt
 import seaborn as sns
 import torch
-from BAMPNO import BAMPNO
+from architectures import BAMPNO, CNO, FNO, ResidualNetwork
 from beartype import beartype
 from cli.utilities_recover_model import get_tensors, test_fun, test_plot_samples
-from CNO import CNO
 from datasets import NO_load_data_model
-from FNO import FNO
 
-# from FNO_lin import FNO_lin
+# from architectures import FNO_lin
 from jaxtyping import Float, jaxtyped
 from loss_fun import (
     ChebyshevLprelLoss_mp,
@@ -57,7 +55,6 @@ from loss_fun import (
     LprelLoss_multiout,
     loss_selector,
 )
-from ResNet import ResidualNetwork
 from scipy.io import savemat
 from torch import Tensor
 from utilities import count_params, initialize_hyperparameters

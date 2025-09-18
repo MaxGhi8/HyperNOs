@@ -9,10 +9,10 @@ import torch
 
 sys.path.append("..")
 
+from architectures import ResidualNetwork
 from datasets import NO_load_data_model
 from loss_fun import lpLoss
 from ray import tune
-from ResNet import ResidualNetwork
 from tune import tune_hyperparameters
 from utilities import initialize_hyperparameters
 

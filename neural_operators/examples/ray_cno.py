@@ -8,7 +8,7 @@ import torch
 
 sys.path.append("..")
 
-from CNO import CNO
+from architectures import CNO
 from datasets import NO_load_data_model
 from loss_fun import loss_selector
 from ray import tune

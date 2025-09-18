@@ -9,7 +9,7 @@ import torch
 
 sys.path.append("..")
 
-from BAMPNO import BAMPNO
+from architectures import BAMPNO
 from datasets import NO_load_data_model
 from loss_fun import loss_selector
 from train import train_fixed_model
@@ -126,4 +126,4 @@ def train_bampno(
 
 
 if __name__ == "__main__":
-    train_bampno("bampno", "8_domain", "best_samedofs", "L2_cheb_mp")
+    train_bampno("bampno", "8_domain", "default", "L2_cheb_mp")

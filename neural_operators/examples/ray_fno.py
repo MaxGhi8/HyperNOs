@@ -8,8 +8,8 @@ import torch
 
 sys.path.append("..")
 
+from architectures import FNO
 from datasets import NO_load_data_model
-from FNO import FNO
 from loss_fun import loss_selector
 from ray import tune
 from tune import tune_hyperparameters

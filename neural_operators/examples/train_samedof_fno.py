@@ -9,8 +9,8 @@ import torch
 
 sys.path.append("..")
 
+from architectures import FNO, compute_modes, count_params_fno
 from datasets import NO_load_data_model
-from FNO import FNO, compute_modes, count_params_fno
 from loss_fun import loss_selector
 from train import train_fixed_model
 from utilities import get_plot_function, initialize_hyperparameters
@@ -49,6 +49,21 @@ def train_samedof_fno(which_example: str, loss_fn_str: str, maximum: int):
         compute_modes(total_default_params, maximum, default_hyper_params),
     )
 
+    example = NO_load_data_model(
+        which_example=which_example,
+        no_architecture={
+            "FourierF": default_hyper_params["FourierF"],
+            "retrain": default_hyper_params["retrain"],
+        },
+        batch_size=default_hyper_params["batch_size"],
+        training_samples=default_hyper_params["training_samples"],
+        filename=(
+            default_hyper_params["filename"]
+            if "filename" in default_hyper_params
+            else None
+        ),
+    )
+
     # Define the model builders
     model_builder = lambda config: FNO(
         config["problem_dim"],
@@ -64,6 +79,11 @@ def train_samedof_fno(which_example: str, loss_fn_str: str, maximum: int):
         config["fft_norm"],
         config["padding"],
         device,
+        (
+            example.output_normalizer
+            if ("internal_normalization" in config and config["internal_normalization"])
+            else None
+        ),
         config["retrain"],
     )
     # Wrap the model builder
@@ -78,6 +98,11 @@ def train_samedof_fno(which_example: str, loss_fn_str: str, maximum: int):
         },
         batch_size=config["batch_size"],
         training_samples=config["training_samples"],
+        filename=(
+            default_hyper_params["filename"]
+            if "filename" in default_hyper_params
+            else None
+        ),
     )
 
     # Define the loss function

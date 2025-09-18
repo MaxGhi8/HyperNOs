@@ -9,7 +9,7 @@ import torch
 
 sys.path.append("..")
 
-from CNO import CNO
+from architectures import CNO
 from datasets import NO_load_data_model
 from loss_fun import loss_selector
 from train import train_fixed_model
@@ -96,4 +96,4 @@ def train_cno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    train_cno("afieti_fno", "default", "L2")
+    train_cno("darcy", "default", "L2")

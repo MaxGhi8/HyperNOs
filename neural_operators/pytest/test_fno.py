@@ -4,7 +4,8 @@ sys.path.append("..")
 
 import pytest
 import torch
-from FNO import FNO
+from architectures import FNO
+from datasets import NO_load_data_model
 from utilities import initialize_hyperparameters
 from wrappers import wrap_model
 
@@ -37,6 +38,17 @@ def test_FNO_1d(which_example, mode_hyperparams):
         **hyperparams_arc,
     }
 
+    example = NO_load_data_model(
+        which_example=which_example,
+        no_architecture={
+            "FourierF": config["FourierF"],
+            "retrain": config["retrain"],
+        },
+        batch_size=config["batch_size"],
+        training_samples=config["training_samples"],
+        filename=config["filename"] if "filename" in config else None,
+    )
+
     # Define the model builders
     model = FNO(
         config["problem_dim"],
@@ -52,6 +64,11 @@ def test_FNO_1d(which_example, mode_hyperparams):
         config["fft_norm"],
         config["padding"],
         device,
+        (
+            example.output_normalizer
+            if ("internal_normalization" in config and config["internal_normalization"])
+            else None
+        ),
         config["retrain"],
     )
 
@@ -96,6 +113,17 @@ def test_FNO_2d(which_example, mode_hyperparams):
         **hyperparams_arc,
     }
 
+    example = NO_load_data_model(
+        which_example=which_example,
+        no_architecture={
+            "FourierF": config["FourierF"],
+            "retrain": config["retrain"],
+        },
+        batch_size=config["batch_size"],
+        training_samples=config["training_samples"],
+        filename=config["filename"] if "filename" in config else None,
+    )
+
     # Define the model builders
     model = FNO(
         config["problem_dim"],
@@ -111,6 +139,11 @@ def test_FNO_2d(which_example, mode_hyperparams):
         config["fft_norm"],
         config["padding"],
         device,
+        (
+            example.output_normalizer
+            if ("internal_normalization" in config and config["internal_normalization"])
+            else None
+        ),
         config["retrain"],
     )
 
@@ -143,7 +176,7 @@ def test_FNO_3d():
         retrain_fno=4,
     )
 
-    dummy_input = torch.randn(10, 70, 70, 70, 1).to(device)
+    dummy_input = torch.randn(10, 40, 40, 40, 1).to(device)
     output = model(dummy_input)
     assert output.shape[:-1] == dummy_input.shape[:-1]
     assert output.shape[-1] == 1
@@ -173,4 +206,5 @@ def test_FNO_different_resolutions():
     dummy_input = torch.randn(10, 50, 60, 70, 1).to(device)
     output = model(dummy_input)
     assert output.shape[:-1] == dummy_input.shape[:-1]
+    assert output.shape[-1] == 1
     assert output.shape[-1] == 1

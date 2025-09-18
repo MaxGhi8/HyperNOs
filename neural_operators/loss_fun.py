@@ -4,7 +4,7 @@ This module contains the definition of the loss functions that can be used in th
 
 import numpy as np
 import torch
-from BAMPNO import chebyshev_utilities as cheb
+from architectures.BAMPNO import chebyshev_utilities as cheb
 from beartype import beartype
 from jaxtyping import Complex, Float, jaxtyped
 from torch import Tensor

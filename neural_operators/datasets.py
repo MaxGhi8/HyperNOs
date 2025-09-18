@@ -2482,7 +2482,7 @@ class OHaraRudy:
 
         #### Training data
         self.TrainDataPath = find_file(
-            "Training_dataset_ORd_n_3000_points_5040_tf_500.mat", search_path
+            "Training_dataset_ORd_n_3000_points_10080_tf_1000.mat", search_path
         )
         dict_train = MatReader_ord(self.fields, self.TrainDataPath)
 
@@ -2507,7 +2507,7 @@ class OHaraRudy:
 
         #### Validation data
         self.ValDataPath = find_file(
-            "Validation_dataset_ORd_n_375_points_5040_tf_500.mat", search_path
+            "Validation_dataset_ORd_n_375_points_10080_tf_1000.mat", search_path
         )
         dict_val = MatReader_ord(self.fields, self.ValDataPath)
 
@@ -2524,7 +2524,7 @@ class OHaraRudy:
 
         #### Validation data
         self.TestDataPath = find_file(
-            "Test_dataset_ORd_n_375_points_5040_tf_500.mat", search_path
+            "Test_dataset_ORd_n_375_points_10080_tf_1000.mat", search_path
         )
         dict_test = MatReader_ord(self.fields, self.TestDataPath)
 
@@ -3393,10 +3393,10 @@ class BAMPNO_continuation:
         reader = mat73.loadmat(self.TrainDataPath)
         input = torch.from_numpy(reader["COEFF"]).type(torch.float32).flip(-1)
         output = torch.from_numpy(reader["SOL"]).type(torch.float32).flip(-1)
-        # self.X_phys = torch.from_numpy(reader["X_phys"]).type(torch.float32)
-        # self.Y_phys = torch.from_numpy(reader["Y_phys"]).type(torch.float32)
-        # self.X_phys = self.X_phys[::s, ::s]
-        # self.Y_phys = self.Y_phys[::s, ::s]
+        self.X_phys = torch.from_numpy(reader["X_phys"]).type(torch.float32)
+        self.Y_phys = torch.from_numpy(reader["Y_phys"]).type(torch.float32)
+        self.X_phys = self.X_phys[::s, ::s]
+        self.Y_phys = self.Y_phys[::s, ::s]
         self.mask = torch.from_numpy(reader["mask"]).type(torch.float32).flip(-1)
         self.mask = self.mask[::s, ::s]
 
