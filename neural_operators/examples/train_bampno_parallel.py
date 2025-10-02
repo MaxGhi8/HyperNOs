@@ -22,7 +22,7 @@ import torch
 
 sys.path.append("..")
 
-from architectures.BAMPNO.BAMPNO_parallel import ParallelBAMPNO
+from architectures import ParallelBAMPNO
 from datasets import NO_load_data_model
 from loss_fun import loss_selector
 from train import train_fixed_model
