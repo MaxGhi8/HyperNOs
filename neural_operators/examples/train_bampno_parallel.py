@@ -3,11 +3,13 @@ Example script to train the Parallel (patch-sharded) BAMPNO architecture.
 Configuration mirrors train_bampno.py but swaps in ParallelBAMPNO which
 splits the patch dimension across all available GPUs (when launched with torchrun).
 
+The code is located in neural_operators/examples/ and have to be run from there.
+
 Usage (single node multi-GPU):
-  torchrun --standalone --nproc_per_node=NUM_GPUS neural_operators/examples/train_bampno_parallel.py
+  torchrun --standalone --nproc_per_node=NUM_GPUS train_bampno_parallel.py 
 
 Usage (single GPU / CPU):
-  python neural_operators/examples/train_bampno_parallel.py
+  python train_bampno_parallel.py
 
 Notes:
 - Model auto-initializes torch.distributed if launched under torchrun.
