@@ -1,5 +1,6 @@
 # BAMPNO architecture
 from .BAMPNO.BAMPNO import BAMPNO
+from .BAMPNO.BAMPNO_parallel import ParallelBAMPNO
 from .BAMPNO.BAMPNO_utilities import compute_modes, count_params_bampno
 from .BAMPNO.chebyshev_utilities import (
     Chebyshev_grid_1d,
