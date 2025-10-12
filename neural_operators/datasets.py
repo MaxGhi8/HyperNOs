@@ -3372,7 +3372,7 @@ class BAMPNO_continuation:
         in_dist=True,
         search_path="/",
     ):
-        assert training_samples <= 1200, "Training samples must be less than 3000"
+        assert training_samples <= 12000, "Training samples must be less than 12000"
         assert in_dist, "Out-of-distribution testing samples are not available"
 
         g = torch.Generator()
@@ -3510,7 +3510,7 @@ class BAMPNO:
         network_properties: dict,
         batch_size: int,
         training_samples: int,
-        s=2,
+        s=1,
         in_dist=True,
         search_path="/",
     ):
