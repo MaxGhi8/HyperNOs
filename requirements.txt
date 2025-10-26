@@ -16,5 +16,5 @@ scipy>=1.14.0,<1.15.0
 seaborn>=0.13.0,<0.14.0
 tensorboard>=2.18.0
 tensorboardX>=2.6.0,<2.7.0
-torch>=2.5.0,<2.6.0
+torch~>2.7.1-rc1
 tqdm>=4.66.0,<4.67.0
