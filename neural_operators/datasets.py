@@ -3514,7 +3514,7 @@ class BAMPNO:
         in_dist=True,
         search_path="/",
     ):
-        assert training_samples <= 1200, "Training samples must be less than 3000"
+        assert training_samples <= 12000, "Training samples must be less than 3000"
         assert in_dist, "Out-of-distribution testing samples are not available"
 
         g = torch.Generator()

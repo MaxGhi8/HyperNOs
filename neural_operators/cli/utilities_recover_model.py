@@ -23,6 +23,7 @@ from loss_fun import (
     LprelLoss_multiout,
 )
 from matplotlib.colors import LogNorm
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from torch import Tensor
 
 
@@ -798,7 +799,11 @@ def plot_bampno(X, Y, input_tensor, output_tensor, prediction_tensor, idx):
 
 
 def plot_bampno_continuation(input_tensor, output_tensor, prediction_tensor, idx):
-    fig, axs = plt.subplots(1, 4, figsize=(16, 4), layout="constrained")
+    fig, axs = plt.subplots(1, 4, figsize=(12, 4))  # avoid constrained layout for manual control
+
+    # Ensure axes expand vertically as much as possible
+    for ax in axs:
+        ax.set_aspect('auto')
 
     # Create the mask once
     tensor_mask = input_tensor[idx[0], :, :].squeeze()
@@ -814,35 +819,38 @@ def plot_bampno_continuation(input_tensor, output_tensor, prediction_tensor, idx
     # Calculate error BEFORE applying NaN masking
     error = torch.abs(output_plot - prediction_plot)
 
+    # Store images to optionally build shared colorbars if needed later
+    images = []
+
     for i in range(4):
         if i == 0:  # input
             input_plot[zero_mask] = float("nan")
             im = axs[i].imshow(input_plot)
-            fig.colorbar(im, ax=axs[i])
-            axs[i].set_ylabel("Diffusion coefficiet (a)")
+            axs[i].set_ylabel("Diffusion coefficient (a)")
         elif i == 1:  # output
             output_plot[zero_mask] = float("nan")
             im = axs[i].imshow(output_plot, vmin=common_vmin, vmax=common_vmax)
-            fig.colorbar(im, ax=axs[i])
             axs[i].set_ylabel("Exact solution (u)")
         elif i == 2:  # predicted
             prediction_plot[zero_mask] = float("nan")
             im = axs[i].imshow(prediction_plot, vmin=common_vmin, vmax=common_vmax)
-            fig.colorbar(im, ax=axs[i])
             axs[i].set_ylabel("FNO approximation (u)")
-        elif i == 3:  # error
+        else:  # error
             error[zero_mask] = float("nan")
-            im = axs[i].imshow(
-                error,
-                norm=LogNorm(vmin=1e-6, vmax=1e-2),
-            )
-            fig.colorbar(im, ax=axs[i])
+            im = axs[i].imshow(error, norm=LogNorm(vmin=1e-6, vmax=1e-2))
             axs[i].set_ylabel("Error (log scale)")
 
+        images.append(im)
         axs[i].set_yticklabels([])
         axs[i].set_xticklabels([])
 
-    plt.savefig("figure.png")
+        # Create a full-height colorbar axis right next to each subplot
+        divider = make_axes_locatable(axs[i])
+        cax = divider.append_axes("right", size="3%", pad=0.05)
+        fig.colorbar(im, cax=cax)
+
+    fig.tight_layout()
+    plt.savefig("figure.png", dpi=300, bbox_inches="tight")
 
 
 #########################################

@@ -64,6 +64,7 @@ from wrappers import wrap_model
 # default values
 #########################################
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cpu")
 print("Device: ", device)
 # torch.set_default_dtype(torch.float32) # default tensor dtype
 
@@ -99,6 +100,7 @@ def parse_arguments():
             "crosstruss",
             "afieti_homogeneous_neumann",
             "bampno_8_domain",
+            "bampno_S_domain",
             "bampno_continuation",
         ],
         help="Select the example to run.",
@@ -112,7 +114,7 @@ def parse_arguments():
     parser.add_argument(
         "loss_fn_str",
         type=str,
-        choices=["L1", "L2", "H1", "L1_smooth", "l2", "L2_cheb_mp"],
+        choices=["L1", "L2", "H1", "L1_smooth", "l2", "L2_cheb_mp", "H1_cheb_mp"],
         help="Select the relative loss function to use during the training process.",
     )
     parser.add_argument(
@@ -397,6 +399,7 @@ print(
 )
 print("")
 
+
 # Count and print the total number of parameters
 total_params, total_bytes = count_params(model)
 total_mb = total_bytes / (1024**2)
@@ -569,6 +572,36 @@ elif which_example in ["crosstruss"]:
     print("Test mean relative h1 norm componentwise: ", test_rel_h1_componentwise)
     print("")
 
+#########################################
+# Compute boundary Dirichlet error (interesting for BAMPNO architecture comparison)
+##########################################
+def compute_dirichlet_error(test_prediction_tensor, example, device):
+    # get the points of the domain 
+    x_phys = example.X_phys.to(device)
+    y_phys = example.Y_phys.to(device)
+    
+    # extract test_prediction_tensor at the boundary points
+    # this code holds only for the S domain
+    total_error=0
+    for n_ex in range(test_prediction_tensor.shape[0]):
+        err=0
+        example=test_prediction_tensor[n_ex,:, :,0]
+        err+=torch.sum(torch.abs(example[0, :])) # bottom boundary
+        err+=torch.sum(torch.abs(example[-1, :])) # top boundary
+        err+=torch.sum(torch.abs(example[:, 0])) # left boundary
+        err+=torch.sum(torch.abs(example[:, -1])) # right boundary
+        err+=torch.sum(torch.abs(example[59, :30]))
+        err+=torch.sum(torch.abs(example[29, 59:]))
+        err+=torch.sum(torch.abs(example[:60, 29]))
+        err+=torch.sum(torch.abs(example[:60, 59]))
+        total_error+=err
+    
+    return total_error/test_prediction_tensor.shape[0]
+    
+
+error_on_boundary = compute_dirichlet_error(prediction_tensor, example, device)
+print("Mean absolute error on the boundary (Dirichlet BC): ", error_on_boundary)
+print("")
 
 #########################################
 # Time for evaluation
@@ -707,7 +740,7 @@ def plot_boxplot(
         log_scale=True,
         jitter=0.4,
         edgecolor="black",
-        size=3,
+        size=0,
         linewidth=0.15,
     )
     sns.boxplot(error_np, fliersize=0, whis=1.5)
@@ -949,7 +982,7 @@ if which_example == "bampno_8_domain":
         output_tensor,
         prediction_tensor,
         test_relative_l2_tensor,
-        "worst",
+        "best",
         which_example,
         ntest=hyperparams["test_samples"],
         str_norm=loss_fn_str,
