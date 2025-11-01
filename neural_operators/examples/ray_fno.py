@@ -129,4 +129,4 @@ def ray_fno(which_example: str, mode_hyperparams: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    ray_fno("bampno_continuation", "default", "L2")
+    ray_fno("darcy", "default", "L2")

@@ -131,4 +131,4 @@ def ray_samedof_fno(
 
 
 if __name__ == "__main__":
-    ray_samedof_fno("bampno_continuation", "default", "L2", 42)
+    ray_samedof_fno("darcy", "default", "L2", 32)
