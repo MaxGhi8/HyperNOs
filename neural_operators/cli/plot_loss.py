@@ -145,26 +145,47 @@ def plot_loss_curves(
 
 if __name__ == "__main__":
 
-    example = "FNO"  # select the example
-    title = "FNO with continuation techniques"  # select the title of the figure
-    fontsize = 14
+    # ### FNO continuation
+    # example = "FNO"  # select the example
+    # title = "FNO with continuation techniques"  # select the title of the figure
+    # fontsize = 16
+    # example2min = {"FNO": 4e-4, "BAMPNO": 4e-4}
+    # example2max = {"FNO": 0.7, "BAMPNO": 0.7}
+
+    # train_files = [
+    #     f"./train_loss/8_domain/{example}/{i}/BAMPNO_Continuation_Wrapper_2D_BAMPNO_continuation_Train loss.csv"
+    #     for i in [0, 1, 4]
+    # ]
+    # test_files = [
+    #     f"./train_loss/8_domain/{example}/{i}/BAMPNO_Continuation_Wrapper_2D_BAMPNO_continuation_Test rel. L^2 error.csv"
+    #     for i in [0, 1, 4]
+    # ]
+    # test_H1 = [
+    #     f"./train_loss/8_domain/{example}/{i}/BAMPNO_Continuation_Wrapper_2D_BAMPNO_continuation_Test rel. H^1 error.csv"
+    #     for i in [0, 1, 4]
+    # ]
+
+    ### BAMPNO continuation
+    example = "BAMPNO"  # select the example
+    title = "BAMPNO"  # select the title of the figure
+    fontsize = 16
     example2min = {"FNO": 4e-4, "BAMPNO": 4e-4}
     example2max = {"FNO": 0.7, "BAMPNO": 0.7}
 
     train_files = [
-        f"train_loss/{example}/{i}/{example}_2D_{example}_Train loss.csv"
+        f"./train_loss/8_domain/{example}/{i}/BAMPNO_2D_BAMPNO_Train loss.csv"
         for i in [0, 1, 4]
     ]
     test_files = [
-        f"train_loss/{example}/{i}/{example}_2D_{example}_Test rel. L^2 error.csv"
+        f"./train_loss/8_domain/{example}/{i}/BAMPNO_2D_BAMPNO_Test rel. L^2 error.csv"
         for i in [0, 1, 4]
     ]
     test_H1 = [
-        f"train_loss/{example}/{i}/{example}_2D_{example}_Test rel. H^1 error.csv"
+        f"./train_loss/8_domain/{example}_new/{i}/BAMPNO_2D_BAMPNO_Test rel. H^1 error.csv"
         for i in [0, 1, 4]
     ]
 
-    # example = "hh"  # select the example
+    ### example = "hh"  # select the example
     # mode = "best_500k"  # select the mode of the test (best or best_500k)
     # title = "Unconstrained optimization"  # select the title of the figure
     # fontsize = 14
