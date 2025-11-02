@@ -23,6 +23,19 @@ def test_zero_mean_imposition():
     assert torch.allclose(x.sum(dim=1), torch.zeros(32), atol=1e-6)
 
 
+def test_residual_block():
+    from architectures.ResNet.ResidualNetwork import ResidualBlock
+
+    hidden_channels = [5, 42, 5]
+    block = ResidualBlock(hidden_channels, "relu")
+    batch_size = 32
+    input = torch.rand(batch_size, hidden_channels[0])
+    output = block.forward(input)
+    # test if the block runs
+    assert output.shape[-1] == hidden_channels[-1]
+    assert output.shape[0] == batch_size
+
+
 def test_residualnetwork():
     in_channels = 7
     out_channels = 3

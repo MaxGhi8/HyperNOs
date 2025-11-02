@@ -53,7 +53,8 @@ def zero_mean_imposition(
 #########################################
 class ResidualBlock(nn.Module):
     """
-    Residual block for the ResNet
+    Residual block for the ResNet: x -> x + F(x)
+    Where F is a feedforward neural network, with optional layer normalization and dropout.
     """
 
     def __init__(
@@ -64,8 +65,15 @@ class ResidualBlock(nn.Module):
         dropout_rate: float = 0.0,
     ) -> None:
         super(ResidualBlock, self).__init__()
+        assert (
+            len(hidden_channels) >= 3
+        ), "Hidden channels must have at least three elements, i.e. input, hidden, output (shallow neural network)"
+        assert (
+            hidden_channels[0] == hidden_channels[-1]
+        ), "Input and output dimensions must be the same for being concatenated in the residual block"
         self.hidden_channels = hidden_channels
 
+        ## Construct the residual block
         modules = []
         for i in range(len(self.hidden_channels) - 1):
             # Affine layer
