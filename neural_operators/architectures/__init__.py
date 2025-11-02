@@ -18,6 +18,9 @@ from .BAMPNO.chebyshev_utilities import (
     values_to_coefficients,
 )
 
+# CNN architecture
+from .CNN.CNN2DResidualNetwork import CNN2DResidualNetwork, Conv2DResidualBlock
+
 # CNO architecture
 from .CNO.CNO import CNO
 from .CNO.CNO_utilities import compute_channel_multiplier, count_params_cno

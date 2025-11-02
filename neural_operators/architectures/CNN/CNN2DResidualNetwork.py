@@ -1,3 +1,5 @@
+from functools import cache
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -159,6 +161,7 @@ class CNN2DResidualNetwork(nn.Module):
         activation_str: str,
         n_blocks: int,
         padding: str = "same",
+        include_grid: bool = False,
         device: torch.device = torch.device("cpu"),
         normalization: str = "none",  # "batch", "layer", or "none"
         dropout_rate: float = 0.0,
@@ -179,6 +182,9 @@ class CNN2DResidualNetwork(nn.Module):
         self.out_channels = out_channels
         self.hidden_channels = hidden_channels
         self.padding = padding
+        self.include_grid = include_grid
+        if self.include_grid:
+            self.in_channels += 2  # for 2D grid
 
         self.input_normalizer = (
             nn.Identity()
@@ -199,7 +205,7 @@ class CNN2DResidualNetwork(nn.Module):
         # Input projection layer
         self.input_layer = nn.Sequential(
             nn.Conv2d(
-                in_channels, hidden_channels[0], kernel_size, padding=self.padding
+                self.in_channels, hidden_channels[0], kernel_size, padding=self.padding
             ),
             input_norm,
             activation_fun(activation_str),
@@ -255,7 +261,6 @@ class CNN2DResidualNetwork(nn.Module):
     def _enable_compilation(self) -> None:
         """Enable PyTorch 2.0+ compilation for performance if available."""
         try:
-            # This is a PyTorch 2.0+ feature
             self = torch.compile(self)
             print("PyTorch compilation enabled for better performance")
         except Exception as e:
@@ -263,12 +268,30 @@ class CNN2DResidualNetwork(nn.Module):
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "batch {self.in_channels} height width"]
-    ) -> Float[Tensor, "batch {self.out_channels} height width"]:
+        self,
+        x: Float[Tensor, "batch height width {self.in_channels-2*self.include_grid}"],
+    ) -> Float[Tensor, "batch height width {self.out_channels}"]:
 
+        if self.include_grid:
+            grid = self.get_grid_2d(x.shape).to(x.device)
+            x = torch.cat((grid, x), dim=-1)  # concatenate last dimension
+
+        x = x.permute(0, 3, 1, 2)  # (n_samples)*(channels)*(*n_x)
         x = self.input_normalizer(x)
         x = self.input_layer(x)
         x = self.residual_blocks(x)
         x = self.output_layer(x)
+        x = x.permute(0, 2, 3, 1)  # (n_samples)*(*n_x)*(channels)
 
         return self.output_denormalizer(x)
+
+    @cache
+    def get_grid_2d(self, shape: torch.Size) -> Tensor:
+        batchsize, size_x, size_y = shape[0], shape[1], shape[2]
+        # grid for x
+        gridx = torch.linspace(0, 1, size_x, dtype=torch.float)
+        gridx = gridx.reshape(1, size_x, 1, 1).repeat([batchsize, 1, size_y, 1])
+        # grid for y
+        gridy = torch.linspace(0, 1, size_y, dtype=torch.float)
+        gridy = gridy.reshape(1, 1, size_y, 1).repeat([batchsize, size_x, 1, 1])
+        return torch.cat((gridx, gridy), dim=-1)

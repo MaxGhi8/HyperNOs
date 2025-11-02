@@ -187,7 +187,7 @@ def train_model_without_ray(
             # save the results of train and test on tensorboard
             if full_validation:
                 writer.add_scalars(
-                    f"{model.__class__.__name__}_{config["problem_dim"]}D_{dataset.__class__.__name__}",
+                    f"{model.__class__.__name__}_{config['problem_dim']}D_{dataset.__class__.__name__}",
                     {
                         "Train loss": train_loss,
                         "Test rel. L^1 error": test_relative_l1,
@@ -199,7 +199,7 @@ def train_model_without_ray(
                 )
             else:
                 writer.add_scalars(
-                    f"{model.__class__.__name__}_{config["problem_dim"]}D_{dataset.__class__.__name__}",
+                    f"{model.__class__.__name__}_{config['problem_dim']}D_{dataset.__class__.__name__}",
                     {
                         "Train loss": train_loss,
                         "Test loss": test_loss,
@@ -223,7 +223,7 @@ def train_model_without_ray(
                 )
                 for i in range(config["out_dim"]):
                     writer.add_scalars(
-                        f"{model.__class__.__name__}_{config["problem_dim"]}D_{dataset.__class__.__name__}_output_{i}",
+                        f"{model.__class__.__name__}_{config['problem_dim']}D_{dataset.__class__.__name__}_output_{i}",
                         {
                             "Test rel. L^1 error": test_relative_l1_multiout[i],
                             "Test rel. L^2 error": test_relative_l2_multiout[i],
