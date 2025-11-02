@@ -81,15 +81,15 @@ class ResidualBlock(nn.Module):
                 nn.Linear(self.hidden_channels[i], self.hidden_channels[i + 1])
             )
 
-            # Layer normalization
-            if layer_norm:
-                modules.append(nn.LayerNorm(self.hidden_channels[i + 1]))
-
             # Activation function (except for the last layer)
             if i < len(self.hidden_channels) - 2:
+                # Layer normalization
+                if layer_norm:
+                    modules.append(nn.LayerNorm(self.hidden_channels[i + 1]))
+
                 modules.append(activation_fun(activation_str))
 
-                # Add dropout if specified
+                # Add dropout
                 if dropout_rate > 0:
                     modules.append(nn.Dropout(dropout_rate))
 
