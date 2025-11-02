@@ -180,6 +180,7 @@ class ResidualNetwork(nn.Module):
             nn.Linear(in_channels, hidden_channels[0]),
             nn.LayerNorm(hidden_channels[0]) if layer_norm else nn.Identity(),
             activation_fun(activation_str),
+            nn.Dropout(dropout_rate) if dropout_rate > 0 else nn.Identity(),
         )
 
         self.residual_blocks = nn.Sequential(
