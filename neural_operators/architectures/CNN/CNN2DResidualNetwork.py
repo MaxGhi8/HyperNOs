@@ -18,8 +18,8 @@ def activation_fun(activation_str):
     """
     if activation_str == "relu":
         return nn.ReLU()
-    elif activation_str == "gelu":
-        return nn.GELU()
+    # elif activation_str == "gelu":
+    #     return nn.GELU()
     elif activation_str == "tanh":
         return nn.Tanh()
     elif activation_str == "leaky_relu":
@@ -31,102 +31,95 @@ def activation_fun(activation_str):
 
 
 #########################################
-# centered softmax and zero mean imposition
+# 2D Convolutional Residual Block
 #########################################
-@jaxtyped(typechecker=beartype)
-def centered_softmax(x: Float[Tensor, "n_samples n"]) -> Float[Tensor, "n_samples n"]:
+class Conv2DResidualBlock(nn.Module):
     """
-    Centered softmax function to be used within the network.
-    """
-    return F.softmax(x, dim=1) - 1 / x.shape[1]
-
-
-@jaxtyped(typechecker=beartype)
-def zero_mean_imposition(
-    x: Float[Tensor, "n_samples n"],
-) -> Float[Tensor, "n_samples n"]:
-    """
-    Take a vector and impose the zero mean constraint.
-    """
-    return x - x.mean(dim=1, keepdim=True)
-
-
-#########################################
-# Residual Block
-#########################################
-class ResidualBlock(nn.Module):
-    """
-    Residual block for the ResNet: x -> x + F(x)
-    Where F is a feedforward neural network, with optional layer normalization and dropout.
+    2D Convolutional Residual block for the CNN ResNet: x -> x + F(x)
+    Where F is a convolutional neural network, with optional normalization and dropout.
     """
 
     def __init__(
         self,
-        hidden_channels: list[int],
+        channels: list[int],
+        kernel_size: int,
         activation_str: str,
-        layer_norm: bool = False,
+        normalization: str = "none",  # "batch", "layer", or "none"
         dropout_rate: float = 0.0,
+        padding: str = "same",
     ) -> None:
-        super(ResidualBlock, self).__init__()
+        super(Conv2DResidualBlock, self).__init__()
 
+        assert normalization in [
+            "batch",
+            "layer",
+            "none",
+        ], "normalization must be 'batch', 'layer', or 'none'"
         assert (
-            len(hidden_channels) >= 3
-        ), "Hidden channels must have at least three elements, i.e. input, hidden, output (shallow neural network)"
+            padding == "same"
+        ), "Only 'same' padding is supported currently, in order to maintain spatial dimensions."
         assert (
-            hidden_channels[0] == hidden_channels[-1]
-        ), "Input and output dimensions must be the same for being concatenated in the residual block"
+            channels[0] == channels[-1]
+        ), "Input and output channels must be the same for residual connection."
 
-        self.hidden_channels = hidden_channels
+        self.channels = channels
 
         ## Construct the residual block
         modules = []
-        for i in range(len(self.hidden_channels) - 1):
-            # Affine layer
+        for i in range(len(self.channels) - 1):
+            # Convolutional layer
             modules.append(
-                nn.Linear(self.hidden_channels[i], self.hidden_channels[i + 1])
+                nn.Conv2d(
+                    self.channels[i],
+                    self.channels[i + 1],
+                    kernel_size,
+                    padding=padding,
+                    bias=(normalization != "batch"),
+                )
             )
 
-            # Activation function (except for the last layer)
-            if i < len(self.hidden_channels) - 2:
-                # Layer normalization
-                if layer_norm:
-                    modules.append(nn.LayerNorm(self.hidden_channels[i + 1]))
+            # Activation function
+            if i < len(self.channels) - 2:
+                # Normalization layer
+                if normalization == "batch":
+                    modules.append(nn.BatchNorm2d(self.channels[i + 1]))
+                elif normalization == "layer":
+                    modules.append(
+                        nn.GroupNorm(1, self.channels[i + 1])
+                    )  # LayerNorm equivalent for 2D
+                else:
+                    modules.append(nn.Identity())
 
                 modules.append(activation_fun(activation_str))
 
                 # Add dropout
                 if dropout_rate > 0:
-                    modules.append(nn.Dropout(dropout_rate))
+                    modules.append(nn.Dropout2d(dropout_rate))
 
         self.res_block = nn.Sequential(*modules)
 
         # Kaiming initialization
-        try:
-            self._init_weights(activation_str)
-        except Exception as e:
-            print(
-                "Warning: Kaiming initialization failed. Using default initialization."
-            )
+        self._init_weights(activation_str)
 
     def _init_weights(self, activation_str) -> None:
         """
         Initialize weights using Kaiming initialization for better training dynamics.
         """
         for m in self.modules():
-            if isinstance(m, nn.Linear):
+            if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, nonlinearity=activation_str)
                 if m.bias is not None:
                     nn.init.zeros_(m.bias)
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "n_samples {self.hidden_channels[0]}"]
-    ) -> Float[Tensor, "n_samples {self.hidden_channels[-1]}"]:
+        self, x: Float[Tensor, "batch {self.channels[0]} height width"]
+    ) -> Float[Tensor, "batch {self.channels[-1]} height width"]:
         return x + self.res_block(x)
 
 
 #########################################
-# Residual Network
+# 2D CNN Residual Network
 #########################################
 class input_normalizer_class(nn.Module):
     def __init__(self, input_normalizer) -> None:
@@ -146,9 +139,15 @@ class output_denormalizer_class(nn.Module):
         return self.output_normalizer.decode(x)
 
 
-class ResidualNetwork(nn.Module):
+class CNN2DResidualNetwork(nn.Module):
     """
-    Residual Network for the Fourier Neural Operator
+    2D Convolutional Residual Network for image-based neural operators
+
+    Args:
+        normalization (str): Type of normalization to use:
+            - "batch": BatchNorm2d (standard for CNNs, normalizes across batch and spatial dims)
+            - "layer": GroupNorm with 1 group (equivalent to LayerNorm for 2D, normalizes across channels)
+            - "none": No normalization (uses bias in conv layers)
     """
 
     def __init__(
@@ -156,24 +155,30 @@ class ResidualNetwork(nn.Module):
         in_channels: int,
         out_channels: int,
         hidden_channels: list[int],
+        kernel_size: int,
         activation_str: str,
         n_blocks: int,
+        padding: str = "same",
         device: torch.device = torch.device("cpu"),
-        layer_norm: bool = False,
+        normalization: str = "none",  # "batch", "layer", or "none"
         dropout_rate: float = 0.0,
-        zero_mean: bool = False,
         example_input_normalizer=None,
         example_output_normalizer=None,
     ) -> None:
-        super(ResidualNetwork, self).__init__()
+        super(CNN2DResidualNetwork, self).__init__()
+
+        assert n_blocks >= 0, "Number of blocks must be greater or equal to 0"
+        assert normalization in [
+            "batch",
+            "layer",
+            "none",
+        ], "normalization must be 'batch', 'layer', or 'none'"
+        assert padding == "same", "Only 'same' padding is supported currently."
 
         self.in_channels = in_channels
         self.out_channels = out_channels
-
-        assert (
-            hidden_channels[-1] == hidden_channels[0]
-        ), "The input and output dimensions must be the same for being concatenated"
-        assert n_blocks >= 0, "Number of layers must be greater or equal to 0"
+        self.hidden_channels = hidden_channels
+        self.padding = padding
 
         self.input_normalizer = (
             nn.Identity()
@@ -181,26 +186,45 @@ class ResidualNetwork(nn.Module):
             else input_normalizer_class(example_input_normalizer)
         )
 
+        # Input projection layer normalization
+        if normalization == "batch":
+            input_norm = nn.BatchNorm2d(hidden_channels[0])
+        elif normalization == "layer":
+            input_norm = nn.GroupNorm(
+                1, hidden_channels[0]
+            )  # LayerNorm equivalent for 2D
+        else:  # normalization == "none"
+            input_norm = nn.Identity()
+
+        # Input projection layer
         self.input_layer = nn.Sequential(
-            nn.Linear(in_channels, hidden_channels[0]),
-            nn.LayerNorm(hidden_channels[0]) if layer_norm else nn.Identity(),
+            nn.Conv2d(
+                in_channels, hidden_channels[0], kernel_size, padding=self.padding
+            ),
+            input_norm,
             activation_fun(activation_str),
-            nn.Dropout(dropout_rate) if dropout_rate > 0 else nn.Identity(),
+            nn.Dropout2d(dropout_rate) if dropout_rate > 0 else nn.Identity(),
         )
 
+        # Residual blocks
         self.residual_blocks = nn.Sequential(
             *[
-                ResidualBlock(
-                    hidden_channels,
-                    activation_str,
-                    layer_norm=layer_norm,
+                Conv2DResidualBlock(
+                    channels=hidden_channels,
+                    kernel_size=kernel_size,
+                    activation_str=activation_str,
+                    normalization=normalization,
                     dropout_rate=dropout_rate,
+                    padding=padding,
                 )
                 for _ in range(n_blocks)
             ]
         )
 
-        self.output_layer = nn.Linear(hidden_channels[-1], out_channels)
+        # Output projection layer
+        self.output_layer = nn.Conv2d(
+            hidden_channels[-1], out_channels, kernel_size, padding="same"
+        )
 
         self.output_denormalizer = (
             nn.Identity()
@@ -208,15 +232,8 @@ class ResidualNetwork(nn.Module):
             else output_denormalizer_class(example_output_normalizer)
         )
 
-        self.post_processing = zero_mean_imposition if zero_mean else nn.Identity()
-
-        # Kaiming initialization
-        # try:
-        #     self._init_weights(activation_str)
-        # except Exception as e:
-        #     print(
-        #         "Warning: Kaiming initialization failed. Using default initialization."
-        #     )
+        # Kaiming initialization for input and output layers
+        self._init_weights(activation_str)
 
         # Move the model to the specified device
         self.to(device)
@@ -230,7 +247,7 @@ class ResidualNetwork(nn.Module):
         Initialize weights using Kaiming initialization for better training dynamics.
         """
         for m in self.modules():
-            if isinstance(m, nn.Linear):
+            if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, nonlinearity=activation_str)
                 if m.bias is not None:
                     nn.init.zeros_(m.bias)
@@ -246,11 +263,12 @@ class ResidualNetwork(nn.Module):
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "n_samples {self.in_channels}"]
-    ) -> Float[Tensor, "n_samples {self.out_channels}"]:
+        self, x: Float[Tensor, "batch {self.in_channels} height width"]
+    ) -> Float[Tensor, "batch {self.out_channels} height width"]:
 
-        x = self.input_layer(self.input_normalizer(x))
+        x = self.input_normalizer(x)
+        x = self.input_layer(x)
         x = self.residual_blocks(x)
         x = self.output_layer(x)
 
-        return self.post_processing(self.output_denormalizer(x))
+        return self.output_denormalizer(x)
