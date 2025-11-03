@@ -3,7 +3,12 @@ import sys
 sys.path.append("..")
 
 import torch
-from architectures import ResidualNetwork, centered_softmax, zero_mean_imposition
+from architectures import (
+    ResidualBlock,
+    ResidualNetwork,
+    centered_softmax,
+    zero_mean_imposition,
+)
 from datasets import NO_load_data_model
 
 torch.set_default_dtype(torch.float64)
@@ -24,8 +29,6 @@ def test_zero_mean_imposition():
 
 
 def test_residual_block():
-    from architectures.ResNet.ResidualNetwork import ResidualBlock
-
     hidden_channels = [5, 42, 5]
     block = ResidualBlock(hidden_channels, "relu")
     batch_size = 32
@@ -98,6 +101,11 @@ def test_residual_normalization():
     )
 
     input = torch.rand(batch_size, in_channels)
+    output = model.forward(input)
+    assert output.shape[-1] == out_channels
+    assert output.shape[0] == batch_size
+    # Test zero mean
+    assert torch.allclose(output.sum(dim=1), torch.zeros(batch_size), atol=1e-6)
     output = model.forward(input)
     assert output.shape[-1] == out_channels
     assert output.shape[0] == batch_size
