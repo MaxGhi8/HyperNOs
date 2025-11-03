@@ -28,7 +28,7 @@ def loss_selector(loss_fn_str: str, problem_dim: int, beta: float = 1.0):
         case "L2_CHEB_MP":
             loss = ChebyshevLprelLoss_mp(2, False)
         case "l2":
-            loss = lpLoss(2, False)
+            loss = lpLoss(2, True)
         case "H1":
             if problem_dim == 1:
                 loss = H1relLoss_1D(beta, False, 1.0)
@@ -131,7 +131,7 @@ class MSELoss_rel:
 class lpLoss:
     """l^p loss for vectors"""
 
-    def __init__(self, p: int, size_mean=False):
+    def __init__(self, p: int, size_mean=True):
         self.p = p
         self.size_mean = size_mean
 

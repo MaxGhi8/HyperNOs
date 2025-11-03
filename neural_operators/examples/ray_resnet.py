@@ -106,7 +106,7 @@ def ray_resnet(which_example: str, filename: str, mode_hyperparams: str):
     # model_builder = wrap_model_builder(model_builder, which_example) # TODO
 
     # Define the loss function
-    loss_fn = lpLoss(default_hyper_params["p"], False)
+    loss_fn = lpLoss(default_hyper_params["p"], True)
 
     # Call the library function to tune the hyperparameters
     tune_hyperparameters(
