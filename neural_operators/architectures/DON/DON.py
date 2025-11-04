@@ -1,13 +1,11 @@
 import torch
 import torch.nn as nn
-import numpy as np
 from FNN import *
-from utilities import compute_num_conv_layers
-
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.set_default_device(device)
 torch.set_default_dtype(torch.float32)
+
 activation_function = {
     "gelu": nn.GELU(),
     "relu": nn.ReLU(),
@@ -26,6 +24,7 @@ class DeepONet(nn.Module):
         self.n_basis = DON_hyperparameters["n_basis"]
         self.n_output = DON_hyperparameters["n_output"]
         self.dim = DON_hyperparameters["dim"]
+
         self.n_input_branch = branch_hyperparameters["n_inputs"]
         self.hidden_branch = branch_hyperparameters["hidden_layer"]
         self.branch_residual = branch_hyperparameters["residual"]
@@ -78,6 +77,7 @@ class DeepONet(nn.Module):
                     self.output_dim_conv,
                     self.n_points[0],
                 )
+
         self.n_input_trunk = trunk_hyperparameters["n_inputs"]
         self.hidden_trunk = trunk_hyperparameters["hidden_layer"]
         self.act_fun_trunk = activation_function[trunk_hyperparameters["act_fun"]]
