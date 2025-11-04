@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from FNN import *
+from .FNN import *
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.set_default_device(device)
@@ -62,8 +62,10 @@ class DeepONet(nn.Module):
     def _initialize_branch_network(self, branch_hyperparameters: dict) -> None:
         # Store parameters needed for forward pass
         self.n_input_branch = branch_hyperparameters["n_inputs"]
-        self.n_points = branch_hyperparameters["n_points"]
+        if self.dim == 2:
+            self.n_points = branch_hyperparameters["n_points"]
 
+        # Initialization of the network
         if self.dim == 1:
             if branch_hyperparameters["residual"]:
                 self.branch_NN = Residual_FeedForward(
