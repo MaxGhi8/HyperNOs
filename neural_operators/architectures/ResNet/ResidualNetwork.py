@@ -161,6 +161,7 @@ class ResidualNetwork(nn.Module):
         device: torch.device = torch.device("cpu"),
         layer_norm: bool = False,
         dropout_rate: float = 0.0,
+        activation_on_output: bool = False,
         zero_mean: bool = False,
         example_input_normalizer=None,
         example_output_normalizer=None,
@@ -210,6 +211,10 @@ class ResidualNetwork(nn.Module):
 
         self.post_processing = zero_mean_imposition if zero_mean else nn.Identity()
 
+        self.output_layer_activation = (
+            activation_fun(activation_str) if activation_on_output else nn.Identity()
+        )
+
         # Kaiming initialization
         # try:
         #     self._init_weights(activation_str)
@@ -251,6 +256,6 @@ class ResidualNetwork(nn.Module):
 
         x = self.input_layer(self.input_normalizer(x))
         x = self.residual_blocks(x)
-        x = self.output_layer(x)
+        x = self.output_layer_activation(self.output_layer(x))
 
         return self.post_processing(self.output_denormalizer(x))
