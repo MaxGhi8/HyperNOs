@@ -185,7 +185,7 @@ class ResidualNetwork(nn.Module):
             nn.Linear(in_channels, hidden_channels[0]),
             nn.LayerNorm(hidden_channels[0]) if layer_norm else nn.Identity(),
             activation_fun(activation_str),
-            # nn.Dropout(dropout_rate) if dropout_rate > 0 else nn.Identity(), #! Do not use dropout here (IDK)
+            # nn.Dropout(dropout_rate) if dropout_rate > 0 else nn.Identity(), #! Do not use dropout here (IDK why)
         )
 
         self.residual_blocks = nn.Sequential(
@@ -211,12 +211,12 @@ class ResidualNetwork(nn.Module):
         self.post_processing = zero_mean_imposition if zero_mean else nn.Identity()
 
         # Kaiming initialization
-        # try:
-        #     self._init_weights(activation_str)
-        # except Exception as e:
-        #     print(
-        #         "Warning: Kaiming initialization failed. Using default initialization."
-        #     )
+        try:
+            self._init_weights(activation_str)
+        except Exception as e:
+            print(
+                "Warning: Kaiming initialization failed. Using default initialization."
+            )
 
         # Move the model to the specified device
         self.to(device)
