@@ -48,6 +48,7 @@ from .RationalNN.RationalNN import (
 
 # ResNet architecture
 from .ResNet.ResidualNetwork import (
+    ResidualBlock,
     ResidualNetwork,
     centered_softmax,
     zero_mean_imposition,
