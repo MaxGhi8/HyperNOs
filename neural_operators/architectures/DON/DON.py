@@ -149,7 +149,8 @@ class DeepONet(nn.Module):
         """Compute output for multiple output case (n_output>1)."""
 
         batch_size = branch_output.shape[0]
-        output_shape = self._compute_output_shape(batch_size)
+        n_points_trunk = trunk_output.shape[0]
+        output_shape = self._compute_output_shape(batch_size, n_points_trunk)
 
         # Initialize output tensor
         output = torch.zeros(
@@ -171,11 +172,11 @@ class DeepONet(nn.Module):
 
         return output
 
-    def _compute_output_shape(self, batch_size: int) -> tuple:
+    def _compute_output_shape(self, batch_size: int, n_points_trunk: int) -> tuple:
         """Compute the output shape based on dimension and parameters."""
 
         if self.dim == 1:
-            return (batch_size, self.n_input_branch, self.n_output)
+            return (batch_size, n_points_trunk, self.n_output)
 
         elif self.dim == 2:
             return (batch_size, self.n_points[0] * self.n_points[1], self.n_output)
