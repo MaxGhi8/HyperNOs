@@ -11,16 +11,22 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Default hyperparameters for 1D case
 branch_hyperparams_1d = {
     "n_inputs": 100,
-    "hidden_layer": [64, 64],
+    "hidden_layer": [64, 50, 20, 64],
+    "n_blocks": 3,
     "act_fun": "relu",
     "residual": True,
+    "layer_norm": True,
+    "dropout_rate": 0.1
 }
 
 trunk_hyperparams_1d = {
     "n_inputs": 3,
-    "hidden_layer": [64, 64],
+    "hidden_layer": [64, 64, 64],
+    "n_blocks": 2,
     "act_fun": "relu",
     "residual": True, 
+    "layer_norm": False,
+    "dropout_rate": 0.0,
 }
 
 # Default hyperparameters for 2D case

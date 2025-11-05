@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from .FNN import *
+from ..ResNet.ResidualNetwork import ResidualNetwork
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.set_default_device(device)
@@ -43,12 +44,19 @@ class DeepONet(nn.Module):
 
     def _initialize_trunk_network(self, trunk_hyperparameters: dict) -> None:
         if trunk_hyperparameters["residual"]:
-            self.trunk_NN = Residual_FeedForward(
-                trunk_hyperparameters["n_inputs"],
-                self.n_basis,
-                trunk_hyperparameters["hidden_layer"],
-                activation_function[trunk_hyperparameters["act_fun"]],
-                True,
+            self.trunk_NN = ResidualNetwork(
+                in_channels=trunk_hyperparameters["n_inputs"],
+                out_channels=self.n_basis,
+                hidden_channels =trunk_hyperparameters["hidden_layer"],
+                activation_str=trunk_hyperparameters["act_fun"],
+                n_blocks=trunk_hyperparameters["n_blocks"],
+                device=device,
+                layer_norm=trunk_hyperparameters["layer_norm"],
+                dropout_rate=trunk_hyperparameters["dropout_rate"],
+                activation_on_output=True,
+                zero_mean=False,
+                example_input_normalizer=None,
+                example_output_normalizer=None,
             )
         else:
             self.trunk_NN = FeedForward(
@@ -68,6 +76,20 @@ class DeepONet(nn.Module):
         # Initialization of the network
         if self.dim == 1:
             if branch_hyperparameters["residual"]:
+                self.branch_NN = ResidualNetwork(
+                    in_channels=branch_hyperparameters["n_inputs"],
+                    out_channels=self.n_basis,
+                    hidden_channels =branch_hyperparameters["hidden_layer"],
+                    activation_str=branch_hyperparameters["act_fun"],
+                    n_blocks=branch_hyperparameters["n_blocks"],
+                    device=device,
+                    layer_norm=branch_hyperparameters["layer_norm"],
+                    dropout_rate=branch_hyperparameters["dropout_rate"],
+                    activation_on_output=True,
+                    zero_mean=False,
+                    example_input_normalizer=None,
+                    example_output_normalizer=None,
+                )
                 self.branch_NN = Residual_FeedForward(
                     self.n_input_branch,
                     self.n_basis,
