@@ -90,12 +90,6 @@ class DeepONet(nn.Module):
                     example_input_normalizer=None,
                     example_output_normalizer=None,
                 )
-                self.branch_NN = Residual_FeedForward(
-                    self.n_input_branch,
-                    self.n_basis,
-                    branch_hyperparameters["hidden_layer"],
-                    activation_function[branch_hyperparameters["act_fun"]],
-                )
 
             else:
                 self.branch_NN = FeedForward(
