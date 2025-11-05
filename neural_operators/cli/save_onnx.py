@@ -132,7 +132,7 @@ try:
             },
             batch_size=default_hyper_params["batch_size"],
             training_samples=default_hyper_params["training_samples"],
-            filename="dataset_homogeneous_Neumann_FNO.mat",
+            filename="dataset_homogeneous_Neumann_rhs_fixed_l_5_deg_3.mat",
         )
 
         match arc:

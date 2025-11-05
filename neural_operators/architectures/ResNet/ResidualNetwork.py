@@ -254,8 +254,13 @@ class ResidualNetwork(nn.Module):
         self, x: Float[Tensor, "n_samples {self.in_channels}"]
     ) -> Float[Tensor, "n_samples {self.out_channels}"]:
 
+        # norm = torch.norm(x, p=2, dim=1, keepdim=True)
+        # x = x / norm
+
         x = self.input_layer(self.input_normalizer(x))
         x = self.residual_blocks(x)
         x = self.output_layer_activation(self.output_layer(x))
+
+        # x = self.output_layer(x) * norm
 
         return self.post_processing(self.output_denormalizer(x))
