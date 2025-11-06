@@ -20,7 +20,7 @@ def activation_fun(activation_str):
     """
     if activation_str == "relu":
         return nn.ReLU()
-    # elif activation_str == "gelu":
+    # elif activation_str == "gelu": # todo: unsupported
     #     return nn.GELU()
     elif activation_str == "tanh":
         return nn.Tanh()

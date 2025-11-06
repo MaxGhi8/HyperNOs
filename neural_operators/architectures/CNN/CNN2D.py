@@ -20,16 +20,14 @@ def activation_fun(activation_str):
     """
     if activation_str == "relu":
         return nn.ReLU()
-    elif activation_str == "gelu":
-        return nn.GELU()
+    # elif activation_str == "gelu": # todo: unsupported
+    #     return nn.GELU()
     elif activation_str == "tanh":
         return nn.Tanh()
     elif activation_str == "leaky_relu":
         return nn.LeakyReLU()
     elif activation_str == "sigmoid":
         return nn.Sigmoid()
-    elif activation_str == "silu":
-        return nn.SiLU()
     else:
         raise ValueError("Not implemented activation function")
 
@@ -204,7 +202,7 @@ class CNN2D(nn.Module):
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, x: Float[Tensor, "batch height width {self.in_channels}"]
+        self, x: Float[Tensor, "batch height width {self.in_channels-2*self.include_grid}"]
     ) -> Float[Tensor, "batch height width {self.out_channels}"]:
         """
         Forward pass through the standard CNN.
@@ -224,19 +222,12 @@ class CNN2D(nn.Module):
         return self.output_denormalizer(x)
 
     @cache
-    def _get_grid(self, shape: tuple[int, int]) -> torch.Tensor:
-        """
-        Generate normalized spatial grid coordinates.
-        """
+    def get_grid_2d(self, shape: torch.Size) -> Tensor:
         batchsize, size_x, size_y = shape[0], shape[1], shape[2]
-        
-        # Create normalized grid coordinates
-        gridx = torch.linspace(0, 1, size_x, dtype=torch.float32)
-        gridy = torch.linspace(0, 1, size_y, dtype=torch.float32)
-        gridx = gridx.reshape(1, size_x, 1, 1).repeat([1, 1, size_y, 1])
-        gridy = gridy.reshape(1, 1, size_y, 1).repeat([1, size_x, 1, 1])
-        
-        grid = torch.cat((gridx, gridy), dim=-1).to(next(self.parameters()).device)
-        grid = grid.permute(0, 3, 1, 2)  # (1, 2, size_x, size_y)
-        
-        return grid.repeat([batchsize, 1, 1, 1])
+        # grid for x
+        gridx = torch.linspace(0, 1, size_x, dtype=torch.float)
+        gridx = gridx.reshape(1, size_x, 1, 1).repeat([batchsize, 1, size_y, 1])
+        # grid for y
+        gridy = torch.linspace(0, 1, size_y, dtype=torch.float)
+        gridy = gridy.reshape(1, 1, size_y, 1).repeat([batchsize, size_x, 1, 1])
+        return torch.cat((gridx, gridy), dim=-1)
