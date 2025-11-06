@@ -20,6 +20,7 @@ from .BAMPNO.chebyshev_utilities import (
 
 # CNN architecture
 from .CNN.CNN2DResidualNetwork import CNN2DResidualNetwork, Conv2DResidualBlock
+from .CNN.CNN2D import CNN2D
 
 # CNO architecture
 from .CNO.CNO import CNO
