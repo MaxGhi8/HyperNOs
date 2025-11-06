@@ -156,6 +156,24 @@ def test_layer_norm():
     output = model(x)
     assert output.shape == (2, 32, 32, 1)
 
+def test_with_grid():
+    """Test CNN2D with spatial grid inclusion"""
+    model = CNN2DResidualNetwork(
+        in_channels=1,
+        out_channels=1,
+        hidden_channels=[16, 32, 16],
+        include_grid=True,
+        n_blocks=2,
+        kernel_size=3,
+        activation_str="relu",
+        normalization="layer",
+        device=device
+    )
+
+    x = torch.randn(4, 32, 32, 1).to(device)
+    output = model(x)
+    assert output.shape == (4, 32, 32, 1)
+
 
 def test_device_placement():
     """Test model device placement"""
