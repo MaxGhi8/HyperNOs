@@ -8,10 +8,11 @@ from torch import Tensor
 torch.set_default_dtype(torch.float32)
 
 
+
 #########################################
 # activation function
 #########################################
-def activation_fun(activation_str):
+def activation_fun(activation_str:str) -> nn.Module:
     """
     Activation function to be used within the network.
     The function is the same throughout the network.
@@ -66,6 +67,7 @@ class ResidualBlock(nn.Module):
         activation_str: str,
         layer_norm: bool = False,
         dropout_rate: float = 0.0,
+        device: torch.device = torch.device("cpu"),
     ) -> None:
         super(ResidualBlock, self).__init__()
 
@@ -99,6 +101,8 @@ class ResidualBlock(nn.Module):
                     modules.append(nn.Dropout(dropout_rate))
 
         self.res_block = nn.Sequential(*modules)
+
+        self.to(device)
 
         # Kaiming initialization
         try:
@@ -224,6 +228,7 @@ class ResidualNetwork(nn.Module):
 
         # Move the model to the specified device
         self.to(device)
+        self.device = device
 
         # Enable JIT compilation for better performance if PyTorch version supports it
         if hasattr(torch, "compile") and torch.__version__ >= "2.0.0":
