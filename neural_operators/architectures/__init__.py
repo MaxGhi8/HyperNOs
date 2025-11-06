@@ -28,6 +28,9 @@ from .CNO.CNO_utilities import compute_channel_multiplier, count_params_cno
 # DON architecture
 from .DON.DON import DeepONet
 
+# FNN architecture
+from .FNN.FeedForwardNetwork import FeedForwardNetwork, activation_fun, zero_mean_imposition, centered_softmax
+
 # FNO architecture
 from .FNO.FNO import FNO
 from .FNO.FNO_ONNX import FNO_ONNX
