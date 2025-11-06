@@ -172,6 +172,7 @@ class FeedForwardNetwork(nn.Module):
             )
 
         # Move the model to the specified device
+        self.device = device
         self.to(device)
 
         # Enable JIT compilation for better performance if PyTorch version supports it
