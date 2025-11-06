@@ -5,6 +5,8 @@ sys.path.append("..")
 import torch
 from architectures import CNN2DResidualNetwork, Conv2DResidualBlock
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def test_conv2d_residual_block_forward():
     """Test forward pass of Conv2D residual block"""
@@ -40,12 +42,13 @@ def test_cnn2d_residual_network_forward():
         n_blocks=4,
         normalization="batch",
         dropout_rate=0.1,
+        device=device,
     )
 
-    x = torch.randn(batch_size, in_channels, height, width)
+    x = torch.randn(batch_size, height, width, in_channels).to(device)
     output = model(x)
 
-    assert output.shape == (batch_size, out_channels, height, width)
+    assert output.shape == (batch_size, height, width, out_channels)
     assert not torch.isnan(output).any()
     assert not torch.isinf(output).any()
 
@@ -59,15 +62,16 @@ def test_different_input_sizes():
         n_blocks=2,
         kernel_size=5,
         activation_str="relu",
+        device=device,
     )
 
     # Test different sizes
     sizes = [(32, 32), (64, 64), (128, 128), (48, 96)]
 
     for height, width in sizes:
-        x = torch.randn(1, 1, height, width)
+        x = torch.randn(1, height, width, 1).to(device)
         output = model(x)
-        assert output.shape == (1, 1, height, width)
+        assert output.shape == (1, height, width, 1)
 
 
 def test_different_activations():
@@ -82,11 +86,12 @@ def test_different_activations():
             activation_str=activation,
             n_blocks=2,
             kernel_size=7,
+            device=device,
         )
 
-        x = torch.randn(1, 1, 32, 32)
+        x = torch.randn(1, 32, 32, 1).to(device)
         output = model(x)
-        assert output.shape == (1, 1, 32, 32)
+        assert output.shape == (1, 32, 32, 1)
         assert not torch.isnan(output).any()
 
 
@@ -117,10 +122,11 @@ def test_gradient_flow():
         n_blocks=2,
         kernel_size=3,
         activation_str="relu",
+        device=device,
     )
 
-    x = torch.randn(2, 1, 32, 32, requires_grad=True)
-    target = torch.randn(2, 1, 32, 32)
+    x = torch.randn(2, 32, 32, 1, requires_grad=True).to(device)
+    target = torch.randn(2, 32, 32, 1).to(device)
 
     output = model(x)
     loss = torch.nn.functional.mse_loss(output, target)
@@ -143,11 +149,12 @@ def test_layer_norm():
         kernel_size=3,
         activation_str="relu",
         normalization="layer",
+        device=device,
     )
 
-    x = torch.randn(2, 1, 32, 32)
+    x = torch.randn(2, 32, 32, 1).to(device)
     output = model(x)
-    assert output.shape == (2, 1, 32, 32)
+    assert output.shape == (2, 32, 32, 1)
 
 
 def test_device_placement():
@@ -164,6 +171,6 @@ def test_device_placement():
             device=device,
         )
 
-        x = torch.randn(1, 1, 32, 32, device=device)
+        x = torch.randn(1, 32, 32, 1, device=device)
         output = model(x)
         assert output.device == x.device

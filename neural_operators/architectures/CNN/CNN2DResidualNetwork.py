@@ -209,7 +209,7 @@ class CNN2DResidualNetwork(nn.Module):
             ),
             input_norm,
             activation_fun(activation_str),
-            nn.Dropout2d(dropout_rate) if dropout_rate > 0 else nn.Identity(),
+            # nn.Dropout2d(dropout_rate) if dropout_rate > 0 else nn.Identity(), # todo: check if is useful add DropOut here
         )
 
         # Residual blocks
@@ -272,12 +272,13 @@ class CNN2DResidualNetwork(nn.Module):
         x: Float[Tensor, "batch height width {self.in_channels-2*self.include_grid}"],
     ) -> Float[Tensor, "batch height width {self.out_channels}"]:
 
+        x = self.input_normalizer(x)
+
         if self.include_grid:
             grid = self.get_grid_2d(x.shape).to(x.device)
             x = torch.cat((grid, x), dim=-1)  # concatenate last dimension
 
         x = x.permute(0, 3, 1, 2)  # (n_samples)*(channels)*(*n_x)
-        x = self.input_normalizer(x)
         x = self.input_layer(x)
         x = self.residual_blocks(x)
         x = self.output_layer(x)
