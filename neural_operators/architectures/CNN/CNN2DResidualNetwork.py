@@ -76,7 +76,7 @@ class Conv2DResidualBlock(nn.Module):
                     self.channels[i + 1],
                     kernel_size,
                     padding=padding,
-                    bias=(normalization != "batch"),
+                    bias=(normalization != "batch" and i < len(self.channels) - 2),
                 )
             )
 
