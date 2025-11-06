@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from .FNN import *
 from ..ResNet.ResidualNetwork import ResidualNetwork
+from ..FNN.FeedForwardNetwork import FeedForwardNetwork
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.set_default_device(device)
@@ -59,12 +60,18 @@ class DeepONet(nn.Module):
                 example_output_normalizer=None,
             )
         else:
-            self.trunk_NN = FeedForward(
-                trunk_hyperparameters["n_inputs"],
-                self.n_basis,
-                trunk_hyperparameters["hidden_layer"],
-                activation_function[trunk_hyperparameters["act_fun"]],
-                True,
+            self.trunk_NN = FeedForwardNetwork(
+                in_channels=trunk_hyperparameters["n_inputs"],
+                out_channels=self.n_basis,
+                hidden_channels =trunk_hyperparameters["hidden_layer"],
+                activation_str=trunk_hyperparameters["act_fun"],
+                device=device,
+                layer_norm=trunk_hyperparameters["layer_norm"],
+                dropout_rate=trunk_hyperparameters["dropout_rate"],
+                activation_on_output=True,
+                zero_mean=False,
+                example_input_normalizer=None,
+                example_output_normalizer=None,
             )
 
     def _initialize_branch_network(self, branch_hyperparameters: dict) -> None:
@@ -85,18 +92,25 @@ class DeepONet(nn.Module):
                     device=device,
                     layer_norm=branch_hyperparameters["layer_norm"],
                     dropout_rate=branch_hyperparameters["dropout_rate"],
-                    activation_on_output=True,
+                    activation_on_output=False,
                     zero_mean=False,
                     example_input_normalizer=None,
                     example_output_normalizer=None,
                 )
 
             else:
-                self.branch_NN = FeedForward(
-                    self.n_input_branch,
-                    self.n_basis,
-                    branch_hyperparameters["hidden_layer"],
-                    activation_function[branch_hyperparameters["act_fun"]],
+                self.branch_NN = FeedForwardNetwork(
+                    in_channels=branch_hyperparameters["n_inputs"],
+                    out_channels=self.n_basis,
+                    hidden_channels =branch_hyperparameters["hidden_layer"],
+                    activation_str=branch_hyperparameters["act_fun"],
+                    device=device,
+                    layer_norm=branch_hyperparameters["layer_norm"],
+                    dropout_rate=branch_hyperparameters["dropout_rate"],
+                    activation_on_output=False,
+                    zero_mean=False,
+                    example_input_normalizer=None,
+                    example_output_normalizer=None,
                 )
 
         elif self.dim == 2:
