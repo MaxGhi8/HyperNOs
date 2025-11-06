@@ -87,7 +87,69 @@ def test_deeponet_1d_multi_output_initialization():
     assert model.n_output == n_output
     assert model.output_division == n_basis // n_output
 
-def test_deeponet_1d_forward_single_output():
+def test_deeponet_1d_forward_single_output_FNN():
+    """Test 1D DeepONet forward pass with single output"""
+    batch_size = 4
+    n_points_trunk = 10 # Number of evaluation points for trunk network
+    n_basis = 32
+    n_output = 1
+
+    branch_hyperparams_1d["residual"] = False
+    trunk_hyperparams_1d["residual"] = False
+    
+    model = DeepONet(
+        branch_hyperparameters=branch_hyperparams_1d,
+        trunk_hyperparameters=trunk_hyperparams_1d,
+        n_basis=n_basis,
+        n_output=n_output,
+        dim=1
+    )
+    
+    # Create input data
+    branch_input = torch.randn(batch_size, branch_hyperparams_1d["n_inputs"])
+    trunk_input = torch.randn(n_points_trunk, trunk_hyperparams_1d["n_inputs"])
+    
+    # Forward pass
+    output = model(branch_input, trunk_input)
+    
+    # Check output shape
+    expected_shape = (batch_size, n_points_trunk)
+    assert output.shape == expected_shape
+    assert not torch.isnan(output).any()
+    assert not torch.isinf(output).any()
+
+def test_deeponet_1d_forward_multi_output_FNN():
+    """Test 1D DeepONet forward pass with multiple outputs"""
+    batch_size = 4
+    n_points_trunk = 10 # Number of evaluation points for trunk network
+    n_basis = 64
+    n_output = 4
+
+    branch_hyperparams_1d["residual"] = False
+    trunk_hyperparams_1d["residual"] = False
+    
+    model = DeepONet(
+        branch_hyperparameters=branch_hyperparams_1d,
+        trunk_hyperparameters=trunk_hyperparams_1d,
+        n_basis=n_basis,
+        n_output=n_output,
+        dim=1
+    )
+    
+    # Create input data
+    branch_input = torch.randn(batch_size, branch_hyperparams_1d["n_inputs"])
+    trunk_input = torch.randn(n_points_trunk, trunk_hyperparams_1d["n_inputs"])
+
+    # Forward pass
+    output = model(branch_input, trunk_input)
+    
+    # Check output shape
+    expected_shape = (batch_size, n_points_trunk, n_output)
+    assert output.shape == expected_shape
+    assert not torch.isnan(output).any()
+    assert not torch.isinf(output).any()
+
+def test_deeponet_1d_forward_single_output_ResNet():
     """Test 1D DeepONet forward pass with single output"""
     batch_size = 4
     n_points_trunk = 10 # Number of evaluation points for trunk network
@@ -115,7 +177,7 @@ def test_deeponet_1d_forward_single_output():
     assert not torch.isnan(output).any()
     assert not torch.isinf(output).any()
 
-def test_deeponet_1d_forward_multi_output():
+def test_deeponet_1d_forward_multi_output_ResNet():
     """Test 1D DeepONet forward pass with multiple outputs"""
     batch_size = 4
     n_points_trunk = 10 # Number of evaluation points for trunk network
