@@ -331,7 +331,9 @@ class ShearLayer:
 
         self.N_Fourier_F = network_properties["FourierF"]
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -2604,7 +2606,10 @@ class AFIETI:
         assert in_dist, "Out-of-distribution testing samples are not available"
         assert s == 1, "Sampling rate must be 1, no subsampling allowed in this example"
 
-        g = torch.Generator()
+        # g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
