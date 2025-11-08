@@ -36,15 +36,33 @@ fprintf('RNN: %d\n', model.RNN);
 fprintf('Padding: %d\n', model.padding);
 
 %% Example of data preparation
-n_samples = 12;
-n_points = 100;
-in_dim = model.in_dim - model.problem_dim; % Subtract grid dimension
+% Check if test batch is included in the exported model
+if isfield(model, 'has_test_batch') && model.has_test_batch
+    fprintf('\n=== Using exported test batch ===\n');
+    x_input = model.test_X_batch;
+    y_target = model.test_y_batch;
+    y_pred_pytorch = model.test_y_pred_pytorch;
 
-% Create dummy input
-if model.problem_dim == 1
-    x_input = randn(n_samples, n_points, in_dim);
-elseif model.problem_dim == 2
-    x_input = randn(n_samples, n_points, n_points, in_dim);
+    fprintf('Test batch loaded from exported model\n');
+    if model.problem_dim == 1
+        fprintf('Input shape: [%d, %d, %d]\n', size(x_input, 1), size(x_input, 2), size(x_input, 3));
+    elseif model.problem_dim == 2
+        fprintf('Input shape: [%d, %d, %d, %d]\n', size(x_input, 1), size(x_input, 2), size(x_input, 3), size(x_input, 4));
+    end
+else
+    % Create dummy input if no test batch available
+    fprintf('\n=== Creating dummy input (no test batch in model) ===\n');
+    n_samples = 12;
+    n_points = 100;
+    in_dim = model.in_dim - model.problem_dim; % Subtract grid dimension
+
+    % Create dummy input
+    if model.problem_dim == 1
+        x_input = randn(n_samples, n_points, in_dim);
+    elseif model.problem_dim == 2
+        x_input = randn(n_samples, n_points, n_points, in_dim);
+    end
+    y_pred_pytorch = [];
 end
 
 fprintf('\n=== Running Inference ===\n');
@@ -64,21 +82,111 @@ elseif model.problem_dim == 2
 end
 fprintf('\nInference completed successfully!\n');
 
+% Compare with PyTorch if available
+if ~isempty(y_pred_pytorch)
+    fprintf('\n=== Comparing MATLAB vs PyTorch ===\n');
+    abs_diff = abs(output - y_pred_pytorch);
+
+    fprintf('Absolute difference:\n');
+    fprintf('  Max:  %.6e\n', max(abs_diff(:)));
+    fprintf('  Mean: %.6e\n', mean(abs_diff(:)));
+
+    % Correlation
+    corr_coef = corrcoef(y_pred_pytorch(:), output(:));
+    fprintf('\nCorrelation coefficient: %.10f\n', corr_coef(1, 2));
+
+    % Check tolerance
+    tol = 1e-5;
+    if max(abs_diff(:)) < tol
+        fprintf('\n✓ SUCCESS: MATLAB and PyTorch outputs match within tolerance (%.e)!\n', tol);
+    else
+        fprintf('\n⚠ WARNING: Difference exceeds tolerance (%.e)\n', tol);
+    end
+end
+
 %% Visualization (optional)
 if model.problem_dim == 1
     figure('Name', 'FNO Inference Results');
-    subplot(2, 1, 1);
-    plot(squeeze(x_input(1, :, :)));
-    title('Input');
-    xlabel('Spatial Points');
-    ylabel('Value');
-    grid on;
 
-    subplot(2, 1, 2);
-    plot(squeeze(output(1, :, :)));
-    title('FNO Output');
-    xlabel('Spatial Points');
-    ylabel('Value');
+    if ~isempty(y_pred_pytorch)
+        % Compare MATLAB vs PyTorch
+        subplot(3, 1, 1);
+        plot(squeeze(x_input(1, :, :)));
+        title('Input');
+        xlabel('Spatial Points');
+        ylabel('Value');
+        grid on;
+
+        subplot(3, 1, 2);
+        hold on;
+        plot(squeeze(output(1, :, :)), 'LineWidth', 2, 'DisplayName', 'MATLAB');
+        plot(squeeze(y_pred_pytorch(1, :, :)), '--', 'LineWidth', 2, 'DisplayName', 'PyTorch');
+        hold off;
+        title('FNO Output: MATLAB vs PyTorch');
+        xlabel('Spatial Points');
+        ylabel('Value');
+        legend();
+        grid on;
+
+        subplot(3, 1, 3);
+        plot(squeeze(abs(output(1, :, :) - y_pred_pytorch(1, :, :))), 'LineWidth', 2);
+        title('Absolute Difference |MATLAB - PyTorch|');
+        xlabel('Spatial Points');
+        ylabel('Difference');
+        grid on;
+    else
+        % Show only MATLAB output
+        subplot(2, 1, 1);
+        plot(squeeze(x_input(1, :, :)));
+        title('Input');
+        xlabel('Spatial Points');
+        ylabel('Value');
+        grid on;
+
+        subplot(2, 1, 2);
+        plot(squeeze(output(1, :, :)));
+        title('FNO Output (MATLAB)');
+        xlabel('Spatial Points');
+        ylabel('Value');
+        grid on;
+    end
+elseif model.problem_dim == 2 && ~isempty(y_pred_pytorch)
+    % 2D comparison visualization
+    figure('Name', 'FNO Inference Results - 2D', 'Position', [100, 100, 1200, 800]);
+
+    sample_idx = 1;
+    channel_idx = 1;
+
+    subplot(2, 3, 1);
+    imagesc(squeeze(x_input(sample_idx, :, :, channel_idx)));
+    colorbar;
+    title('Input (Sample 1)');
+    axis equal tight;
+
+    subplot(2, 3, 2);
+    imagesc(squeeze(output(sample_idx, :, :, channel_idx)));
+    colorbar;
+    title('MATLAB Output');
+    axis equal tight;
+
+    subplot(2, 3, 3);
+    imagesc(squeeze(y_pred_pytorch(sample_idx, :, :, channel_idx)));
+    colorbar;
+    title('PyTorch Output');
+    axis equal tight;
+
+    subplot(2, 3, 4);
+    imagesc(squeeze(abs(output(sample_idx, :, :, channel_idx) - y_pred_pytorch(sample_idx, :, :, channel_idx))));
+    colorbar;
+    title('Absolute Difference');
+    axis equal tight;
+
+    % Difference histogram
+    subplot(2, 3, 5:6);
+    histogram(abs(output(:) - y_pred_pytorch(:)), 50);
+    xlabel('Absolute Difference');
+    ylabel('Frequency');
+    title('Distribution of Absolute Differences (All Samples)');
     grid on;
 end
 

@@ -477,6 +477,55 @@ else:
     params_dict["has_output_normalizer"] = False
     print("No output normalizer found")
 
+#########################################
+# Export test data batch for verification
+#########################################
+print("\n" + "=" * 60)
+print("Exporting test data batch for verification...")
+print("=" * 60)
+
+# Get one batch from test loader
+try:
+    # Get test loader
+    test_loader = example.test_loader
+
+    # Get first batch
+    test_batch = next(iter(test_loader))
+    X_test_batch, y_test_batch = test_batch
+
+    # Move to CPU and convert to numpy
+    X_test_np = X_test_batch.cpu().detach().numpy()
+    y_test_np = y_test_batch.cpu().detach().numpy()
+
+    # Run inference on the batch with PyTorch
+    model.eval()
+    with torch.no_grad():
+        y_pred_pytorch = model(X_test_batch.to(device))
+        y_pred_np = y_pred_pytorch.cpu().detach().numpy()
+
+    print(f"\nTest batch shapes:")
+    print(f"  Input (X_test):  {X_test_np.shape}")
+    print(f"  Target (y_test): {y_test_np.shape}")
+    print(f"  PyTorch output (y_pred_pytorch): {y_pred_np.shape}")
+
+    # Add to params_dict
+    params_dict["test_X_batch"] = X_test_np
+    params_dict["test_y_batch"] = y_test_np
+    params_dict["test_y_pred_pytorch"] = y_pred_np
+    params_dict["has_test_batch"] = True
+
+    print(f"\n✓ Test batch exported successfully!")
+    print(f"  PyTorch output stats:")
+    print(f"    Mean: {y_pred_np.mean():.6f}")
+    print(f"    Std:  {y_pred_np.std():.6f}")
+    print(f"    Min:  {y_pred_np.min():.6f}")
+    print(f"    Max:  {y_pred_np.max():.6f}")
+
+except Exception as e:
+    print(f"\n⚠ Warning: Could not export test batch: {e}")
+    print("  Continuing without test data...")
+    params_dict["has_test_batch"] = False
+
 # Save to .mat file in the model folder
 output_path = os.path.join(folder, output_file)
 savemat(output_path, params_dict, oned_as="column")
