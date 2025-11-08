@@ -219,7 +219,12 @@ function output = fno_forward(x, model)
     padding = model.padding;
     fun_act = model.fun_act;
 
-    % TODO: NORMALIZATION
+    % Input normalization (if available)
+    if isfield(model, 'has_input_normalizer_gaussian') && model.has_input_normalizer_gaussian
+        x = normalize_input_gaussian(x, model, problem_dim);
+    elseif isfield(model, 'has_input_normalizer_minmax') && model.has_input_normalizer_minmax
+        x = normalize_input_minmax(x, model, problem_dim);
+    end
 
     % Add grid coordinates to input
     x = add_grid(x, problem_dim);
@@ -261,7 +266,12 @@ function output = fno_forward(x, model)
     output = mlp_forward(problem_dim, x, model.q_mlp1_weight, model.q_mlp1_bias, ...
         model.q_mlp2_weight, model.q_mlp2_bias, fun_act);
 
-    % TODO: DENORMALIZATION
+    % Output denormalization (if available)
+    if isfield(model, 'has_output_normalizer_gaussian') && model.has_output_normalizer_gaussian
+        output = denormalize_output_gaussian(output, model, problem_dim);
+    elseif isfield(model, 'has_output_normalizer_minmax') && model.has_output_normalizer_minmax
+        output = denormalize_output_minmax(output, model, problem_dim);
+    end
 
 end
 
@@ -317,6 +327,88 @@ function x_unpadded = unpad_tensor(x, padding, problem_dim)
         [~, ~, n_x, n_y] = size(x);
         x_unpadded = x(:, :, padding + 1:n_x + padding, padding + 1:n_y + padding);
     end
+end
+
+%% Normalization functions (Gaussian)
+function x_normalized = normalize_input_gaussian(x, model, problem_dim)
+    % NORMALIZE_INPUT - Apply UnitGaussianNormalizer encoding
+    % x = (x - mean) / (std + eps)
+
+    mean = model.input_normalizer_mean;
+    std = model.input_normalizer_std;
+    eps = model.input_normalizer_eps;
+
+    if problem_dim == 1
+        % x: [n_samples, n_points, in_dim]
+        % mean, std: [n_points, in_dim]
+        [n_samples, n_points, in_dim] = size(x);
+        mean_expanded = repmat(reshape(mean, [1, n_points, 1]), [n_samples, 1, in_dim]);
+        std_expanded = repmat(reshape(std, [1, n_points, 1]), [n_samples, 1, in_dim]);
+        x_normalized = (x - mean_expanded) ./ (std_expanded + eps);
+
+    elseif problem_dim == 2
+        % x: [n_samples, n_x, n_y, in_dim]
+        % mean, std: [n_x, n_y]
+        [n_samples, n_x, n_y, in_dim] = size(x);
+        mean_expanded = repmat(reshape(mean, [1, n_x, n_y, 1]), [n_samples, 1, 1, in_dim]);
+        std_expanded = repmat(reshape(std, [1, n_x, n_y, 1]), [n_samples, 1, 1, in_dim]);
+        x_normalized = (x - mean_expanded) ./ (std_expanded + eps);
+
+    else
+        error('Normalization for 3D not yet implemented');
+    end
+end
+
+function x_denormalized = denormalize_output_gaussian(x, model, problem_dim)
+    % DENORMALIZE_OUTPUT - Apply UnitGaussianNormalizer decoding
+    % x = x * (std + eps) + mean
+
+    mean = model.output_normalizer_mean;
+    std = model.output_normalizer_std;
+    eps = model.output_normalizer_eps;
+
+    if problem_dim == 1
+        % x: [n_samples, n_points, out_dim]
+        % mean, std: [n_points, out_dim]
+        [n_samples, n_points, out_dim] = size(x);
+        mean_expanded = repmat(reshape(mean, [1, n_points, 1]), [n_samples, 1, out_dim]);
+        std_expanded = repmat(reshape(std, [1, n_points, 1]), [n_samples, 1, out_dim]);
+        x_denormalized = x .* (std_expanded + eps) + mean_expanded;
+
+    elseif problem_dim == 2
+        % x: [n_samples, n_x, n_y, out_dim]
+        % mean, std: [n_x, n_y, out_dim]
+        [n_samples, n_x, n_y, out_dim] = size(x);
+        mean_expanded = repmat(reshape(mean, [1, n_x, n_y, 1]), [n_samples, 1, 1, out_dim]);
+        std_expanded = repmat(reshape(std, [1, n_x, n_y, 1]), [n_samples, 1, 1, out_dim]);
+        x_denormalized = x .* (std_expanded + eps) + mean_expanded;
+
+    else
+        error('Denormalization for 3D not yet implemented');
+    end
+end
+
+%% Normalization functions (MinMax)
+function x_normalized = normalize_input_minmax(x, model, problem_dim)
+    % NORMALIZE_INPUT_MINMAX - Apply minmax normalization
+    % x = (x - min) / (max - min)
+    % Assumes min_val and max_val are scalars
+
+    min_val = model.input_normalizer_min;
+    max_val = model.input_normalizer_max;
+
+    x_normalized = (x - min_val) ./ (max_val - min_val);
+end
+
+function x_denormalized = denormalize_output_minmax(x, model, problem_dim)
+    % DENORMALIZE_OUTPUT_MINMAX - Apply minmax denormalization
+    % x = x * (max - min) + min
+    % Assumes min_val and max_val are scalars
+
+    min_val = model.output_normalizer_min;
+    max_val = model.output_normalizer_max;
+
+    x_denormalized = x .* (max_val - min_val) + min_val;
 end
 
 %% Fourier Layer

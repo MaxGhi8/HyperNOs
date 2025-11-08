@@ -2780,8 +2780,8 @@ class AFIETI_FNO:
         output_train = output[:training_samples, ::s, ::s].unsqueeze(-1)
 
         # Compute mean and std (for gaussian point-wise normalization)
-        self.input_normalizer_rhs = UnitGaussianNormalizer(rhs_train.unsqueeze(-1))
-        self.output_normalizer = UnitGaussianNormalizer(output_train)
+        self.input_normalizer = minmaxGlobalNormalizer(rhs_train.unsqueeze(-1))
+        self.output_normalizer = minmaxGlobalNormalizer(output_train)
 
         # Normalize
         # rhs_train = self.input_normalizer_rhs.encode(rhs_train)

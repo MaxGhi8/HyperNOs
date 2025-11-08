@@ -411,6 +411,72 @@ params_dict["arc"] = model.arc
 params_dict["RNN"] = model.RNN
 params_dict["padding"] = model.padding
 
+# Add normalization parameters if available
+if hasattr(example, "input_normalizer") and example.input_normalizer is not None:
+    try:  # for UnitGaussianNormalizer
+        params_dict["input_normalizer_mean"] = (
+            example.input_normalizer.mean.cpu().detach().numpy()
+        )
+        params_dict["input_normalizer_std"] = (
+            example.input_normalizer.std.cpu().detach().numpy()
+        )
+        params_dict["input_normalizer_eps"] = (
+            example.input_normalizer.eps.cpu().detach().numpy()
+        )
+        print(
+            f"\nAdded input normalizer (Gaussian point-wise scaling): mean shape={example.input_normalizer.mean.shape}, std shape={example.input_normalizer.std.shape}"
+        )
+        params_dict["has_input_normalizer_gaussian"] = True
+
+    except:
+        # for minmaxGlobalNormalizer
+        params_dict["input_normalizer_min"] = (
+            example.input_normalizer.min.cpu().detach().numpy()
+        )
+        params_dict["input_normalizer_max"] = (
+            example.input_normalizer.max.cpu().detach().numpy()
+        )
+        print(
+            f"\nAdded input normalizer (min-max scaling): min shape={example.input_normalizer.min.shape}, max shape={example.input_normalizer.max.shape}"
+        )
+        params_dict["has_input_normalizer_minmax"] = True
+
+else:
+    params_dict["has_input_normalizer"] = False
+    print("\nNo input normalizer found")
+
+if hasattr(example, "output_normalizer") and example.output_normalizer is not None:
+    try:  # for UnitGaussianNormalizer
+        params_dict["output_normalizer_mean"] = (
+            example.output_normalizer.mean.cpu().detach().numpy()
+        )
+        params_dict["output_normalizer_std"] = (
+            example.output_normalizer.std.cpu().detach().numpy()
+        )
+        params_dict["output_normalizer_eps"] = (
+            example.output_normalizer.eps.cpu().detach().numpy()
+        )
+        print(
+            f"Added output normalizer (Gaussian point-wise scaling): mean shape={example.output_normalizer.mean.shape}, std shape={example.output_normalizer.std.shape}"
+        )
+        params_dict["has_output_normalizer_gaussian"] = True
+
+    except:  # for minmaxGlobalNormalizer
+        params_dict["output_normalizer_min"] = (
+            example.output_normalizer.min.cpu().detach().numpy()
+        )
+        params_dict["output_normalizer_max"] = (
+            example.output_normalizer.max.cpu().detach().numpy()
+        )
+        print(
+            f"Added output normalizer (min-max scaling): min shape={example.output_normalizer.min.shape}, max shape={example.output_normalizer.max.shape}"
+        )
+        params_dict["has_output_normalizer_minmax"] = True
+
+else:
+    params_dict["has_output_normalizer"] = False
+    print("No output normalizer found")
+
 # Save to .mat file in the model folder
 output_path = os.path.join(folder, output_file)
 savemat(output_path, params_dict, oned_as="column")
