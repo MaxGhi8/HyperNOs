@@ -40,6 +40,7 @@ fprintf('Padding: %d\n', model.padding);
 if isfield(model, 'has_test_batch') && model.has_test_batch
     fprintf('\n=== Using exported test batch ===\n');
     x_input = model.test_X_batch;
+    x_input(1, 1, 1)
     y_target = model.test_y_batch;
     y_pred_pytorch = model.test_y_pred_pytorch;
 
@@ -190,253 +191,6 @@ elseif model.problem_dim == 2 && ~isempty(y_pred_pytorch)
     grid on;
 end
 
-%% Activation function
-function out = apply_activation(x, fun_act)
-    switch fun_act
-        case 'relu'
-            out = max(0, x);
-        case 'gelu'
-            out = 0.5 * x .* (1 + tanh(sqrt(2 / pi) * (x + 0.044715 * x .^ 3)));
-        case 'tanh'
-            out = tanh(x);
-        case 'leaky_relu'
-            out = max(0.01 * x, x);
-        otherwise
-            error('Unknown activation function: %s', fun_act);
-    end
-end
-
-% Apply activation to tensor
-function out = apply_activation_tensor(x, fun_act, problem_dim)
-    if problem_dim == 1
-        [n_samples, channels, n_points] = size(x);
-        x_flat = reshape(x, [n_samples * channels * n_points, 1]);
-        out_flat = apply_activation(x_flat, fun_act);
-        out = reshape(out_flat, [n_samples, channels, n_points]);
-
-    elseif problem_dim == 2
-        [n_samples, channels, n_x, n_y] = size(x);
-        x_flat = reshape(x, [n_samples * channels * n_x * n_y, 1]);
-        out_flat = apply_activation(x_flat, fun_act);
-        out = reshape(out_flat, [n_samples, channels, n_x, n_y]);
-
-    else
-        error('Unknown problem dimension: %d', problem_dim);
-
-    end
-end
-
-%% Shallow MLP
-function out = mlp_forward(problem_dim, x, w1, b1, w2, b2, fun_act)
-    if problem_dim == 1
-        % reshape
-        [n_samples, n_points, ~] = size(x);
-        x_flat = reshape(x, [n_samples * n_points, size(x, 3)]);
-
-        % First layer
-        h = x_flat * w1' + b1';
-        h = apply_activation(h, fun_act);
-
-        % Second layer
-        out = h * w2' + b2';
-
-        % Reshape back
-        out = reshape(out, [n_samples, n_points, size(out, 2)]);
-
-    elseif problem_dim == 2
-        % reshape
-        [n_samples, n_x, n_y, ~] = size(x);
-        x_flat = reshape(x, [n_samples * n_x * n_y, size(x, 4)]);
-
-        % First layer
-        h = x_flat * w1' + b1';
-        h = apply_activation(h, fun_act);
-
-        % Second layer
-        out = h * w2' + b2';
-
-        % Reshape back
-        out = reshape(out, [n_samples, n_x, n_y, size(out, 2)]);
-    else
-        error('MLP for 3D not yet implemented');
-    end
-end
-
-% Linear layer - like the conv trick in pytorch
-function x_skip = linear_conv(problem_dim, x, ws_weight, ws_bias)
-    if problem_dim == 1
-        [n_samples, ~, n_points] = size(x);
-        x_flat = reshape(x, [n_samples * n_points, size(x, 2)]);
-        x_skip = x_flat * ws_weight' + ws_bias';
-        x_skip = reshape(x_skip, [n_samples, size(x_skip, 2), n_points]);
-
-    elseif problem_dim == 2
-        [n_samples, ~, n_x, n_y] = size(x);
-        x_flat = reshape(x, [n_samples * n_x * n_y, size(x, 2)]);
-        x_skip = x_flat * ws_weight' + ws_bias';
-        x_skip = reshape(x_skip, [n_samples, size(x_skip, 2), n_x, n_y]);
-
-    else
-        error('MLP for 3D not yet implemented');
-    end
-end
-
-% MLP_conv - MLP with convolutional structure
-function out = mlp_conv_forward(problem_dim, x, w1, b1, w2, b2, fun_act)
-    if problem_dim == 1
-        [n_samples, ~, n_points] = size(x);
-
-        % Reshape to apply MLP on channels
-        x_flat = reshape(x, [n_samples * n_points, size(x, 2)]);
-
-        % First layer
-        h = x_flat * w1' + b1';
-        h = apply_activation(h, fun_act);
-
-        % Second layer
-        out_flat = h * w2' + b2';
-
-        % Reshape back
-        out = reshape(out_flat, [n_samples, size(out_flat, 2), n_points]);
-
-    elseif problem_dim == 2
-        [n_samples, ~, n_x, n_y] = size(x);
-
-        % Reshape to apply MLP on channels
-        x_flat = reshape(x, [n_samples * n_x * n_y, size(x, 2)]);
-
-        % First layer
-        h = x_flat * w1' + b1';
-        h = apply_activation(h, fun_act);
-
-        % Second layer
-        out_flat = h * w2' + b2';
-
-        % Reshape back
-        out = reshape(out_flat, [n_samples, size(out_flat, 2), n_x, n_y]);
-
-    else
-        error('MLP_conv for 3D not yet implemented');
-    end
-end
-
-%% FNO Forward Pass
-function output = fno_forward(x, model)
-    problem_dim = model.problem_dim;
-    L = model.L;
-    padding = model.padding;
-    fun_act = model.fun_act;
-
-    % Input normalization (if available)
-    if isfield(model, 'has_input_normalizer_gaussian') && model.has_input_normalizer_gaussian
-        x = normalize_input_gaussian(x, model, problem_dim);
-    elseif isfield(model, 'has_input_normalizer_minmax') && model.has_input_normalizer_minmax
-        x = normalize_input_minmax(x, model, problem_dim);
-    end
-
-    % Add grid coordinates to input
-    x = add_grid(x, problem_dim);
-
-    % Lifting operator P (MLP)
-    x = mlp_forward(problem_dim, x, model.p_mlp1_weight, model.p_mlp1_bias, ...
-        model.p_mlp2_weight, model.p_mlp2_bias, fun_act);
-
-    % Reshape for convolution: [n_samples, spatial_points*, d_v] -> [n_samples, d_v, spatial_points*]
-    if problem_dim == 1
-        x = permute(x, [1, 3, 2]);
-    elseif problem_dim == 2
-        x = permute(x, [1, 4, 2, 3]);
-    end
-
-    % Apply padding
-    if padding > 0
-        x = pad_tensor(x, padding, problem_dim);
-    end
-
-    % Fourier Layers
-    for i = 0:(L - 1)
-        x = fourier_layer(x, model, i);
-    end
-
-    % Remove padding
-    if padding > 0
-        x = unpad_tensor(x, padding, problem_dim);
-    end
-
-    % Reshape back: [n_samples, d_v, spatial_points] -> [n_samples, spatial_points, d_v]
-    if problem_dim == 1
-        x = permute(x, [1, 3, 2]);
-    elseif problem_dim == 2
-        x = permute(x, [1, 3, 4, 2]);
-    end
-
-    % Projection operator Q (MLP)
-    output = mlp_forward(problem_dim, x, model.q_mlp1_weight, model.q_mlp1_bias, ...
-        model.q_mlp2_weight, model.q_mlp2_bias, fun_act);
-
-    % Output denormalization (if available)
-    if isfield(model, 'has_output_normalizer_gaussian') && model.has_output_normalizer_gaussian
-        output = denormalize_output_gaussian(output, model, problem_dim);
-    elseif isfield(model, 'has_output_normalizer_minmax') && model.has_output_normalizer_minmax
-        output = denormalize_output_minmax(output, model, problem_dim);
-    end
-
-end
-
-%% UTILS for FNO forward pass: add grid function
-function x = add_grid(x, problem_dim)
-    if problem_dim == 1
-        [n_samples, n_points, ~] = size(x);
-        grid = linspace(0, 1, n_points)';
-        grid = repmat(reshape(grid, [1, n_points, 1]), [n_samples, 1, 1]);
-        x = cat(3, grid, x);
-
-    elseif problem_dim == 2
-        [n_samples, size_x, size_y, ~] = size(x);
-
-        % Grid for x dimension: shape [1, size_x, 1, 1] repeated to [n_samples, size_x, size_y, 1]
-        gridx = linspace(0, 1, size_x);
-        gridx = reshape(gridx, [1, size_x, 1, 1]);
-        gridx = repmat(gridx, [n_samples, 1, size_y, 1]);
-
-        % Grid for y dimension: shape [1, 1, size_y, 1] repeated to [n_samples, size_x, size_y, 1]
-        gridy = linspace(0, 1, size_y);
-        gridy = reshape(gridy, [1, 1, size_y, 1]);
-        gridy = repmat(gridy, [n_samples, size_x, 1, 1]);
-
-        % Concatenate grids with input: [n_samples, size_x, size_y, 2+in_dim]
-        x = cat(4, gridx, gridy, x);
-
-    elseif problem_dim == 3
-        warning('3D grid addition needs to be customized for your specific case');
-    end
-end
-
-%% UTILS for FNO forward pass: padding and unpadding functions
-function x_padded = pad_tensor(x, padding, problem_dim)
-    if problem_dim == 1
-        [n_samples, channels, n_points] = size(x);
-        x_padded = zeros(n_samples, channels, n_points + 2 * padding);
-        x_padded(:, :, padding + 1:n_points + padding) = x;
-    elseif problem_dim == 2
-        [n_samples, channels, n_x, n_y] = size(x);
-        x_padded = zeros(n_samples, channels, n_x + 2 * padding, n_y + 2 * padding);
-        x_padded(:, :, padding + 1:n_x + padding, padding + 1:n_y + padding) = x;
-    else
-        error('Padding for 3D not yet implemented');
-    end
-end
-
-function x_unpadded = unpad_tensor(x, padding, problem_dim)
-    if problem_dim == 1
-        [~, ~, n_points] = size(x);
-        x_unpadded = x(:, :, padding + 1:n_points + padding);
-    else
-        [~, ~, n_x, n_y] = size(x);
-        x_unpadded = x(:, :, padding + 1:n_x + padding, padding + 1:n_y + padding);
-    end
-end
-
 %% Normalization functions (Gaussian)
 function x_normalized = normalize_input_gaussian(x, model, problem_dim)
     % NORMALIZE_INPUT - Apply UnitGaussianNormalizer encoding
@@ -519,6 +273,245 @@ function x_denormalized = denormalize_output_minmax(x, model, problem_dim)
     x_denormalized = x .* (max_val - min_val) + min_val;
 end
 
+%% Activation function
+function out = apply_activation(x, fun_act)
+    switch fun_act
+        case 'relu'
+            out = max(0, x);
+        case 'gelu'
+            out = 0.5 * x .* (1 + tanh(sqrt(2 / pi) * (x + 0.044715 * x .^ 3)));
+        case 'tanh'
+            out = tanh(x);
+        case 'leaky_relu'
+            out = max(0.01 * x, x);
+        otherwise
+            error('Unknown activation function: %s', fun_act);
+    end
+end
+
+% Apply activation to tensor
+function out = apply_activation_tensor(x, fun_act, problem_dim)
+    if problem_dim == 1
+        [n_samples, channels, n_points] = size(x);
+        x_flat = reshape(x, [n_samples * channels * n_points, 1]);
+        out_flat = apply_activation(x_flat, fun_act);
+        out = reshape(out_flat, [n_samples, channels, n_points]);
+
+    elseif problem_dim == 2
+        [n_samples, channels, n_x, n_y] = size(x);
+        x_flat = reshape(x, [n_samples * channels * n_x * n_y, 1]);
+        out_flat = apply_activation(x_flat, fun_act);
+        out = reshape(out_flat, [n_samples, channels, n_x, n_y]);
+
+    else
+        error('Unknown problem dimension: %d', problem_dim);
+
+    end
+end
+
+%% Shallow MLP
+function out = mlp_forward(problem_dim, x, w1, b1, w2, b2, fun_act)
+    if problem_dim == 1
+        % reshape
+        [n_samples, n_points, ~] = size(x);
+        x_flat = reshape(x, [n_samples * n_points, size(x, 3)]);
+
+        % First layer
+        h = x_flat * w1' + b1';
+        h = apply_activation(h, fun_act);
+
+        % Second layer
+        out = h * w2' + b2';
+
+        % Reshape back
+        out = reshape(out, [n_samples, n_points, size(out, 2)]);
+
+    elseif problem_dim == 2
+        % reshape
+        [n_samples, n_x, n_y, ~] = size(x);
+        x_flat = reshape(x, [n_samples * n_x * n_y, size(x, 4)]);
+
+        % First layer
+        h = x_flat * w1' + b1';
+        h = apply_activation(h, fun_act);
+
+        % Second layer
+        out = h * w2' + b2';
+
+        % Reshape back
+        out = reshape(out, [n_samples, n_x, n_y, size(out, 2)]);
+    else
+        error('MLP for 3D not yet implemented');
+    end
+end
+
+% Linear layer - like the conv trick in pytorch
+function out = linear_conv(problem_dim, x, w1, b1)
+    if problem_dim == 1
+        x = permute(x, [1, 3, 2]);
+
+        [n_samples, n_points, ~] = size(x);
+        x_flat = reshape(x, [n_samples * n_points, size(x, 3)]);
+        out = x_flat * w1' + b1';
+        out = reshape(out, [n_samples, n_points, size(out, 2)]);
+
+        out = permute(out, [1, 3, 2]);
+
+    elseif problem_dim == 2
+        x = permute(x, [1, 3, 4, 2]);
+
+        [n_samples, n_x, n_y, ~] = size(x);
+        x_flat = reshape(x, [n_samples * n_x * n_y, size(x, 4)]);
+        out = x_flat * w1' + b1';
+        out = reshape(out, [n_samples, n_x, n_y, size(out, 2)]);
+
+        out = permute(out, [1, 4, 2, 3]);
+
+    else
+        error('MLP_conv for 3D not yet implemented');
+    end
+
+end
+
+% MLP_conv - MLP with convolutional structure
+function out = mlp_conv_forward(problem_dim, x, w1, b1, w2, b2, fun_act)
+    % x shape is [n_samples, channels, spatial_points*]
+
+    if problem_dim == 1
+        x = permute(x, [1, 3, 2]);
+        x = mlp_forward(problem_dim, x, w1, b1, w2, b2, fun_act);
+        out = permute(x, [1, 3, 2]);
+
+    elseif problem_dim == 2
+        x = permute(x, [1, 3, 4, 2]);
+        x = mlp_forward(problem_dim, x, w1, b1, w2, b2, fun_act);
+        out = permute(x, [1, 4, 2, 3]);
+
+    else
+        error('MLP_conv for 3D not yet implemented');
+    end
+
+end
+
+%% FNO Forward Pass
+function output = fno_forward(x, model)
+    problem_dim = model.problem_dim;
+    L = model.L;
+    padding = model.padding;
+    fun_act = model.fun_act;
+
+    % Input normalization (if available)
+    % if isfield(model, 'has_input_normalizer_gaussian') && model.has_input_normalizer_gaussian
+    %     x = normalize_input_gaussian(x, model, problem_dim);
+    % elseif isfield(model, 'has_input_normalizer_minmax') && model.has_input_normalizer_minmax
+    %     x = normalize_input_minmax(x, model, problem_dim);
+    % end
+
+    % Add grid coordinates to input
+    x = add_grid(x, problem_dim);
+
+    % Lifting operator P (MLP)
+    x = mlp_forward(problem_dim, x, model.p_mlp1_weight, model.p_mlp1_bias, ...
+        model.p_mlp2_weight, model.p_mlp2_bias, fun_act);
+
+    % Reshape for convolution: [n_samples, spatial_points*, d_v] -> [n_samples, d_v, spatial_points*]
+    if problem_dim == 1
+        x = permute(x, [1, 3, 2]);
+    elseif problem_dim == 2
+        x = permute(x, [1, 4, 2, 3]);
+    end
+
+    % Apply padding
+    if padding > 0
+        x = pad_tensor(x, padding, problem_dim);
+    end
+
+    % Fourier Layers
+    for i = 0:(L - 1)
+        x = fourier_layer(x, model, i);
+    end
+
+    x(1, 1:11, 1, 1)
+
+    % Remove padding
+    if padding > 0
+        x = unpad_tensor(x, padding, problem_dim);
+    end
+
+    % Reshape back: [n_samples, d_v, spatial_points] -> [n_samples, spatial_points, d_v]
+    if problem_dim == 1
+        x = permute(x, [1, 3, 2]);
+    elseif problem_dim == 2
+        x = permute(x, [1, 3, 4, 2]);
+    end
+
+    % Projection operator Q (MLP)
+    output = mlp_forward(problem_dim, x, model.q_mlp1_weight, model.q_mlp1_bias, ...
+        model.q_mlp2_weight, model.q_mlp2_bias, fun_act);
+
+    % Output denormalization (if available)
+    if isfield(model, 'has_output_normalizer_gaussian') && model.has_output_normalizer_gaussian
+        output = denormalize_output_gaussian(output, model, problem_dim);
+    elseif isfield(model, 'has_output_normalizer_minmax') && model.has_output_normalizer_minmax
+        output = denormalize_output_minmax(output, model, problem_dim);
+    end
+
+end
+
+%% UTILS for FNO forward pass: add grid function
+function x = add_grid(x, problem_dim)
+    if problem_dim == 1
+        [n_samples, n_points, ~] = size(x);
+        grid = linspace(0, 1, n_points)';
+        grid = repmat(reshape(grid, [1, n_points, 1]), [n_samples, 1, 1]);
+        x = cat(3, grid, x);
+
+    elseif problem_dim == 2
+        [n_samples, size_x, size_y, ~] = size(x);
+
+        % Grid for x dimension: shape [1, size_x, 1, 1] repeated to [n_samples, size_x, size_y, 1]
+        gridx = linspace(0, 1, size_x);
+        gridx = reshape(gridx, [1, size_x, 1, 1]);
+        gridx = repmat(gridx, [n_samples, 1, size_y, 1]);
+
+        % Grid for y dimension: shape [1, 1, size_y, 1] repeated to [n_samples, size_x, size_y, 1]
+        gridy = linspace(0, 1, size_y);
+        gridy = reshape(gridy, [1, 1, size_y, 1]);
+        gridy = repmat(gridy, [n_samples, size_x, 1, 1]);
+
+        % Concatenate grids with input: [n_samples, size_x, size_y, 2+in_dim]
+        x = cat(4, gridx, gridy, x);
+
+    elseif problem_dim == 3
+        warning('3D grid addition needs to be customized for your specific case');
+    end
+end
+
+%% UTILS for FNO forward pass: padding and unpadding functions
+function x_padded = pad_tensor(x, padding, problem_dim)
+    if problem_dim == 1
+        [n_samples, channels, n_points] = size(x);
+        x_padded = zeros(n_samples, channels, n_points + 2 * padding);
+        x_padded(:, :, padding + 1:n_points + padding) = x;
+    elseif problem_dim == 2
+        [n_samples, channels, n_x, n_y] = size(x);
+        x_padded = zeros(n_samples, channels, n_x + 2 * padding, n_y + 2 * padding);
+        x_padded(:, :, padding + 1:n_x + padding, padding + 1:n_y + padding) = x;
+    else
+        error('Padding for 3D not yet implemented');
+    end
+end
+
+function x_unpadded = unpad_tensor(x, padding, problem_dim)
+    if problem_dim == 1
+        [~, ~, n_points] = size(x);
+        x_unpadded = x(:, :, padding + 1:n_points + padding);
+    else
+        [~, ~, n_x, n_y] = size(x);
+        x_unpadded = x(:, :, padding + 1:n_x + padding, padding + 1:n_y + padding);
+    end
+end
+
 %% Fourier Layer
 function x = fourier_layer(x, model, layer_idx)
 
@@ -593,6 +586,12 @@ function x = fourier_layer(x, model, layer_idx)
             % Apply Zongyi variant
             x1 = mlp_conv_forward(problem_dim, x_fourier, mlp1_weight, mlp1_bias, ...
                 mlp2_weight, mlp2_bias, fun_act);
+
+            if layer_idx == 0
+                x1(1, 1:11, 1, 1)
+                x_skip(1, 1:11, 1, 1)
+            end
+
             x = x1 + x_skip;
             if layer_idx < L - 1
                 x = apply_activation_tensor(x, fun_act, problem_dim);
