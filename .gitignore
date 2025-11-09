@@ -11,3 +11,5 @@ train_loss/
 **/FNO_lin/
 
 uv.lock
+
+fft_test_data.mat
