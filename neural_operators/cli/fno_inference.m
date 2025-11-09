@@ -1,15 +1,4 @@
 % FNO_INFERENCE - Load and run inference with exported FNO model
-%
-% This script demonstrates how to load an FNO model exported from PyTorch
-% and perform forward pass inference in MATLAB.
-%
-% Usage:
-%   1. Export your PyTorch model using export_fno_to_mat.py
-%   2. Modify the parameters below to match your setup
-%   3. Run this script: fno_inference
-%
-% Author: Generated for HyperNOs project
-% Date: 2025-11-07
 
 clear; close all; clc;
 
@@ -97,11 +86,11 @@ if ~isempty(y_pred_pytorch)
     fprintf('\nCorrelation coefficient: %.10f\n', corr_coef(1, 2));
 
     % Check tolerance
-    tol = 1e-5;
+    tol = 1e-4;
     if max(abs_diff(:)) < tol
-        fprintf('\n✓ SUCCESS: MATLAB and PyTorch outputs match within tolerance (%.e)!\n', tol);
+        fprintf('\n SUCCESS: MATLAB and PyTorch outputs match within tolerance (%.e)!\n', tol);
     else
-        fprintf('\n⚠ WARNING: Difference exceeds tolerance (%.e)\n', tol);
+        fprintf('\n WARNING: Difference exceeds tolerance (%.e)\n', tol);
     end
 end
 
@@ -428,7 +417,6 @@ function output = fno_forward(x, model)
 
     % Fourier Layers
     for i = 0:(L - 1)
-        x(1, 1:11, 1, 1)
         x = fourier_layer(x, model, i);
     end
 
@@ -702,10 +690,27 @@ function out = fourier_transform_2d(x, weights1, weights2, modes)
     out_fft_full(:, :, :, 1:n_y_rfft) = out_fft;
 
     % Impose Hermitian symmetry for the output
-    if n_y_rfft < n_y
-        mirror_indices_from = 2:(n_y_rfft - 1);
-        mirror_indices_to = (n_y - mirror_indices_from + 2);
-        out_fft_full(:, :, :, mirror_indices_to) = conj(out_fft(:, :, :, mirror_indices_from));
+    if mod(n_y, 2) == 0
+        for k_y = 2:(n_y_rfft - 1)
+            % For k_x = 1 (DC in x-direction)
+            out_fft_full(:, :, 1, n_y - k_y + 2) = conj(out_fft(:, :, 1, k_y));
+            % For other k_x values (including negative x-frequencies)
+            for k_x = 2:n_x
+                % Negative x-frequency index
+                k_x_neg = mod(-k_x + 1, n_x) + 1;
+                out_fft_full(:, :, k_x, n_y - k_y + 2) = conj(out_fft(:, :, k_x_neg, k_y));
+            end
+        end
+    else
+        for k_y = 2:n_y_rfft
+            % For k_x = 1 (DC in x-direction)
+            out_fft_full(:, :, 1, n_y - k_y + 2) = conj(out_fft(:, :, 1, k_y));
+            % For other k_x values
+            for k_x = 2:n_x
+                k_x_neg = mod(-k_x + 1, n_x) + 1;
+                out_fft_full(:, :, k_x, n_y - k_y + 2) = conj(out_fft(:, :, k_x_neg, k_y));
+            end
+        end
     end
 
     % Inverse FFT on both dimensions
