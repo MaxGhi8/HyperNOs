@@ -14,7 +14,7 @@ sys.path.append("..")
 
 import numpy as np
 import torch
-from architectures import BAMPNO, CNO, FNO, ResidualNetwork
+from architectures import BAMPNO, CNO, FNO, FNO_lin, ResidualNetwork
 from datasets import NO_load_data_model
 
 # from architectures import FNO_lin
@@ -22,6 +22,8 @@ from loss_fun import loss_selector
 from scipy.io import savemat
 from utilities import count_params, initialize_hyperparameters
 from wrappers import wrap_model
+
+# torch.set_default_dtype(torch.float64)  # default tensor dtype
 
 #########################################
 # default values
@@ -496,6 +498,8 @@ try:
     # Move to CPU and convert to numpy
     X_test_np = X_test_batch.cpu().detach().numpy()
     y_test_np = y_test_batch.cpu().detach().numpy()
+    print("\nFirst element of X_test_np:")
+    print(X_test_np[0, 0, 0])
 
     # Run inference on the batch with PyTorch
     model.eval()
@@ -514,7 +518,7 @@ try:
     params_dict["test_y_pred_pytorch"] = y_pred_np
     params_dict["has_test_batch"] = True
 
-    print(f"\n✓ Test batch exported successfully!")
+    print(f"\n Test batch exported successfully!")
     print(f"  PyTorch output stats:")
     print(f"    Mean: {y_pred_np.mean():.6f}")
     print(f"    Std:  {y_pred_np.std():.6f}")
@@ -522,7 +526,7 @@ try:
     print(f"    Max:  {y_pred_np.max():.6f}")
 
 except Exception as e:
-    print(f"\n⚠ Warning: Could not export test batch: {e}")
+    print(f"\n Warning: Could not export test batch: {e}")
     print("  Continuing without test data...")
     params_dict["has_test_batch"] = False
 

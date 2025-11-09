@@ -428,10 +428,9 @@ function output = fno_forward(x, model)
 
     % Fourier Layers
     for i = 0:(L - 1)
+        x(1, 1:11, 1, 1)
         x = fourier_layer(x, model, i);
     end
-
-    x(1, 1:11, 1, 1)
 
     % Remove padding
     if padding > 0
@@ -586,11 +585,6 @@ function x = fourier_layer(x, model, layer_idx)
             % Apply Zongyi variant
             x1 = mlp_conv_forward(problem_dim, x_fourier, mlp1_weight, mlp1_bias, ...
                 mlp2_weight, mlp2_bias, fun_act);
-
-            if layer_idx == 0
-                x1(1, 1:11, 1, 1)
-                x_skip(1, 1:11, 1, 1)
-            end
 
             x = x1 + x_skip;
             if layer_idx < L - 1
