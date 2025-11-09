@@ -3,11 +3,9 @@ import os
 
 import torch
 from loss_fun import (
-    ChebyshevLprelLoss_mp,
     H1relLoss,
     H1relLoss_1D,
     H1relLoss_1D_multiout,
-    H1relLoss_cheb_mp,
     H1relLoss_multiout,
     LprelLoss,
     LprelLoss_multiout,

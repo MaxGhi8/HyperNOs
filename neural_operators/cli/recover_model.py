@@ -37,7 +37,7 @@ sys.path.append("..")
 import matplotlib.pyplot as plt
 import seaborn as sns
 import torch
-from architectures import BAMPNO, CNO, FNO, ResidualNetwork
+from architectures import CNO, FNO, ResidualNetwork
 from beartype import beartype
 from cli.utilities_recover_model import get_tensors, test_fun, test_plot_samples
 from datasets import NO_load_data_model
@@ -572,32 +572,33 @@ elif which_example in ["crosstruss"]:
     print("Test mean relative h1 norm componentwise: ", test_rel_h1_componentwise)
     print("")
 
+
 #########################################
 # Compute boundary Dirichlet error (interesting for BAMPNO architecture comparison)
 ##########################################
 def compute_dirichlet_error(test_prediction_tensor, example, device):
-    # get the points of the domain 
+    # get the points of the domain
     x_phys = example.X_phys.to(device)
     y_phys = example.Y_phys.to(device)
-    
+
     # extract test_prediction_tensor at the boundary points
     # this code holds only for the S domain
-    total_error=0
+    total_error = 0
     for n_ex in range(test_prediction_tensor.shape[0]):
-        err=0
-        example=test_prediction_tensor[n_ex,:, :,0]
-        err+=torch.sum(torch.abs(example[0, :])) # bottom boundary
-        err+=torch.sum(torch.abs(example[-1, :])) # top boundary
-        err+=torch.sum(torch.abs(example[:, 0])) # left boundary
-        err+=torch.sum(torch.abs(example[:, -1])) # right boundary
-        err+=torch.sum(torch.abs(example[59, :30]))
-        err+=torch.sum(torch.abs(example[29, 59:]))
-        err+=torch.sum(torch.abs(example[:60, 29]))
-        err+=torch.sum(torch.abs(example[:60, 59]))
-        total_error+=err
-    
-    return total_error/test_prediction_tensor.shape[0]
-    
+        err = 0
+        example = test_prediction_tensor[n_ex, :, :, 0]
+        err += torch.sum(torch.abs(example[0, :]))  # bottom boundary
+        err += torch.sum(torch.abs(example[-1, :]))  # top boundary
+        err += torch.sum(torch.abs(example[:, 0]))  # left boundary
+        err += torch.sum(torch.abs(example[:, -1]))  # right boundary
+        err += torch.sum(torch.abs(example[59, :30]))
+        err += torch.sum(torch.abs(example[29, 59:]))
+        err += torch.sum(torch.abs(example[:60, 29]))
+        err += torch.sum(torch.abs(example[:60, 59]))
+        total_error += err
+
+    return total_error / test_prediction_tensor.shape[0]
+
 
 error_on_boundary = compute_dirichlet_error(prediction_tensor, example, device)
 print("Mean absolute error on the boundary (Dirichlet BC): ", error_on_boundary)
