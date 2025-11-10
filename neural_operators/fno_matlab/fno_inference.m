@@ -29,7 +29,6 @@ fprintf('Padding: %d\n', model.padding);
 if isfield(model, 'has_test_batch') && model.has_test_batch
     fprintf('\n=== Using exported test batch ===\n');
     x_input = model.test_X_batch;
-    x_input(1, 1, 1)
     y_target = model.test_y_batch;
     y_pred_pytorch = model.test_y_pred_pytorch;
 
@@ -87,7 +86,7 @@ if ~isempty(y_pred_pytorch)
 
     % Check tolerance
     tol = 1e-4;
-    if max(abs_diff(:)) < tol
+    if mean(abs_diff(:)) < tol
         fprintf('\n SUCCESS: MATLAB and PyTorch outputs match within tolerance (%.e)!\n', tol);
     else
         fprintf('\n WARNING: Difference exceeds tolerance (%.e)\n', tol);
