@@ -1,10 +1,10 @@
 {
 	"training_properties": {
-		"training_samples": 1600,
-		"val_samples": 200,
-		"test_samples": 200,
+		"training_samples": 3400,
+		"val_samples": 300,
+		"test_samples": 300,
 		"learning_rate": 0.001,
-		"epochs": 2,
+		"epochs": 1000,
 		"batch_size": 32,
 		"weight_decay": 0.0001,
 		"scheduler_step": 10,
@@ -26,7 +26,7 @@
 		"include_grid": 1,
 		"weights_norm": "Kaiming",
 		"retrain": 4,
-		"filename": "dataset_homogeneous_Neumann_FNO.mat",
+		"filename": "dataset_homogeneous_Neumann_FNO_ring.mat",
 		"internal_normalization": true,
 		"problem_dim": 2
 	}

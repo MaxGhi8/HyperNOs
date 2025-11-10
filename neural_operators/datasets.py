@@ -2751,7 +2751,7 @@ class AFIETI_FNO:
         in_dist=True,
         search_path="/",
     ):
-        assert training_samples <= 1600, "Training samples must be less than 3000"
+        assert training_samples <= 3600, "Training samples must be less than 3000"
         assert in_dist, "Out-of-distribution testing samples are not available"
 
         # Create generator on the appropriate device
