@@ -498,8 +498,6 @@ try:
     # Move to CPU and convert to numpy
     X_test_np = X_test_batch.cpu().detach().numpy()
     y_test_np = y_test_batch.cpu().detach().numpy()
-    print("\nFirst element of X_test_np:")
-    print(X_test_np[0, 0, 0])
 
     # Run inference on the batch with PyTorch
     model.eval()
