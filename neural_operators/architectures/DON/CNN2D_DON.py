@@ -37,7 +37,7 @@ def activation_fun(activation_str):
 #########################################
 # 2D CNN Branch Network for DeepONet
 #########################################
-class CNN2D_Branch(nn.Module):
+class CNN2D_DON(nn.Module):
     """
     2D CNN Branch Network for DeepONet.
 
@@ -79,7 +79,7 @@ class CNN2D_Branch(nn.Module):
             normalization (str): Normalization type ('batch', 'layer', or 'none')
             dropout_rate (float): Dropout rate
         """
-        super(CNN2D_Branch, self).__init__()
+        super(CNN2D_DON, self).__init__()
 
         assert (
             len(hidden_channels) >= 1
@@ -221,8 +221,6 @@ class CNN2D_Branch(nn.Module):
         Returns:
             Basis coefficients of shape (batch, n_basis)
         """
-        x = self.input_normalizer(x)
-
         # Add grid if requested
         if self.include_grid:
             grid = self.get_grid_2d(x.shape).to(x.device)

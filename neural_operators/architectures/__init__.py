@@ -17,20 +17,26 @@ from .BAMPNO.chebyshev_utilities import (
     patched_values_to_coefficients,
     values_to_coefficients,
 )
+from .CNN.CNN2D import CNN2D
 
 # CNN architecture
 from .CNN.CNN2DResidualNetwork import CNN2DResidualNetwork, Conv2DResidualBlock
-from .CNN.CNN2D import CNN2D
 
 # CNO architecture
 from .CNO.CNO import CNO
 from .CNO.CNO_utilities import compute_channel_multiplier, count_params_cno
+from .DON.CNN2D_DON import CNN2D_DON
 
 # DON architecture
 from .DON.DON import DeepONet
 
 # FNN architecture
-from .FNN.FeedForwardNetwork import FeedForwardNetwork, activation_fun, zero_mean_imposition, centered_softmax
+from .FNN.FeedForwardNetwork import (
+    FeedForwardNetwork,
+    activation_fun,
+    centered_softmax,
+    zero_mean_imposition,
+)
 
 # FNO architecture
 from .FNO.FNO import FNO
