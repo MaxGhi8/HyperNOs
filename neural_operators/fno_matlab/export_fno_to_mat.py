@@ -414,7 +414,11 @@ params_dict["RNN"] = model.RNN
 params_dict["padding"] = model.padding
 
 # Add normalization parameters if available
-if hasattr(example, "input_normalizer") and example.input_normalizer is not None:
+if (
+    hasattr(example, "input_normalizer")
+    and example.input_normalizer is not None
+    and params_dict.get("internal_normalization", False)
+):
     try:  # for UnitGaussianNormalizer
         params_dict["input_normalizer_mean"] = (
             example.input_normalizer.mean.cpu().detach().numpy()
@@ -447,7 +451,11 @@ else:
     params_dict["has_input_normalizer"] = False
     print("\nNo input normalizer found")
 
-if hasattr(example, "output_normalizer") and example.output_normalizer is not None:
+if (
+    hasattr(example, "output_normalizer")
+    and example.output_normalizer is not None
+    and params_dict.get("internal_normalization", False)
+):
     try:  # for UnitGaussianNormalizer
         params_dict["output_normalizer_mean"] = (
             example.output_normalizer.mean.cpu().detach().numpy()
