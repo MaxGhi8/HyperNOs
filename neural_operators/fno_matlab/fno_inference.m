@@ -388,12 +388,31 @@ function output = fno_forward(x, model)
     padding = model.padding;
     fun_act = model.fun_act;
 
-    % Input normalization (if available)
+    % Input normalization (if available, not yet done in FNO)
     % if isfield(model, 'has_input_normalizer_gaussian') && model.has_input_normalizer_gaussian
     %     x = normalize_input_gaussian(x, model, problem_dim);
     % elseif isfield(model, 'has_input_normalizer_minmax') && model.has_input_normalizer_minmax
     %     x = normalize_input_minmax(x, model, problem_dim);
     % end
+
+    %%%% Impose norm L2 equal to 1
+    batch_size = size(x, 1);
+    x_flat = reshape(x, [batch_size, numel(x) / batch_size]);
+    x_norm = sqrt(sum(x_flat .^ 2, 2)); % L2 norm for each batch element, shape: [batch_size, 1]
+
+    % Expand x_norm to match x dimensions for broadcasting
+    if problem_dim == 1
+        % x is [batch_size, n_points, in_dim]
+        x_norm_expanded = repmat(x_norm, [1, size(x, 2), size(x, 3)]);
+    elseif problem_dim == 2
+        % x is [batch_size, size_x, size_y, in_dim]
+        x_norm_expanded = repmat(x_norm, [1, size(x, 2), size(x, 3), size(x, 4)]);
+    elseif problem_dim == 3
+        % x is [batch_size, size_x, size_y, size_z, in_dim]
+        x_norm_expanded = repmat(x_norm, [1, size(x, 2), size(x, 3), size(x, 4), size(x, 5)]);
+    end
+
+    x = x ./ (x_norm_expanded +1e-8);
 
     % Add grid coordinates to input
     x = add_grid(x, problem_dim);
@@ -441,6 +460,20 @@ function output = fno_forward(x, model)
     elseif isfield(model, 'has_output_normalizer_minmax') && model.has_output_normalizer_minmax
         output = denormalize_output_minmax(output, model, problem_dim);
     end
+
+    %%%% Rescale output to original L2 norm
+    if problem_dim == 1
+        % output is [batch_size, n_points, out_dim]
+        output_norm_expanded = repmat(x_norm, [1, size(output, 2), size(output, 3)]);
+    elseif problem_dim == 2
+        % output is [batch_size, size_x, size_y, out_dim]
+        output_norm_expanded = repmat(x_norm, [1, size(output, 2), size(output, 3), size(output, 4)]);
+    elseif problem_dim == 3
+        % output is [batch_size, size_x, size_y, size_z, out_dim]
+        output_norm_expanded = repmat(x_norm, [1, size(output, 2), size(output, 3), size(output, 4), size(output, 5)]);
+    end
+
+    output = output .* (output_norm_expanded +1e-8);
 
 end
 
