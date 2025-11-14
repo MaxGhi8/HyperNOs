@@ -379,7 +379,12 @@ def train_epoch(
     model.train()
     train_loss = 0.0
     for step, (input_batch, output_batch) in enumerate(train_loader):
-        input_batch = input_batch.to(device)
+
+        if type(input_batch) is not torch.Tensor:
+            input_batch = tuple(item.to(device) for item in input_batch)
+        else:
+            input_batch = input_batch.to(device)
+
         output_batch = output_batch.to(device)
 
         optimizer.zero_grad()  # annealing the gradient
