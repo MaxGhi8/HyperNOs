@@ -678,8 +678,14 @@ class FNO(nn.Module):
                 f"absmax={x.abs().max().item()}"
             )
 
-        #### Only for AFIETI_FNO
+        #! Only for AFIETI_FNO (and comment jaxtyping)
         # x = x.unsqueeze(-1)
+        # batch_size = x.shape[0]
+        # x_flat = x.view(batch_size, -1)
+        # x_norm = torch.norm(x_flat, p=2, dim=1, keepdim=True)
+        # for _ in range(len(x.shape) - 2):
+        #     x_norm = x_norm.unsqueeze(-1)
+        # x = x / (x_norm + 1e-8)
 
         ## Grid and initialization
         if self.problem_dim == 1:
@@ -779,6 +785,9 @@ class FNO(nn.Module):
         x = self.output_denormalizer(
             self.q(x)
         )  # shape --> (n_samples)*(*n_x)*(out_dim)
+
+        #! Rescale output to original L2 norm (only for AFIETI_FNO)
+        # x = x * (x_norm + 1e-8)
 
         # see if nan or inf in output
         if not torch.isfinite(x).all():
