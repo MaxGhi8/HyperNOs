@@ -782,3 +782,38 @@ def test_afieti_fno_dataset():
         example.s_out,
         example.s_out,
     )
+
+
+def test_darcy_don():
+    batch_size = 10
+    training_samples = 160
+    example = NO_load_data_model(
+        which_example="darcy_don",
+        no_architecture={
+            "FourierF": 0,
+            "retrain": -1,
+        },
+        batch_size=batch_size,
+        training_samples=training_samples,
+    )
+
+    # Check for the dimensions of the input and output tensors
+    train_branch_input, train_trunk_input, train_batch_output = next(
+        iter(example.train_loader)
+    )
+
+    assert train_branch_input.shape == (batch_size, example.s, example.s, 1)
+    assert train_trunk_input.shape == (batch_size, example.s * example.s, 2)
+    assert train_batch_output.shape == (batch_size, example.s, example.s, 1)
+
+    test_branch_input, test_trunk_input, test_batch_output = next(
+        iter(example.test_loader)
+    )
+    assert test_branch_input.shape == (batch_size, example.s, example.s, 1)
+    assert test_trunk_input.shape == (batch_size, example.s * example.s, 2)
+    assert test_batch_output.shape == (batch_size, example.s, example.s, 1)
+
+    val_branch_input, val_trunk_input, val_batch_output = next(iter(example.val_loader))
+    assert val_branch_input.shape == (batch_size, example.s, example.s, 1)
+    assert val_trunk_input.shape == (batch_size, example.s * example.s, 2)
+    assert val_batch_output.shape == (batch_size, example.s, example.s, 1)

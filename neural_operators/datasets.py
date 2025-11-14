@@ -52,6 +52,7 @@ def NO_load_data_model(
         "disc_tran": DiscContTranslation,
         "airfoil": Airfoil,
         "darcy": Darcy,
+        "darcy_don": Darcy_DON,
         ###
         "burgers_zongyi": Burgers_Zongyi,
         "darcy_zongyi": Darcy_Zongyi,
@@ -1604,6 +1605,7 @@ class DarcyDataset(Dataset):
         s=64,
         insample=True,
         search_path="/",
+        return_grid: bool = False,
     ):
         self.s = s
         if insample:
@@ -1633,6 +1635,10 @@ class DarcyDataset(Dataset):
                 self.start = 0
 
         self.N_Fourier_F = nf
+        self.return_grid = return_grid
+
+        self._coordinate_grid_cache = None
+        self._feature_grid_cache = None
 
     def __len__(self):
         return self.length
@@ -1665,24 +1671,143 @@ class DarcyDataset(Dataset):
         inputs = inputs[:, ::stride, ::stride]
         labels = labels[:, ::stride, ::stride]
 
-        if self.N_Fourier_F > 0:
-            grid = self.get_grid()
-            grid = grid.permute(2, 0, 1)
-            inputs = torch.cat((inputs, grid), 0)
+        coord_grid = None
+        if self.return_grid:
+            coord_grid = self.get_coordinate_grid()
 
-        return inputs.permute(1, 2, 0), labels.permute(1, 2, 0)
-
-    def get_grid(self):
-        x = torch.linspace(0, 1, self.s)
-        y = torch.linspace(0, 1, self.s)
-        x_grid, y_grid = torch.meshgrid(x, y, indexing="ij")
-        x_grid = x_grid.unsqueeze(-1)
-        y_grid = y_grid.unsqueeze(-1)
-        grid = torch.cat((x_grid, y_grid), -1)
         if self.N_Fourier_F > 0:
-            FF = FourierFeatures(1, self.N_Fourier_F, grid.device)
-            grid = FF(grid)
-        return grid
+            feature_grid = self.get_grid().permute(2, 0, 1)
+            inputs = torch.cat((inputs, feature_grid), 0)
+
+        branch_input = inputs.permute(1, 2, 0)
+        target = labels.permute(1, 2, 0)
+
+        if self.return_grid:
+            assert coord_grid is not None
+            trunk_input = coord_grid.reshape(-1, coord_grid.shape[-1])
+            return branch_input, trunk_input, target
+
+        return branch_input, target
+
+    def get_coordinate_grid(self) -> torch.Tensor:
+        if self._coordinate_grid_cache is None:
+            x = torch.linspace(0, 1, self.s, dtype=torch.float32)
+            y = torch.linspace(0, 1, self.s, dtype=torch.float32)
+            x_grid, y_grid = torch.meshgrid(x, y, indexing="ij")
+            x_grid = x_grid.unsqueeze(-1)
+            y_grid = y_grid.unsqueeze(-1)
+            self._coordinate_grid_cache = torch.cat((x_grid, y_grid), -1)
+        return self._coordinate_grid_cache
+
+    def get_grid(self) -> torch.Tensor:
+        if self.N_Fourier_F == 0:
+            return self.get_coordinate_grid()
+
+        if self._feature_grid_cache is None:
+            base_grid = self.get_coordinate_grid()
+            FF = FourierFeatures(1, self.N_Fourier_F, base_grid.device)
+            self._feature_grid_cache = FF(base_grid)
+
+        return self._feature_grid_cache
+
+
+class Darcy_DON:
+    def __init__(
+        self,
+        network_properties,
+        batch_size,
+        training_samples=256,
+        s=64,
+        in_dist=True,
+        search_path="/",
+    ):
+        self.s = s
+        assert self.s <= 64
+
+        self.N_Fourier_F = network_properties["FourierF"]
+
+        # Create generator on the appropriate device
+        g = torch.Generator(device=torch.device("cpu"))
+
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
+            torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g.manual_seed(retrain)
+
+        # Change number of workers according to your preference
+        num_workers = 0
+
+        self.train_set = DarcyDataset(
+            "training",
+            self.N_Fourier_F,
+            training_samples,
+            s=self.s,
+            search_path=search_path,
+            return_grid=True,
+        )
+
+        self.train_loader = DataLoader(
+            self.train_set,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.val_loader = DataLoader(
+            DarcyDataset(
+                "validation",
+                self.N_Fourier_F,
+                training_samples,
+                s=self.s,
+                search_path=search_path,
+                return_grid=True,
+            ),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.test_loader = DataLoader(
+            DarcyDataset(
+                "testing",
+                self.N_Fourier_F,
+                training_samples,
+                s=self.s,
+                insample=in_dist,
+                search_path=search_path,
+                return_grid=True,
+            ),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+
+    @property
+    def min_data(self):
+        return self.train_set.min_data
+
+    @property
+    def max_data(self):
+        return self.train_set.max_data
+
+    @property
+    def min_model(self):
+        return self.train_set.min_model
+
+    @property
+    def max_model(self):
+        return self.train_set.max_model
 
 
 class Darcy:
@@ -2633,7 +2758,7 @@ class AFIETI:
         # g = torch.Generator()
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
