@@ -5,8 +5,6 @@ from ..FNN.FeedForwardNetwork import FeedForwardNetwork
 from ..ResNet.ResidualNetwork import ResidualNetwork
 from .CNN2D_DON import CNN2D_DON
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-torch.set_default_device(device)
 torch.set_default_dtype(torch.float32)
 
 activation_function = {
@@ -26,12 +24,14 @@ class DeepONet(nn.Module):
         n_basis: int,
         n_output: int,
         dim: int,
+        device: torch.device = torch.device("cpu"),
     ) -> None:
         super().__init__()
 
         self.n_basis = n_basis
         self.n_output = n_output
         self.dim = dim
+        self.device = device
 
         assert (
             self.n_basis % self.n_output == 0
@@ -42,7 +42,7 @@ class DeepONet(nn.Module):
         self._initialize_branch_network(branch_hyperparameters)
         self._initialize_trunk_network(trunk_hyperparameters)
 
-        self.to(device)
+        self.to(self.device)
 
     def _initialize_trunk_network(self, trunk_hyperparameters: dict) -> None:
         if trunk_hyperparameters["residual"]:
@@ -52,7 +52,7 @@ class DeepONet(nn.Module):
                 hidden_channels=trunk_hyperparameters["hidden_layer"],
                 activation_str=trunk_hyperparameters["act_fun"],
                 n_blocks=trunk_hyperparameters["n_blocks"],
-                device=device,
+                device=self.device,
                 layer_norm=trunk_hyperparameters["layer_norm"],
                 dropout_rate=trunk_hyperparameters["dropout_rate"],
                 activation_on_output=True,
@@ -66,7 +66,7 @@ class DeepONet(nn.Module):
                 out_channels=self.n_basis,
                 hidden_channels=trunk_hyperparameters["hidden_layer"],
                 activation_str=trunk_hyperparameters["act_fun"],
-                device=device,
+                device=self.device,
                 layer_norm=trunk_hyperparameters["layer_norm"],
                 dropout_rate=trunk_hyperparameters["dropout_rate"],
                 activation_on_output=True,
@@ -88,7 +88,7 @@ class DeepONet(nn.Module):
                     hidden_channels=branch_hyperparameters["hidden_layer"],
                     activation_str=branch_hyperparameters["act_fun"],
                     n_blocks=branch_hyperparameters["n_blocks"],
-                    device=device,
+                    device=self.device,
                     layer_norm=branch_hyperparameters["layer_norm"],
                     dropout_rate=branch_hyperparameters["dropout_rate"],
                     activation_on_output=False,
@@ -103,7 +103,7 @@ class DeepONet(nn.Module):
                     out_channels=self.n_basis,
                     hidden_channels=branch_hyperparameters["hidden_layer"],
                     activation_str=branch_hyperparameters["act_fun"],
-                    device=device,
+                    device=self.device,
                     layer_norm=branch_hyperparameters["layer_norm"],
                     dropout_rate=branch_hyperparameters["dropout_rate"],
                     activation_on_output=False,
@@ -130,28 +130,18 @@ class DeepONet(nn.Module):
                     padding=branch_hyperparameters["padding"],
                     stride=branch_hyperparameters["stride"],
                     include_grid=branch_hyperparameters["include_grid"],
-                    device=device,
+                    device=self.device,
                     normalization=branch_hyperparameters["normalization"],
                     dropout_rate=branch_hyperparameters["dropout_rate"],
                 )
 
-    def forward(
-        self, input_branch: torch.Tensor, input_trunk: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, input_don) -> torch.Tensor:
         """
         Forward pass of DeepONet.
-
-        Args:
-            input_branch: Branch network input
-            input_trunk: Trunk network input
-
-        Returns:
-            DeepONet output tensor
         """
-        print("input", input_branch.shape, input_trunk.shape)
+        input_branch, input_trunk = input_don
         branch_output = self.branch_NN(input_branch)
         trunk_output = self.trunk_NN(input_trunk)
-        print("output", branch_output.shape, trunk_output.shape)
 
         if self.n_output == 1:
             return branch_output @ trunk_output.T
