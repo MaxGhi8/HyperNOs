@@ -1685,7 +1685,7 @@ class DarcyDataset(Dataset):
         if self.return_grid:
             assert coord_grid is not None
             trunk_input = coord_grid.reshape(-1, coord_grid.shape[-1])
-            return (branch_input, trunk_input), target
+            return branch_input, trunk_input, target
 
         return branch_input, target
 
@@ -1709,6 +1709,27 @@ class DarcyDataset(Dataset):
             self._feature_grid_cache = FF(base_grid)
 
         return self._feature_grid_cache
+
+
+def deeponet_collate_fn(batch):
+    """
+    Custom collate function for DeepONet that keeps trunk coordinates
+    shared across the batch (no batch dimension for trunk input).
+    """
+    branch_inputs = []
+    trunk_input = None
+    targets = []
+
+    for branch, trunk, target in batch:
+        branch_inputs.append(branch)
+        targets.append(target)
+        if trunk_input is None:
+            trunk_input = trunk  # Use trunk coords from first sample
+
+    branch_inputs = torch.stack(branch_inputs, dim=0)
+    targets = torch.stack(targets, dim=0)
+
+    return (branch_inputs, trunk_input), targets
 
 
 class Darcy_DON:
@@ -1760,6 +1781,7 @@ class Darcy_DON:
             num_workers=num_workers,
             pin_memory=True,
             generator=g,
+            collate_fn=deeponet_collate_fn,
         )
         self.val_loader = DataLoader(
             DarcyDataset(
@@ -1775,6 +1797,7 @@ class Darcy_DON:
             num_workers=num_workers,
             pin_memory=True,
             generator=g,
+            collate_fn=deeponet_collate_fn,
         )
         self.test_loader = DataLoader(
             DarcyDataset(
@@ -1791,6 +1814,7 @@ class Darcy_DON:
             num_workers=num_workers,
             pin_memory=True,
             generator=g,
+            collate_fn=deeponet_collate_fn,
         )
 
     @property
