@@ -832,6 +832,8 @@ def plot_data_mishra_input(
     plotting: bool = False,
 ):
     if normalization:
+        if type(data_plot) is not torch.Tensor:
+            data_plot = data_plot[0]
         data_plot = (example.max_data - example.min_data) * data_plot + example.min_data
 
     plot_data_generic_2d(data_plot, title, ep, writer, plotting)

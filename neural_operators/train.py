@@ -302,7 +302,12 @@ def train_model_without_ray(
             # Approximate solution with NO
             if epoch % ep_step == 0:
                 with torch.no_grad():  # no grad for efficiency
-                    out_test = model(esempio_test.to(device))
+                    if type(esempio_test) is not torch.Tensor:
+                        esempio_test = tuple(item.to(device) for item in esempio_test)
+                    else:
+                        esempio_test = esempio_test.to(device)
+
+                    out_test = model(esempio_test)
                     out_test = out_test.cpu()
 
                 # plot the approximate solution
@@ -395,7 +400,8 @@ def train_epoch(
         # extract the first batch for the plot on tensorboard
         if (step == 0) and (n_idx > 0):
             if type(input_batch) is not torch.Tensor:
-                esempio_test = tuple(item[:n_idx].cpu() for item in input_batch)
+                #! works only for DON
+                esempio_test = (input_batch[0][:n_idx].cpu(), input_batch[1].cpu())
             else:
                 esempio_test = input_batch[:n_idx].cpu()
             soluzione_test = output_batch[:n_idx].cpu()
@@ -411,11 +417,18 @@ def train_epoch(
         # set the postfix for print
         train_loss += loss_f.item()
         if tepoch is not None:
-            tepoch.set_postfix_str(
-                f"Batch: {(step + 1):3}"
-                + " , "
-                + f"Train loss (in progress): {(train_loss / (input_batch.shape[0] * (step + 1))):<7.4f}🔥",
-            )
+            if type(input_batch) is not torch.Tensor:
+                tepoch.set_postfix_str(
+                    f"Batch: {(step + 1):3}"
+                    + " , "
+                    + f"Train loss (in progress): {(train_loss / (input_batch[0].shape[0] * (step + 1))):<7.4f}🔥",
+                )
+            else:
+                tepoch.set_postfix_str(
+                    f"Batch: {(step + 1):3}"
+                    + " , "
+                    + f"Train loss (in progress): {(train_loss / (input_batch.shape[0] * (step + 1))):<7.4f}🔥",
+                )
 
     # update the learning rate after an epoch
     scheduler.step()
@@ -575,8 +588,13 @@ def validate_epoch_fast(
 
         ## Compute loss on the test set
         for input_batch, output_batch in test_loader:
-            input_batch = input_batch.to(device)
-            test_samples_count += input_batch.size(0)
+
+            if type(input_batch) is not torch.Tensor:
+                input_batch = tuple(item.to(device) for item in input_batch)
+                test_samples_count += input_batch[0].size(0)
+            else:
+                input_batch = input_batch.to(device)
+                test_samples_count += input_batch.size(0)
             output_batch = output_batch.to(device)
 
             # compute the output
@@ -589,8 +607,12 @@ def validate_epoch_fast(
 
         ## Compute loss on the training set
         for input_batch, output_batch in train_loader:
-            input_batch = input_batch.to(device)
-            training_samples_count += input_batch.size(0)
+            if type(input_batch) is not torch.Tensor:
+                input_batch = tuple(item.to(device) for item in input_batch)
+                training_samples_count += input_batch[0].size(0)
+            else:
+                input_batch = input_batch.to(device)
+                training_samples_count += input_batch.size(0)
             output_batch = output_batch.to(device)
             output_pred_batch = model(input_batch)
 

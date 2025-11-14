@@ -12,31 +12,33 @@
 		"beta": 1
 	},
 	"don_architecture": {
-		"trunk_hyperparams": {
-			"n_inputs": 3,
+		"trunk_hyperparameters": {
+			"n_inputs": 2,
 			"hidden_layer": [64, 64, 64],
-			"act_fun": "ReLU",
+			"act_fun": "relu",
 			"n_blocks": 3,
 			"layer_norm": false,
-			"dropout_rate": 0.0
+			"dropout_rate": 0.0,
+			"residual": 1
 		},
-		"branch_hyperparams": {
-			"n_inputs": 3,
-			"channels_conv": [64, 64, 64],
+		"branch_hyperparameters": {
+			"n_inputs": 1,
+			"channels_conv": [10, 20, 30],
 			"hidden_layer": [64, 64, 64],
-			"kernel_size": 5,
+			"kernel_size": 3,
 			"stride": 1,
 			"padding": 2,
 			"include_grid": 1,
-			"act_fun": "ReLU",
+			"act_fun": "relu",
 			"n_blocks": 3,
 			"normalization": "none",
-			"dropout_rate": 0.0
+			"dropout_rate": 0.0,
+			"residual": 0
 		},
 		"n_basis": 102,
 		"n_output": 1,
+		"size_grid": 64,
 		"dim": 2,
-		"residual": 1,
 		"FourierF": 0,
 		"retrain": 4,
 		"internal_normalization": true,
