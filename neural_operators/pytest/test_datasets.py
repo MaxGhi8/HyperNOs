@@ -798,7 +798,7 @@ def test_darcy_don():
     )
 
     # Check for the dimensions of the input and output tensors
-    train_branch_input, train_trunk_input, train_batch_output = next(
+    (train_branch_input, train_trunk_input), train_batch_output = next(
         iter(example.train_loader)
     )
 
@@ -806,14 +806,16 @@ def test_darcy_don():
     assert train_trunk_input.shape == (batch_size, example.s * example.s, 2)
     assert train_batch_output.shape == (batch_size, example.s, example.s, 1)
 
-    test_branch_input, test_trunk_input, test_batch_output = next(
+    (test_branch_input, test_trunk_input), test_batch_output = next(
         iter(example.test_loader)
     )
     assert test_branch_input.shape == (batch_size, example.s, example.s, 1)
     assert test_trunk_input.shape == (batch_size, example.s * example.s, 2)
     assert test_batch_output.shape == (batch_size, example.s, example.s, 1)
 
-    val_branch_input, val_trunk_input, val_batch_output = next(iter(example.val_loader))
+    (val_branch_input, val_trunk_input), val_batch_output = next(
+        iter(example.val_loader)
+    )
     assert val_branch_input.shape == (batch_size, example.s, example.s, 1)
     assert val_trunk_input.shape == (batch_size, example.s * example.s, 2)
     assert val_batch_output.shape == (batch_size, example.s, example.s, 1)

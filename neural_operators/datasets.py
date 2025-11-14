@@ -1685,7 +1685,7 @@ class DarcyDataset(Dataset):
         if self.return_grid:
             assert coord_grid is not None
             trunk_input = coord_grid.reshape(-1, coord_grid.shape[-1])
-            return branch_input, trunk_input, target
+            return (branch_input, trunk_input), target
 
         return branch_input, target
 
