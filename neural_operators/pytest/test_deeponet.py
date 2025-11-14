@@ -124,7 +124,7 @@ def test_deeponet_1d_forward_single_output_FNN():
     trunk_input = torch.randn(n_points_trunk, trunk_hyperparams_1d["n_inputs"])
 
     # Forward pass
-    output = model(branch_input, trunk_input)
+    output = model((branch_input, trunk_input))
 
     # Check output shape
     expected_shape = (batch_size, n_points_trunk)
@@ -156,7 +156,7 @@ def test_deeponet_1d_forward_multi_output_FNN():
     trunk_input = torch.randn(n_points_trunk, trunk_hyperparams_1d["n_inputs"])
 
     # Forward pass
-    output = model(branch_input, trunk_input)
+    output = model((branch_input, trunk_input))
 
     # Check output shape
     expected_shape = (batch_size, n_points_trunk, n_output)
@@ -185,7 +185,7 @@ def test_deeponet_1d_forward_single_output_ResNet():
     trunk_input = torch.randn(n_points_trunk, trunk_hyperparams_1d["n_inputs"])
 
     # Forward pass
-    output = model(branch_input, trunk_input)
+    output = model((branch_input, trunk_input))
 
     # Check output shape
     expected_shape = (batch_size, n_points_trunk)
@@ -214,7 +214,7 @@ def test_deeponet_1d_forward_multi_output_ResNet():
     trunk_input = torch.randn(n_points_trunk, trunk_hyperparams_1d["n_inputs"])
 
     # Forward pass
-    output = model(branch_input, trunk_input)
+    output = model((branch_input, trunk_input))
 
     # Check output shape
     expected_shape = (batch_size, n_points_trunk, n_output)
@@ -244,7 +244,7 @@ def test_residual_networks_1d():
     n_points_trunk = 200
     trunk_input = torch.randn(n_points_trunk, trunk_params["n_inputs"])
 
-    output = model(branch_input, trunk_input)
+    output = model((branch_input, trunk_input))
     assert output.shape == (batch_size, n_points_trunk)
 
 
@@ -271,7 +271,7 @@ def test_different_activation_functions():
         n_trunk_points = 50
         trunk_input = torch.randn(n_trunk_points, trunk_params["n_inputs"])
 
-        output = model(branch_input, trunk_input)
+        output = model((branch_input, trunk_input))
         assert not torch.isnan(output).any(), f"NaN values with {act_fun} activation"
 
 
@@ -307,7 +307,7 @@ def test_gradient_flow():
     )
     target = torch.randn(batch_size, n_trunk_points)
 
-    output = model(branch_input, trunk_input)
+    output = model((branch_input, trunk_input))
     loss = torch.nn.functional.mse_loss(output, target)
     loss.backward()
 
@@ -326,6 +326,7 @@ def test_device_consistency():
         n_basis=32,
         n_output=1,
         dim=1,
+        device=device,
     )
 
     # Check that model is on expected device
@@ -349,14 +350,15 @@ def test_different_network_sizes():
             n_basis=32,
             n_output=1,
             dim=1,
+            device=device,
         )
 
         batch_size = 2
-        branch_input = torch.randn(batch_size, branch_params["n_inputs"])
+        branch_input = torch.randn(batch_size, branch_params["n_inputs"]).to(device)
         n_trunk_points = 50
-        trunk_input = torch.randn(n_trunk_points, trunk_params["n_inputs"])
+        trunk_input = torch.randn(n_trunk_points, trunk_params["n_inputs"]).to(device)
 
-        output = model(branch_input, trunk_input)
+        output = model((branch_input, trunk_input))
         assert output.shape == (batch_size, n_trunk_points)
 
 
@@ -375,19 +377,23 @@ def test_deeponet_2d_single_output():
         n_basis=n_basis,
         n_output=n_output,
         dim=2,
+        device=device,
     )
 
     # Create input data
     # Branch input: 2D field data
     h, w = 50, 50
-    branch_input = torch.randn(batch_size, h, w, branch_hyperparams_2d["n_inputs"])
+    branch_input = torch.randn(batch_size, h, w, branch_hyperparams_2d["n_inputs"]).to(
+        device
+    )
 
     # Trunk input: 2D coordinates
     n_points_trunk = 200
-    trunk_input = torch.randn(n_points_trunk, trunck_hyperparams_2d["n_inputs"])
-
+    trunk_input = torch.randn(n_points_trunk, trunck_hyperparams_2d["n_inputs"]).to(
+        device
+    )
     # Forward pass
-    output = model(branch_input, trunk_input)
+    output = model((branch_input, trunk_input))
 
     # Check output shape for 2D single output
     expected_shape = (batch_size, n_points_trunk)
@@ -408,16 +414,21 @@ def test_deeponet_2d_multi_output():
         n_basis=n_basis,
         n_output=n_output,
         dim=2,
+        device=device,
     )
 
     # Create input data
     h, w = 50, 50
-    branch_input = torch.randn(batch_size, h, w, branch_hyperparams_2d["n_inputs"])
+    branch_input = torch.randn(batch_size, h, w, branch_hyperparams_2d["n_inputs"]).to(
+        device
+    )
     n_trunk_points = 300
-    trunk_input = torch.randn(n_trunk_points, trunck_hyperparams_2d["n_inputs"])
+    trunk_input = torch.randn(n_trunk_points, trunck_hyperparams_2d["n_inputs"]).to(
+        device
+    )
 
     # Forward pass
-    output = model(branch_input, trunk_input)
+    output = model((branch_input, trunk_input))
 
     # Check output shape for 2D multi output
     expected_shape = (batch_size, n_trunk_points, n_output)
@@ -454,6 +465,7 @@ def test_deeponet_2d_with_cnn_branch():
         n_basis=n_basis,
         n_output=n_output,
         dim=2,
+        device=device,
     )
 
     # Create input data
@@ -466,7 +478,7 @@ def test_deeponet_2d_with_cnn_branch():
     )
 
     # Forward pass
-    output = model(branch_input, trunk_input)
+    output = model((branch_input, trunk_input))
 
     # Check output shape
     expected_shape = (batch_size, n_points_trunk)
@@ -495,11 +507,12 @@ def test_deeponet_2d_different_spatial_resolutions():
             n_basis=n_basis,
             n_output=n_output,
             dim=2,
+            device=device,
         )
         branch_input = torch.randn(
             batch_size, h, w, branch_hyperparams_2d["n_inputs"]
         ).to(device)
-        output = model(branch_input, trunk_input)
+        output = model((branch_input, trunk_input))
 
         expected_shape = (batch_size, n_points_trunk)
         assert output.shape == expected_shape, f"Failed for spatial size {h}x{w}"
@@ -524,6 +537,7 @@ def test_deeponet_2d_multi_channel_input():
         n_basis=n_basis,
         n_output=n_output,
         dim=2,
+        device=device,
     )
 
     # Create multi-channel input
@@ -534,7 +548,7 @@ def test_deeponet_2d_multi_channel_input():
     )
 
     # Forward pass
-    output = model(branch_input, trunk_input)
+    output = model((branch_input, trunk_input))
 
     expected_shape = (batch_size, n_points_trunk)
     assert output.shape == expected_shape
@@ -554,6 +568,7 @@ def test_deeponet_2d_gradient_flow():
         n_basis=n_basis,
         n_output=n_output,
         dim=2,
+        device=device,
     )
 
     model.train()
@@ -568,7 +583,7 @@ def test_deeponet_2d_gradient_flow():
     ).to(device)
 
     # Forward and backward pass
-    output = model(branch_input, trunk_input)
+    output = model((branch_input, trunk_input))
     loss = output.sum()
     loss.backward()
 
@@ -596,6 +611,7 @@ def test_deeponet_2d_batch_sizes():
         n_basis=n_basis,
         n_output=n_output,
         dim=2,
+        device=device,
     )
 
     n_points_trunk = 100
@@ -609,7 +625,7 @@ def test_deeponet_2d_batch_sizes():
         branch_input = torch.randn(
             batch_size, h, w, branch_hyperparams_2d["n_inputs"]
         ).to(device)
-        output = model(branch_input, trunk_input)
+        output = model((branch_input, trunk_input))
 
         expected_shape = (batch_size, n_points_trunk)
         assert output.shape == expected_shape, f"Failed for batch size {batch_size}"
@@ -628,6 +644,7 @@ def test_deeponet_2d_trunk_evaluation_points():
         n_basis=n_basis,
         n_output=n_output,
         dim=2,
+        device=device,
     )
 
     branch_input = torch.randn(batch_size, h, w, branch_hyperparams_2d["n_inputs"]).to(
@@ -640,7 +657,7 @@ def test_deeponet_2d_trunk_evaluation_points():
         trunk_input = torch.randn(n_points_trunk, trunck_hyperparams_2d["n_inputs"]).to(
             device
         )
-        output = model(branch_input, trunk_input)
+        output = model((branch_input, trunk_input))
 
         expected_shape = (batch_size, n_points_trunk)
         assert (
@@ -668,6 +685,7 @@ def test_deeponet_2d_multi_output_different_basis():
             n_basis=n_basis,
             n_output=n_output,
             dim=2,
+            device=device,
         )
 
         branch_input = torch.randn(
@@ -678,7 +696,7 @@ def test_deeponet_2d_multi_output_different_basis():
             device
         )
 
-        output = model(branch_input, trunk_input)
+        output = model((branch_input, trunk_input))
 
         expected_shape = (batch_size, n_points_trunk, n_output)
         assert (
@@ -705,6 +723,7 @@ def test_deeponet_2d_with_normalization():
             n_basis=n_basis,
             n_output=n_output,
             dim=2,
+            device=device,
         )
 
         branch_input = torch.randn(batch_size, h, w, branch_params["n_inputs"]).to(
@@ -715,7 +734,7 @@ def test_deeponet_2d_with_normalization():
             device
         )
 
-        output = model(branch_input, trunk_input)
+        output = model((branch_input, trunk_input))
 
         expected_shape = (batch_size, n_points_trunk)
         assert output.shape == expected_shape, f"Failed for normalization={norm}"
@@ -735,6 +754,7 @@ def test_deeponet_2d_output_consistency():
         n_basis=n_basis,
         n_output=n_output,
         dim=2,
+        device=device,
     )
 
     model.eval()  # Set to evaluation mode
@@ -750,8 +770,8 @@ def test_deeponet_2d_output_consistency():
 
     # Multiple forward passes
     with torch.no_grad():
-        output1 = model(branch_input, trunk_input)
-        output2 = model(branch_input, trunk_input)
+        output1 = model((branch_input, trunk_input))
+        output2 = model((branch_input, trunk_input))
 
     # Outputs should be identical in eval mode
     assert torch.allclose(output1, output2, rtol=1e-5, atol=1e-7)
