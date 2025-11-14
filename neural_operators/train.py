@@ -394,7 +394,10 @@ def train_epoch(
 
         # extract the first batch for the plot on tensorboard
         if (step == 0) and (n_idx > 0):
-            esempio_test = input_batch[:n_idx].cpu()
+            if type(input_batch) is not torch.Tensor:
+                esempio_test = tuple(item[:n_idx].cpu() for item in input_batch)
+            else:
+                esempio_test = input_batch[:n_idx].cpu()
             soluzione_test = output_batch[:n_idx].cpu()
 
         loss_f = loss(output_pred_batch, output_batch) + loss_phys(
