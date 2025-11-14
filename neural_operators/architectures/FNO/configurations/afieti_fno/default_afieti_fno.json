@@ -27,7 +27,7 @@
 		"weights_norm": "Kaiming",
 		"retrain": 4,
 		"filename": "dataset_homogeneous_Neumann_FNO_ring.mat",
-		"internal_normalization": true,
+		"internal_normalization": false,
 		"problem_dim": 2
 	}
 }

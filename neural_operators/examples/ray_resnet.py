@@ -119,14 +119,14 @@ def ray_resnet(which_example: str, filename: str, mode_hyperparams: str):
         runs_per_gpu=1.0,
         grace_period=400,
         reduction_factor=4,
-        max_epochs=2000,
-        checkpoint_freq=1000,
+        max_epochs=5000,
+        checkpoint_freq=5000,
     )
 
 
 if __name__ == "__main__":
     ray_resnet(
         "afieti_homogeneous_neumann",
-        "dataset_homogeneous_Neumann_l_3_deg_3.mat",
+        "dataset_homogeneous_Neumann_l_4_deg_3.mat",
         "default",
     )
