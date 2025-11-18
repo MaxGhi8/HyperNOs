@@ -12,7 +12,7 @@
 		"beta": 1
 	},
 	"don_architecture": {
-		"trunk_hyperparams": {
+		"trunk_hyperparameters": {
 			"n_inputs": 3,
 			"hidden_layer": [64, 64, 64],
 			"act_fun": "ReLU",
@@ -20,7 +20,7 @@
 			"layer_norm": false,
 			"dropout_rate": 0.0
 		},
-		"branch_hyperparams": {
+		"branch_hyperparameters": {
 			"n_inputs": 3,
 			"hidden_layer": [64, 64, 64],
 			"act_fun": "ReLU",
