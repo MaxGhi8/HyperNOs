@@ -195,8 +195,13 @@ def validate_epoch(
         examples_count = 0
 
         for input_batch, output_batch in val_loader:
-            input_batch = input_batch.to(device)
-            examples_count += input_batch.size(0)
+            if type(input_batch) is list:
+                input_batch = [inp.to(device) for inp in input_batch]
+                examples_count += input_batch[0].size(0)
+            else:
+                input_batch = input_batch.to(device)
+                examples_count += input_batch.size(0)
+
             output_batch = output_batch.to(device)
             output_pred_batch = model.forward(input_batch)
             loss += loss_fn(output_pred_batch, output_batch).item()
