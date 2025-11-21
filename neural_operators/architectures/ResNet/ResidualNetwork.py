@@ -8,11 +8,10 @@ from torch import Tensor
 torch.set_default_dtype(torch.float32)
 
 
-
 #########################################
 # activation function
 #########################################
-def activation_fun(activation_str:str) -> nn.Module:
+def activation_fun(activation_str: str) -> nn.Module:
     """
     Activation function to be used within the network.
     The function is the same throughout the network.

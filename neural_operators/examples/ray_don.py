@@ -26,17 +26,27 @@ def ray_don(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         "DON", which_example, mode=mode_hyperparams
     )
 
-    # Define mappings for list-based hyperparameters (HyperOpt can't handle lists)
-    trunk_hidden_layer_options = [[32, 32, 32], [64, 64, 64], [128, 128, 128]]
+    # Define mappings for list-based hyperparameters
     branch_hidden_layer_options = [[32, 32, 32], [64, 64, 64], [128, 128, 128]]
     branch_channels_options = [[10, 20, 30], [20, 40, 60], [30, 60, 90]]
+    trunk_hidden_layer_options = [[32, 32, 32], [64, 64, 64], [128, 128, 128]]
 
     # Define the hyperparameter search space
     config_space = {
+        # Optimization hyperparameters
         "learning_rate": tune.quniform(1e-4, 1e-2, 1e-5),
         "weight_decay": tune.quniform(1e-6, 1e-3, 1e-6),
         "scheduler_gamma": tune.quniform(0.75, 0.99, 0.01),
+        # DON hyperparameters
         "n_basis": tune.randint(10, 500),
+        # Add branch network parameters (using indices for list-based params)
+        "branch_channels_idx": tune.choice([0, 1, 2]),
+        "branch_hidden_layer_idx": tune.choice([0, 1, 2]),
+        "branch_act_fun": tune.choice(["tanh", "relu", "leaky_relu", "sigmoid"]),
+        # "branch_n_blocks": tune.randint(2, 5), # TODO
+        "branch_normalization": tune.choice(["none", "batch", "layer"]),
+        "branch_dropout_rate": tune.quniform(0.0, 0.4, 0.01),
+        # "trunk_residual": tune.choice([0, 1]), # TODO
         # Add trunk network parameters (using indices for list-based params)
         "trunk_hidden_layer_idx": tune.choice([0, 1, 2]),
         "trunk_act_fun": tune.choice(["tanh", "relu", "leaky_relu", "sigmoid"]),
@@ -44,13 +54,6 @@ def ray_don(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         "trunk_layer_norm": tune.choice([True, False]),
         "trunk_dropout_rate": tune.quniform(0.0, 0.4, 0.01),
         "trunk_residual": tune.choice([0, 1]),
-        # Add branch network parameters (using indices for list-based params)
-        "branch_channels_idx": tune.choice([0, 1, 2]),
-        "branch_hidden_layer_idx": tune.choice([0, 1, 2]),
-        "branch_act_fun": tune.choice(["tanh", "relu", "leaky_relu", "sigmoid"]),
-        "branch_n_blocks": tune.randint(2, 5),
-        "branch_normalization": tune.choice(["none", "batch", "layer"]),
-        "branch_dropout_rate": tune.quniform(0.0, 0.4, 0.01),
     }
 
     # Set all the other parameters to fixed values
@@ -90,20 +93,21 @@ def ray_don(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         }
     ]
 
-    example = NO_load_data_model(
-        which_example=which_example + "_don",
-        no_architecture={
-            "FourierF": default_hyper_params[0]["FourierF"],
-            "retrain": default_hyper_params[0]["retrain"],
-        },
-        batch_size=default_hyper_params[0]["batch_size"],
-        training_samples=default_hyper_params[0]["training_samples"],
-        filename=(
-            default_hyper_params[0]["filename"]
-            if "filename" in default_hyper_params[0]
-            else None
-        ),
-    )
+    # TODO: add internal normalization
+    # example = NO_load_data_model(
+    #     which_example=which_example + "_don",
+    #     no_architecture={
+    #         "FourierF": default_hyper_params[0]["FourierF"],
+    #         "retrain": default_hyper_params[0]["retrain"],
+    #     },
+    #     batch_size=default_hyper_params[0]["batch_size"],
+    #     training_samples=default_hyper_params[0]["training_samples"],
+    #     filename=(
+    #         default_hyper_params[0]["filename"]
+    #         if "filename" in default_hyper_params[0]
+    #         else None
+    #     ),
+    # )
 
     # Define the model builders
     model_builder = lambda config: DON(
