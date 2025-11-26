@@ -127,6 +127,6 @@ def ray_resnet(which_example: str, filename: str, mode_hyperparams: str):
 if __name__ == "__main__":
     ray_resnet(
         "afieti_homogeneous_neumann",
-        "dataset_homogeneous_Neumann_l_4_deg_3.mat",
+        "dataset_homogeneous_Neumann_rhs_fixed_l_0_deg_2_geo06.mat",
         "default",
     )
