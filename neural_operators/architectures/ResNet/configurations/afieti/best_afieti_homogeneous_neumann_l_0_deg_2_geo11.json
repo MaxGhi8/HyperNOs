@@ -15,7 +15,7 @@
 		"problem_dim": 1,
 		"in_channels": 625,
 		"out_channels": 625,
-		"hidden_channels": [700, 700, 700, 700, 700, 700],
+		"hidden_channels": [800, 800, 800, 800, 800, 800],
 		"activation_str": "gelu",
 		"n_blocks": 7,
 		"layer_norm": false,
