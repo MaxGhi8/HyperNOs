@@ -17,9 +17,11 @@ def wrap_model(model, which_example, grid_size=None):
             return StiffnessMatrixWrapper(model)
         case "bampno_continuation":
             return BAMPNO_Continuation_Wrapper(model)
-        case "darcy_don":
+        case str(x) if x.endswith("_don"):
             if grid_size is None:
-                raise ValueError("grid_size must be provided for darcy_don wrapper")
+                raise ValueError(
+                    f"grid_size must be provided for {which_example} wrapper"
+                )
             return DeepONetWrapper(model, grid_size)
         case _:
             print(
