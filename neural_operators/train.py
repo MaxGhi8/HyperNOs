@@ -475,8 +475,14 @@ def validate_epoch(
 
         ## Compute loss on the test set
         for input_batch, output_batch in test_loader:
-            input_batch = input_batch.to(device)
-            test_samples_count += input_batch.size(0)
+
+            if type(input_batch) is not torch.Tensor:
+                input_batch = tuple(item.to(device) for item in input_batch)
+                test_samples_count += input_batch[0].size(0)
+            else:
+                input_batch = input_batch.to(device)
+                test_samples_count += input_batch.size(0)
+
             output_batch = output_batch.to(device)
 
             # compute the output
@@ -525,8 +531,13 @@ def validate_epoch(
 
         ## Compute loss on the training set
         for input_batch, output_batch in train_loader:
-            input_batch = input_batch.to(device)
-            training_samples_count += input_batch.size(0)
+            if type(input_batch) is not torch.Tensor:
+                input_batch = tuple(item.to(device) for item in input_batch)
+                training_samples_count += input_batch[0].size(0)
+            else:
+                input_batch = input_batch.to(device)
+                training_samples_count += input_batch.size(0)
+
             output_batch = output_batch.to(device)
             output_pred_batch = model(input_batch)
 
