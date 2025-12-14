@@ -52,6 +52,9 @@ from .FNO.FNO_utilities import (
 from .FNO_lin.FNO_lin import FNO_lin
 from .FNO_lin.FNO_lin_utilities import compute_modes, count_params_fno
 
+# IgaNet transformer architecture
+from .IgaNet_transformer.IgaNet_transformer import GeometryConditionedLinearOperator
+
 # RationalNN architecture
 from .RationalNN.RationalNN import (
     RationalStandardNetwork,
