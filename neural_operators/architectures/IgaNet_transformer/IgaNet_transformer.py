@@ -241,11 +241,14 @@ class GeometryConditionedLinearOperator(nn.Module):
 
     @jaxtyped(typechecker=beartype)
     def forward(
-        self, f: Float[Tensor, "n_samples d"], g: Float[Tensor, "n_samples p 4"]
+        self, x  #: Float[Tensor, "n_samples d"], g: Float[Tensor, "n_samples p 4"]
     ) -> Float[Tensor, "n_samples d"]:
         """
         Forward pass: u = A(g) * f
         """
+        # Unpack the input
+        f, g = x
+
         # 1-2. Process geometry and construct A(g)
         A = self.construct_matrix(g)
 
@@ -296,7 +299,7 @@ if __name__ == "__main__":
     print(f"  Geometry (g): {g_input.shape}")
 
     ## 4. Forward Pass
-    u_pred = model(f_input, g_input)
+    u_pred = model((f_input, g_input))
 
     print(f"\nOutput Shape:")
     print(f"  Solution (u): {u_pred.shape}")
