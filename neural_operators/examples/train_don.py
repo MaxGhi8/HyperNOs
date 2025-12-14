@@ -92,7 +92,7 @@ def train_don(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         experiment_name,
         get_plot_function(which_example, "input"),
         get_plot_function(which_example, "output"),
-        full_validation=False,
+        full_validation=True,
     )
 
 

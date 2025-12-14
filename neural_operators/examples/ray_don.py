@@ -46,7 +46,7 @@ def ray_don(which_example: str, mode_hyperparams: str, loss_fn_str: str):
         # "branch_n_blocks": tune.randint(2, 5), # TODO
         "branch_normalization": tune.choice(["none", "batch", "layer"]),
         "branch_dropout_rate": tune.quniform(0.0, 0.4, 0.01),
-        # "trunk_residual": tune.choice([0, 1]), # TODO
+        # "branch_residual": tune.choice([0, 1]), # TODO
         # Add trunk network parameters (using indices for list-based params)
         "trunk_hidden_layer_idx": tune.choice([0, 1, 2]),
         "trunk_act_fun": tune.choice(["tanh", "relu", "leaky_relu", "sigmoid"]),
