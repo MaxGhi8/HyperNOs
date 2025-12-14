@@ -167,6 +167,24 @@ class GeometryEncoderResampler(nn.Module):
 #########################################
 # Main Architecture: GCLO
 #########################################
+class input_normalizer_class(nn.Module):
+    def __init__(self, input_normalizer) -> None:
+        super(input_normalizer_class, self).__init__()
+        self.input_normalizer = input_normalizer
+
+    def forward(self, x):
+        return self.input_normalizer.encode(x)
+
+
+class output_denormalizer_class(nn.Module):
+    def __init__(self, output_normalizer) -> None:
+        super(output_denormalizer_class, self).__init__()
+        self.output_normalizer = output_normalizer
+
+    def forward(self, x):
+        return self.output_normalizer.decode(x)
+
+
 class GeometryConditionedLinearOperator(nn.Module):
     """
     Geometry-Conditioned Linear Operator (GCLO).
@@ -187,6 +205,8 @@ class GeometryConditionedLinearOperator(nn.Module):
         dropout_rate: float = 0.0,
         activation_str: str = "gelu",
         zero_mean: bool = True,
+        example_input_normalizer=None,
+        example_output_normalizer=None,
         device: torch.device = torch.device("cpu"),
     ) -> None:
         super().__init__()
@@ -194,6 +214,13 @@ class GeometryConditionedLinearOperator(nn.Module):
         self.n_dofs = n_dofs
         self.hidden_dim = hidden_dim
         self.device = device
+
+        # Normalizer
+        self.input_normalizer = (
+            nn.Identity()
+            if example_input_normalizer is None
+            else input_normalizer_class(example_input_normalizer)
+        )
 
         # 1. Geometry Processing Branch
         self.geo_branch = GeometryEncoderResampler(
@@ -210,6 +237,13 @@ class GeometryConditionedLinearOperator(nn.Module):
         self.W_Q = nn.Linear(hidden_dim, hidden_dim, bias=False)
         self.W_K = nn.Linear(hidden_dim, hidden_dim, bias=False)
         self.scale = 1.0 / math.sqrt(hidden_dim)
+
+        # Denormalizer
+        self.output_denormalizer = (
+            nn.Identity()
+            if example_output_normalizer is None
+            else output_denormalizer_class(example_output_normalizer)
+        )
 
         # Post processing
         self.post_processing = zero_mean_imposition if zero_mean else nn.Identity()
@@ -248,6 +282,7 @@ class GeometryConditionedLinearOperator(nn.Module):
         """
         # Unpack the input
         f, g = x
+        f = self.input_normalizer(f)
 
         # 1-2. Process geometry and construct A(g)
         A = self.construct_matrix(g)
@@ -256,8 +291,11 @@ class GeometryConditionedLinearOperator(nn.Module):
         # A: (n_samples, d, d), f: (n_samples, d)
         u = torch.bmm(A, f.unsqueeze(-1)).squeeze(-1)
 
-        # 3. Enforce constraints
-        return self.post_processing(u)  # shape: (n_samples, d)
+        # 3. Denormalize and enforce constraints
+        u = self.output_denormalizer(u)
+        u = self.post_processing(u)
+
+        return u  # shape: (n_samples, d)
 
 
 #########################################
