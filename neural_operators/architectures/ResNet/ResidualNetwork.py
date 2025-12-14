@@ -70,9 +70,9 @@ class ResidualBlock(nn.Module):
     ) -> None:
         super(ResidualBlock, self).__init__()
 
-        assert (
-            len(hidden_channels) >= 2
-        ), "Hidden channels must have at least two elements, i.e. input, output"
+        # assert (
+        #     len(hidden_channels) >= 2
+        # ), "Hidden channels must have at least two elements, i.e. input, output"
         assert (
             hidden_channels[0] == hidden_channels[-1]
         ), "Input and output dimensions must be the same for being concatenated in the residual block"
