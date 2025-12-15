@@ -11,7 +11,12 @@ import torch
 
 sys.path.append("..")
 
-from architectures import CNO, FNO_ONNX, ResidualNetwork
+from architectures import (
+    CNO,
+    FNO_ONNX,
+    GeometryConditionedLinearOperator,
+    ResidualNetwork,
+)
 from datasets import NO_load_data_model
 from utilities import initialize_hyperparameters
 from wrappers import wrap_model
@@ -58,7 +63,7 @@ def parse_arguments():
     parser.add_argument(
         "architecture",
         type=str,
-        choices=["FNO", "CNO", "ResNet"],
+        choices=["FNO", "CNO", "ResNet", "IgaNet_transformer"],
         help="Select the architecture to use.",
     )
     parser.add_argument(
@@ -125,14 +130,18 @@ try:
         }
 
         example = NO_load_data_model(
-            which_example=which_example,
+            which_example=which_example + "_transformer" * ("transformer" in arc),
             no_architecture={
-                "FourierF": default_hyper_params["FourierF"],
+                "FourierF": (
+                    default_hyper_params["FourierF"]
+                    if "FourierF" in default_hyper_params
+                    else None
+                ),
                 "retrain": default_hyper_params["retrain"],
             },
             batch_size=default_hyper_params["batch_size"],
             training_samples=default_hyper_params["training_samples"],
-            filename="dataset_homogeneous_Neumann_rhs_fixed_l_0_deg_2_geo06.mat",
+            filename="dataset_homogeneous_Neumann_l_0_deg_2_crazygeom.mat",
         )
 
         match arc:
@@ -203,6 +212,29 @@ try:
                     ),
                 )
 
+            case "IgaNet_transformer":
+                model = GeometryConditionedLinearOperator(
+                    n_dofs=default_hyper_params["n_dofs"],
+                    n_control_points=default_hyper_params["n_control_points"],
+                    hidden_dim=default_hyper_params["hidden_dim"],
+                    n_heads=default_hyper_params["n_heads"],
+                    n_layers_geo=default_hyper_params["n_layers_geo"],
+                    dropout_rate=default_hyper_params["dropout_rate"],
+                    activation_str=default_hyper_params["activation_str"],
+                    zero_mean=default_hyper_params["zero_mean"],
+                    example_input_normalizer=(
+                        example.input_normalizer
+                        if default_hyper_params["internal_normalization"]
+                        else None
+                    ),
+                    example_output_normalizer=(
+                        example.output_normalizer
+                        if default_hyper_params["internal_normalization"]
+                        else None
+                    ),
+                    device=device,
+                )
+
         checkpoint = torch.load(name_model, weights_only=True, map_location=device)
         model.load_state_dict(checkpoint["state_dict"])
 
@@ -219,12 +251,20 @@ model.eval()
 model.to("cpu")
 
 # Create dummy input
-dummy_input = next(iter(example.train_loader))[0].to("cpu")
+batch_input = next(iter(example.train_loader))[0]
+
+if isinstance(batch_input, list) or isinstance(batch_input, tuple):
+    first, second = batch_input
+    first = first.to("cpu")
+    second = second.to("cpu")
+    dummy_input = (first, second)
+else:
+    dummy_input = batch_input.to("cpu")
 
 # Export the model to ONNX
 torch.onnx.export(
     model,
-    dummy_input,
+    (dummy_input,),  # pass a single positional argument
     f"{name_model[:-4]}.onnx",
     input_names=["input"],
     output_names=["output"],
