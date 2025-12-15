@@ -63,6 +63,7 @@ def NO_load_data_model(
         "ord": OHaraRudy,
         ###
         "afieti_homogeneous_neumann": AFIETI,
+        "afieti_homogeneous_neumann_transformer": AFIETI_transformer,
         "afieti_fno": AFIETI_FNO,
         ###
         "bampno": BAMPNO,
@@ -2880,6 +2881,143 @@ class AFIETI:
 
     def get_grid(self, res):
         return torch.linspace(0, 1, res).unsqueeze(-1)
+
+
+# ------------------------------------------------------------------------------
+# AF-IETI data
+# Training samples (16000)
+# Testing samples (2000)
+# Validation samples (2000)
+
+
+class AFIETI_transformer:
+    def __init__(
+        self,
+        filename: str,
+        network_properties: dict,
+        batch_size: int,
+        training_samples: int,
+        s=1,
+        in_dist=True,
+        search_path="/",
+    ):
+        # assert training_samples <= 16000, "Training samples must be less than 3000"
+        assert in_dist, "Out-of-distribution testing samples are not available"
+        assert s == 1, "Sampling rate must be 1, no subsampling allowed in this example"
+
+        # g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=torch.device("cpu"))
+
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
+            torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g.manual_seed(retrain)
+
+        self.TrainDataPath = find_file(filename, search_path)
+        reader = h5py.File(self.TrainDataPath, "r")
+        input = torch.from_numpy(reader["input"][:]).type(torch.float32)
+        output = torch.from_numpy(reader["output"][:]).type(torch.float32)
+
+        # Process the input to separate rhs and geometry
+        N = 625  # separation index between rhs and geometry
+        f = input[:, :N]  # rhs
+        x = torch.zeros(input.shape[0], input[[0], N:].shape[1] // 2, 4)
+        x[:, :, 0] = input[:, N::2]  # x
+        x[:, :, 1] = input[:, N + 1 :: 2]  # y
+        # x[:, :, 2] = 0 -> already zero, z
+        x[:, :, 3] = torch.ones_like(x[:, :, 3])  # w
+
+        # Training data
+        f_train, x_train, output_train = (
+            f[:training_samples, ::s],
+            x[:training_samples, ::s, :],
+            output[:training_samples, ::s],
+        )
+
+        # Compute mean and std (for gaussian point-wise normalization)
+        self.input_normalizer = UnitGaussianNormalizer(x_train)
+        self.output_normalizer = UnitGaussianNormalizer(output_train)
+
+        # Normalize
+        # x_train = self.input_normalizer.encode(x_train)
+        # output_train = self.output_normalizer.encode(output_train)
+
+        # Validation data
+        f_val, x_val, output_val = (
+            f[training_samples : training_samples + 2000, ::s],
+            x[training_samples : training_samples + 2000, ::s, :],
+            output[training_samples : training_samples + 2000, ::s],
+        )
+        # x_val = self.input_normalizer.encode(x_val)
+        # output_val = self.output_normalizer.encode(output_val)
+
+        # Test data
+        f_test, x_test, output_test = (
+            f[training_samples + 2000 :, ::s],
+            x[training_samples + 2000 :, ::s, :],
+            output[training_samples + 2000 :, ::s],
+        )
+        # x_test = self.input_normalizer.encode(x_test)
+        # output_test = self.output_normalizer.encode(output_test)
+
+        # Small Dataset wrapper so that each input is a tuple (x_i, f_i)
+        class AFIETITransformerDataset(torch.utils.data.Dataset):
+            def __init__(self, x: torch.Tensor, f: torch.Tensor, y: torch.Tensor):
+                self.x = x
+                self.f = f
+                self.y = y
+
+            def __len__(self):
+                return self.y.shape[0]
+
+            def __getitem__(self, idx):
+                # Return input as tuple (x_i, f_i) and target y_i
+                return (self.x[idx], self.f[idx]), self.y[idx]
+
+        train_set = AFIETITransformerDataset(x_train, f_train, output_train)
+        val_set = AFIETITransformerDataset(x_val, f_val, output_val)
+        test_set = AFIETITransformerDataset(x_test, f_test, output_test)
+
+        # Change number of workers according to your preference
+        num_workers = 0
+
+        self.train_loader = DataLoader(
+            train_set,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.val_loader = DataLoader(
+            val_set,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.test_loader = DataLoader(
+            test_set,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+
+        self.s_in_rhs = f.shape[1]
+        self.s_in_geo = x_train.shape[1]
+        self.s_out = output_test.shape[1]
 
 
 # ------------------------------------------------------------------------------
