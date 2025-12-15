@@ -2981,7 +2981,7 @@ class AFIETI_transformer:
 
             def __getitem__(self, idx):
                 # Return input as tuple (x_i, f_i) and target y_i
-                return (self.x[idx], self.f[idx]), self.y[idx]
+                return (self.f[idx], self.x[idx]), self.y[idx]
 
         train_set = AFIETITransformerDataset(x_train, f_train, output_train)
         val_set = AFIETITransformerDataset(x_val, f_val, output_val)
@@ -3015,8 +3015,8 @@ class AFIETI_transformer:
             generator=g,
         )
 
-        self.s_in_rhs = f.shape[1]
-        self.s_in_geo = x_train.shape[1]
+        self.s_rhs = f.shape[1]
+        self.s_geo = x_train.shape[1]
         self.s_out = output_test.shape[1]
 
 

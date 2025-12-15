@@ -7,6 +7,7 @@ import torch
 sys.path.append("..")
 from datasets import (
     AFIETI,
+    AFIETI_transformer,
     Airfoil,
     AllenCahn,
     Burgers_Zongyi,
@@ -819,3 +820,34 @@ def test_darcy_don():
     assert val_branch_input.shape == (batch_size, example.s, example.s, 1)
     assert val_trunk_input.shape == (example.s * example.s, 2)
     assert val_batch_output.shape == (batch_size, example.s, example.s, 1)
+
+
+def test_afieti_transformer():
+    batch_size = 10
+    training_samples = 160
+    example = NO_load_data_model(
+        which_example="afieti_homogeneous_neumann_transformer",
+        no_architecture={
+            "FourierF": 0,
+            "retrain": -1,
+        },
+        batch_size=batch_size,
+        training_samples=training_samples,
+        filename="dataset_homogeneous_Neumann_l_0_deg_2_crazygeom.mat",
+    )
+
+    # Check for the dimensions of the input and output tensors
+    (rhs, geom), output = next(iter(example.train_loader))
+    assert rhs.shape == (batch_size, example.s_rhs)
+    assert geom.shape == (batch_size, example.s_geo, 4)
+    assert output.shape == (batch_size, example.s_rhs)
+
+    (rhs, geom), output = next(iter(example.val_loader))
+    assert rhs.shape == (batch_size, example.s_rhs)
+    assert geom.shape == (batch_size, example.s_geo, 4)
+    assert output.shape == (batch_size, example.s_rhs)
+
+    (rhs, geom), output = next(iter(example.test_loader))
+    assert rhs.shape == (batch_size, example.s_rhs)
+    assert geom.shape == (batch_size, example.s_geo, 4)
+    assert output.shape == (batch_size, example.s_rhs)
