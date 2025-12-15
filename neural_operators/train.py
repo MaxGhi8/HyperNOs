@@ -400,8 +400,13 @@ def train_epoch(
         # extract the first batch for the plot on tensorboard
         if (step == 0) and (n_idx > 0):
             if type(input_batch) is not torch.Tensor:
-                #! works only for DON
-                esempio_test = (input_batch[0][:n_idx].cpu(), input_batch[1].cpu())
+                # TODO: works only for DON
+                # esempio_test = (input_batch[0][:n_idx].cpu(), input_batch[1].cpu())
+                # TODO: works only for IgaNet_transformer
+                esempio_test = (
+                    input_batch[0][:n_idx].cpu(),
+                    input_batch[1][:n_idx].cpu(),
+                )
             else:
                 esempio_test = input_batch[:n_idx].cpu()
             soluzione_test = output_batch[:n_idx].cpu()

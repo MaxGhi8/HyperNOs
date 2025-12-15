@@ -282,7 +282,7 @@ class GeometryConditionedLinearOperator(nn.Module):
         """
         # Unpack the input
         f, g = x
-        f = self.input_normalizer(f)
+        g = self.input_normalizer(g)
 
         # 1-2. Process geometry and construct A(g)
         A = self.construct_matrix(g)

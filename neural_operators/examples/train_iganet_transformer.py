@@ -34,7 +34,6 @@ def train_iganet_transformer(which_example: str, filename: str, mode_hyperparams
     dataset_builder = lambda config: NO_load_data_model(
         which_example=which_example + "_transformer",
         no_architecture={
-            "FourierF": config["FourierF"],
             "retrain": config["retrain"],
         },
         batch_size=config["batch_size"],
@@ -46,7 +45,6 @@ def train_iganet_transformer(which_example: str, filename: str, mode_hyperparams
     example = NO_load_data_model(
         which_example=which_example + "_transformer",
         no_architecture={
-            "FourierF": default_hyper_params["FourierF"],
             "retrain": default_hyper_params["retrain"],
         },
         batch_size=default_hyper_params["batch_size"],
