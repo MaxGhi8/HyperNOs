@@ -66,3 +66,36 @@ def test_construct_matrix_and_apply_matches_forward():
     )
     assert torch.allclose(u_model, u_manual, atol=1e-5)
     assert torch.allclose(u_model, u_manual, atol=1e-5)
+
+
+def test_multiple_heads_A():
+    model = GeometryConditionedLinearOperator(
+        n_dofs=16,
+        n_control_points=10,
+        hidden_dim=8,
+        n_heads=2,
+        n_heads_A=10,
+        n_layers_geo=1,
+        dropout_rate=0.0,
+        activation_str="gelu",
+        zero_mean=True,
+        device=device,
+    )
+
+    torch.manual_seed(1)
+    model = make_model(device=device)
+    batch = 3
+    d = 16
+
+    # Create inputs
+    f = torch.randn(batch, d, device=device)
+    f = zero_mean_imposition(f)
+    g = torch.randn(batch, 10, 4, device=device)
+
+    u = model((f, g))
+
+    assert u.shape == (batch, d)
+
+    # Check zero-mean constraint per sample (allow small numerical tol)
+    means = u.mean(dim=1)
+    assert torch.allclose(means, torch.zeros_like(means), atol=1e-4)
