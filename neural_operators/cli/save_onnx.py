@@ -218,6 +218,7 @@ try:
                     n_control_points=default_hyper_params["n_control_points"],
                     hidden_dim=default_hyper_params["hidden_dim"],
                     n_heads=default_hyper_params["n_heads"],
+                    n_heads_A=default_hyper_params["n_heads_A"],
                     n_layers_geo=default_hyper_params["n_layers_geo"],
                     dropout_rate=default_hyper_params["dropout_rate"],
                     activation_str=default_hyper_params["activation_str"],
@@ -255,8 +256,8 @@ batch_input = next(iter(example.train_loader))[0]
 
 if isinstance(batch_input, list) or isinstance(batch_input, tuple):
     first, second = batch_input
-    first = first.to("cpu")
-    second = second.to("cpu")
+    first = first[[0], :].to("cpu")  # TODO: works only for IgaNet_transformer
+    second = second[[0], :, :].to("cpu")  # TODO: works only for IgaNet_transformer
     dummy_input = (first, second)
 else:
     dummy_input = batch_input.to("cpu")

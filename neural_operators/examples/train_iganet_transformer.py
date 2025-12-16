@@ -57,6 +57,7 @@ def train_iganet_transformer(which_example: str, filename: str, mode_hyperparams
         n_control_points=config["n_control_points"],
         hidden_dim=config["hidden_dim"],
         n_heads=config["n_heads"],
+        n_heads_A=config["n_heads_A"],
         n_layers_geo=config["n_layers_geo"],
         dropout_rate=config["dropout_rate"],
         activation_str=config["activation_str"],

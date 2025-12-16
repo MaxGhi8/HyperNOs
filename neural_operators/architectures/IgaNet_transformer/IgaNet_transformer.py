@@ -201,6 +201,7 @@ class GeometryConditionedLinearOperator(nn.Module):
         n_control_points: int,  # p (Size of Geometry input)
         hidden_dim: int,  # k (Latent dimension)
         n_heads: int = 4,
+        n_heads_A: int = 1,
         n_layers_geo: int = 2,
         dropout_rate: float = 0.0,
         activation_str: str = "gelu",
@@ -214,6 +215,7 @@ class GeometryConditionedLinearOperator(nn.Module):
         self.n_dofs = n_dofs
         self.hidden_dim = hidden_dim
         self.device = device
+        self.n_heads_A = n_heads_A
 
         # Normalizer
         self.input_normalizer = (
@@ -234,8 +236,12 @@ class GeometryConditionedLinearOperator(nn.Module):
         )
 
         # 2. Linear Operator Projections (to build A(g))
-        self.W_Q = nn.Linear(hidden_dim, hidden_dim, bias=False)
-        self.W_K = nn.Linear(hidden_dim, hidden_dim, bias=False)
+        self.W_Q = nn.ModuleList(
+            [nn.Linear(hidden_dim, hidden_dim, bias=False) for _ in range(n_heads_A)]
+        )
+        self.W_K = nn.ModuleList(
+            [nn.Linear(hidden_dim, hidden_dim, bias=False) for _ in range(n_heads_A)]
+        )
         self.scale = 1.0 / math.sqrt(hidden_dim)
 
         # Denormalizer
@@ -261,12 +267,18 @@ class GeometryConditionedLinearOperator(nn.Module):
         Z = self.geo_branch(g)  # Z shape: (n_samples, d, hidden_dim)
 
         # 2. Compute Q and K
-        Q = self.W_Q(Z)  # (n_samples, d, hidden_dim)
-        K = self.W_K(Z)  # (n_samples, d, hidden_dim)
+        Q = torch.zeros_like(Z, device=self.device)  # (n_samples, d, hidden_dim)
+        K = torch.zeros_like(Z, device=self.device)  # (n_samples, d, hidden_dim)
+        for idx in range(self.n_heads_A):
+            Q += self.W_Q[idx](Z)
+            K += self.W_K[idx](Z)
+        Q = Q / self.n_heads_A
+        K = K / self.n_heads_A
 
         # 3. Compute Attention Matrix (Plain Form)
         # (n_samples, d, k) @ (n_samples, k, d) -> (n_samples, d, d)
         attn_scores = torch.matmul(Q, K.transpose(-2, -1)) * self.scale
+        # attn_scores = torch.matmul(Z, Z.transpose(-2, -1)) * self.scale #! For the identity alternative
 
         # Apply Softmax over the last dimension
         # A = F.softmax(attn_scores, dim=-1)
