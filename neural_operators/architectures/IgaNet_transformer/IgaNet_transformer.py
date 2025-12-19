@@ -267,8 +267,8 @@ class GeometryConditionedLinearOperator(nn.Module):
         Z = self.geo_branch(g)  # Z shape: (n_samples, d, hidden_dim)
 
         # 2. Compute Q and K
-        Q = torch.zeros_like(Z, device=self.device)  # (n_samples, d, hidden_dim)
-        K = torch.zeros_like(Z, device=self.device)  # (n_samples, d, hidden_dim)
+        Q = torch.zeros_like(Z, device=Z.device)  # (n_samples, d, hidden_dim)
+        K = torch.zeros_like(Z, device=Z.device)  # (n_samples, d, hidden_dim)
         for idx in range(self.n_heads_A):
             Q += self.W_Q[idx](Z)
             K += self.W_K[idx](Z)
