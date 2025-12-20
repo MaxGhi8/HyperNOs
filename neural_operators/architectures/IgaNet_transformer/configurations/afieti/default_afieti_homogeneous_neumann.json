@@ -16,7 +16,7 @@
 		"n_dofs": 625,
 		"n_control_points": 625,
 		"hidden_dim": 40,
-		"n_heads_A": 1,
+		"n_heads_A": 5,
 		"n_heads": 4,
 		"n_layers_geo": 2,
 		"dropout_rate": 0.0,
