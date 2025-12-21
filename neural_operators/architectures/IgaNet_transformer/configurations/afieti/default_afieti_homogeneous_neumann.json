@@ -18,6 +18,7 @@
 		"hidden_dim": 40,
 		"n_heads_A": 5,
 		"n_heads": 4,
+		"head_dim": 10,
 		"n_layers_geo": 2,
 		"dropout_rate": 0.0,
 		"activation_str": "gelu",
