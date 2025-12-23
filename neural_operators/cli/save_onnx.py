@@ -251,6 +251,13 @@ except Exception:
 model.eval()
 model.to("cpu")
 
+# print the parameters of the model
+# print("Model parameters:")
+# for name, param in model.named_parameters():
+#     print(f"{name}: {param.shape}")
+
+print("Total number of parameters: ", sum(p.numel() for p in model.parameters()))
+
 # Create dummy input
 batch_input = next(iter(example.train_loader))[0]
 

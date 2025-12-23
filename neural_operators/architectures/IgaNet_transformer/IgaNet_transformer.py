@@ -302,13 +302,14 @@ class GeometryConditionedLinearOperator(nn.Module):
 
         # 1-2. Process geometry and construct A(g)
         A = self.construct_matrix(g)
+        # print(torch.linalg.matrix_rank(A))
 
         # 2. Apply Linear Operator
         # A: (n_samples, d, d), f: (n_samples, d)
         u = torch.bmm(A, f.unsqueeze(-1)).squeeze(-1)
 
         # 3. Denormalize and enforce constraints
-        u = self.output_denormalizer(u)
+        u = self.output_denormalizer(u)  #!
         u = self.post_processing(u)
 
         return u  # shape: (n_samples, d)
