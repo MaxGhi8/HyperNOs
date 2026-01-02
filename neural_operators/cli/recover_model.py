@@ -37,7 +37,7 @@ sys.path.append("..")
 import matplotlib.pyplot as plt
 import seaborn as sns
 import torch
-from architectures import BAMPNO, CNO, FNO, ResidualNetwork
+from architectures import BAMPNO, CNO, FNO, ResidualNetwork, DeepONet
 from beartype import beartype
 from cli.utilities_recover_model import get_tensors, test_fun, test_plot_samples
 from datasets import NO_load_data_model
@@ -109,7 +109,7 @@ def parse_arguments():
     parser.add_argument(
         "architecture",
         type=str,
-        choices=["FNO", "CNO", "ResNet", "FNO_lin", "BAMPNO"],
+        choices=["FNO", "CNO", "ResNet", "FNO_lin", "BAMPNO", "DON"],
         help="Select the architecture to use.",
     )
     parser.add_argument(
@@ -178,7 +178,7 @@ try:
         }
 
         example = NO_load_data_model(
-            which_example=which_example,
+            which_example=which_example + "_don" if arc == "DON" else which_example,
             no_architecture={
                 "FourierF": default_hyper_params["FourierF"],
                 "retrain": default_hyper_params["retrain"],
@@ -316,6 +316,22 @@ try:
                     ),
                     default_hyper_params["retrain"],
                 )
+            
+            case "DON":
+                model = DeepONet(
+                    branch_hyperparameters=default_hyper_params["branch_hyperparameters"],
+                    trunk_hyperparameters=default_hyper_params["trunk_hyperparameters"],
+                    n_basis=default_hyper_params["n_basis"],
+                    n_output=default_hyper_params["n_output"],
+                    dim=default_hyper_params["problem_dim"],
+                    device=device,
+                )
+                model = wrap_model(
+                    model,
+                    which_example + "_don",
+                    grid_size=default_hyper_params["size_grid"],
+                )
+
 
         checkpoint = torch.load(name_model, weights_only=True, map_location=device)
         model.load_state_dict(checkpoint["state_dict"])
@@ -371,7 +387,7 @@ loss = loss_selector(loss_fn_str=loss_fn_str, problem_dim=problem_dim, beta=beta
 # Data loader
 #########################################
 example = NO_load_data_model(
-    which_example=which_example,
+    which_example=which_example + "_don" if arc == "DON" else which_example,
     no_architecture={
         "FourierF": hyperparams["FourierF"],
         "retrain": retrain,
@@ -386,11 +402,22 @@ example = NO_load_data_model(
 train_loader = example.train_loader
 val_loader = example.val_loader
 test_loader = example.test_loader
+train_input_sample = next(iter(train_loader))[0]
+val_input_sample = next(iter(val_loader))[0]
+test_input_sample = next(iter(test_loader))[0]
+
+def get_shape(x):
+    if hasattr(x, "shape"):
+        return x.shape
+    elif isinstance(x, (list, tuple)):
+        return [get_shape(xi) for xi in x]
+    return "Unknown"
+
 print(
     "Dimension of datasets inputs are:",
-    next(iter(train_loader))[0].shape,
-    next(iter(val_loader))[0].shape,
-    next(iter(test_loader))[0].shape,
+    get_shape(train_input_sample),
+    get_shape(val_input_sample),
+    get_shape(test_input_sample),
 )
 print(
     "Dimension of datasets outputs are:",
@@ -483,8 +510,12 @@ else:
 
         # Compute loss on the test set
         for input_batch, output_batch in test_loader:
-            input_batch = input_batch.to(device)
-            test_samples_count += input_batch.size(0)
+            if isinstance(input_batch, (list, tuple)):
+                input_batch = [i.to(device) for i in input_batch]
+                test_samples_count += input_batch[0].shape[0]
+            else:
+                input_batch = input_batch.to(device)
+                test_samples_count += input_batch.shape[0]
             output_batch = output_batch.to(device)
 
             # compute the output
@@ -572,8 +603,12 @@ else:
 
         # Compute loss on the training set
         for input_batch, output_batch in train_loader:
-            input_batch = input_batch.to(device)
-            train_samples_count += input_batch.size(0)
+            if isinstance(input_batch, (list, tuple)):
+                input_batch = [i.to(device) for i in input_batch]
+                train_samples_count += input_batch[0].shape[0]
+            else:
+                input_batch = input_batch.to(device)
+                train_samples_count += input_batch.shape[0]
             output_batch = output_batch.to(device)
 
             # compute the output
@@ -766,7 +801,11 @@ def compute_dirichlet_error(test_prediction_tensor, example, device):
 # evaluation of all the test set
 t_1 = time.time()
 with torch.no_grad():
-    _ = model(input_tensor)
+    if arc == "DON":
+        trunk = next(iter(test_loader))[0][1].to(device)
+        _ = model((input_tensor, trunk))
+    else:
+        _ = model(input_tensor)
 t_2 = time.time()
 print(f"Time for evaluation of {input_tensor.shape[0]} solutions is: ", t_2 - t_1)
 
@@ -774,7 +813,11 @@ print(f"Time for evaluation of {input_tensor.shape[0]} solutions is: ", t_2 - t_
 ex = input_tensor[[0], ...]
 t_1 = time.time()
 with torch.no_grad():
-    _ = model(ex)
+    if arc == "DON":
+        trunk = next(iter(test_loader))[0][1].to(device)
+        _ = model((ex, trunk))
+    else:
+        _ = model(ex)
 t_2 = time.time()
 print(f"Time for evaluation of one solution is: ", t_2 - t_1)
 print("")
