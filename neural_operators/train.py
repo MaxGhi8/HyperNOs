@@ -400,13 +400,20 @@ def train_epoch(
         # extract the first batch for the plot on tensorboard
         if (step == 0) and (n_idx > 0):
             if type(input_batch) is not torch.Tensor:
-                # TODO: works only for DON
-                # esempio_test = (input_batch[0][:n_idx].cpu(), input_batch[1].cpu())
-                # TODO: works only for IgaNet_transformer
-                esempio_test = (
-                    input_batch[0][:n_idx].cpu(),
-                    input_batch[1][:n_idx].cpu(),
-                )
+                # Handle tuple input
+                
+                # Input 0 is assumed to be batched (branch input)
+                in0_slice = input_batch[0][:n_idx].cpu()
+                
+                # Check if dimension 0 matches the batch size
+                if input_batch[1].shape[0] == input_batch[0].shape[0]:
+                    # Assumed batched (IgaNet case)
+                    in1_slice = input_batch[1][:n_idx].cpu()
+                else:
+                    # Assumed shared (DeepONet trunk case)
+                    in1_slice = input_batch[1].cpu()
+                
+                esempio_test = (in0_slice, in1_slice)
             else:
                 esempio_test = input_batch[:n_idx].cpu()
             soluzione_test = output_batch[:n_idx].cpu()
