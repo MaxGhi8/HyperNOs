@@ -29,6 +29,7 @@ from .DON.CNN2D_DON import CNN2D_DON
 
 # DON architecture
 from .DON.DON import DeepONet
+from .DON.CNN2D_DON import CNN2D_DON, LazyKernelConv2d
 
 # FNN architecture
 from .FNN.FeedForwardNetwork import (
