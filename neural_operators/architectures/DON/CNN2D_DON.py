@@ -370,7 +370,7 @@ class CNN2D_DON(nn.Module):
         # The LazyKernelConv2d will initialize on first forward pass
         x = self.spatial_reduction_layer(x)
         x = self.activation(x)
-        x = x.squeeze()
+        x = x.flatten(start_dim=1)
 
         # Pass through FeedForward network
         x = self.fnn(x)
