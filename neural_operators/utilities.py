@@ -17,6 +17,7 @@ from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from tensorboardX import SummaryWriter
 from torch import Tensor
+from torch.nn.parameter import UninitializedParameter
 
 
 #########################################
@@ -96,6 +97,8 @@ def count_params(model):
     par_tot = 0
     bytes_tot = 0
     for par in model.parameters():
+        if isinstance(par, UninitializedParameter):
+            continue
         tmp = reduce(
             operator.mul, list(par.shape + (2,) if par.is_complex() else par.shape)
         )
@@ -112,6 +115,8 @@ def count_weight_params(model):
 
     for name, par in model.named_parameters():
         if "weight" in name:
+            if isinstance(par, UninitializedParameter):
+                continue
             tmp = reduce(
                 operator.mul, list(par.shape + (2,) if par.is_complex() else par.shape)
             )
