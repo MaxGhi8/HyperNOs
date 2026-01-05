@@ -42,7 +42,7 @@ def tune_hyperparameters(
     init(
         address="auto",
         runtime_env={
-            "env_vars": {"PYTHONPATH": os.path.abspath("..")},
+            "env_vars": {"PYTHONPATH": os.path.dirname(os.path.abspath(__file__))},
         },
     )
 
