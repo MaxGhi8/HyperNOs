@@ -25,6 +25,7 @@ def train_fixed_model(
     plot_data_output=None,
     loss_phys=lambda x, y: 0.0,
     full_validation=True,
+    output_folder=None,
 ):
     required_keys = [
         "learning_rate",
@@ -58,6 +59,7 @@ def train_fixed_model(
         config["scheduler_gamma"],
         loss_phys=loss_phys,
         full_validation=full_validation,
+        output_folder=output_folder,
     )
 
 
@@ -77,10 +79,15 @@ def train_model_without_ray(
     scheduler_gamma: float = 0.99,
     loss_phys=lambda x, y: 0.0,
     full_validation=True,
+    output_folder=None,
 ):
-    folder = f"../tests/{experiment_name}"
+    if output_folder is None:
+        folder = f"../tests/{experiment_name}"
+    else:
+        folder = output_folder
+
     mode_hyperparams = experiment_name.split("_")[-1]
-    name_model = f"../tests/{experiment_name}/model_{model.__class__.__name__}_{mode_hyperparams}_{dataset.__class__.__name__}"
+    name_model = f"{folder}/model_{model.__class__.__name__}_{mode_hyperparams}_{dataset.__class__.__name__}"
     
     model = model.to(device)
 
