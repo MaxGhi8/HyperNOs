@@ -133,6 +133,8 @@ class DeepONet(nn.Module):
                     device=self.device,
                     normalization=branch_hyperparameters["normalization"],
                     dropout_rate=branch_hyperparameters["dropout_rate"],
+                    n_points=branch_hyperparameters.get("n_points", None),
+                    global_pooling=branch_hyperparameters.get("global_pooling", True),
                 )
 
     def forward(self, input_don) -> torch.Tensor:

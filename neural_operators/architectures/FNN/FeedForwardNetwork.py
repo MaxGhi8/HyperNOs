@@ -11,7 +11,7 @@ torch.set_default_dtype(torch.float32)  # default tensor dtype
 #########################################
 # activation function
 #########################################
-def activation_fun(activation_str:str) -> nn.Module:
+def activation_fun(activation_str: str) -> nn.Module:
     """
     Activation function to be used within the network.
     The function is the same throughout the network.
@@ -119,7 +119,9 @@ class FeedForwardNetwork(nn.Module):
         self.out_channels = out_channels
         self.hidden_channels = hidden_channels
 
-        assert len(hidden_channels) >= 1, "Hidden channels must have at least one element"
+        assert (
+            len(hidden_channels) >= 1
+        ), "Hidden channels must have at least one element"
 
         self.input_normalizer = (
             nn.Identity()
@@ -183,11 +185,12 @@ class FeedForwardNetwork(nn.Module):
         """
         Initialize weights using Kaiming initialization for better training dynamics.
         """
-        for m in self.modules():
-            if isinstance(m, nn.Linear):
-                nn.init.kaiming_normal_(m.weight, nonlinearity=activation_str)
-                if m.bias is not None:
-                    nn.init.zeros_(m.bias)
+        pass
+        # for m in self.modules():
+        #     if isinstance(m, nn.Linear):
+        #         nn.init.kaiming_normal_(m.weight, nonlinearity=activation_str)
+        #         if m.bias is not None:
+        #             nn.init.zeros_(m.bias)
 
     def _enable_compilation(self) -> None:
         """Enable PyTorch 2.0+ compilation for performance if available."""

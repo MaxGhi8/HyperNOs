@@ -97,4 +97,4 @@ def train_don(which_example: str, mode_hyperparams: str, loss_fn_str: str):
 
 
 if __name__ == "__main__":
-    train_don("darcy", "default", "L2")
+    train_don("fhn_prova", "default", "L2")

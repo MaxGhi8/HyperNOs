@@ -23,8 +23,8 @@ def activation_fun(activation_str):
     """
     if activation_str == "relu":
         return nn.ReLU()
-    # elif activation_str == "gelu": # todo: unsupported
-    #     return nn.GELU()
+    elif activation_str == "gelu":
+        return nn.GELU()
     elif activation_str == "tanh":
         return nn.Tanh()
     elif activation_str == "leaky_relu":
@@ -41,14 +41,14 @@ def activation_fun(activation_str):
 class LazyKernelConv2d(nn.Module):
     """
     A Conv2d layer where the kernel size is determined lazily during the first forward pass.
-    
+
     This is similar to PyTorch's LazyConv2d, but instead of deferring the number of input channels,
     we defer the kernel size which will be set to match the spatial dimensions of the input.
-    
+
     This allows the layer to adapt to the spatial dimensions of the input during the first forward pass,
     and properly save/load the state dict after initialization.
     """
-    
+
     def __init__(
         self,
         in_channels: int,
@@ -64,20 +64,20 @@ class LazyKernelConv2d(nn.Module):
         self.stride = stride
         self.padding = padding
         self.nonlinearity = nonlinearity
-        
+
         # Use UninitializedParameter for weights and bias
         # These will be properly initialized during the first forward pass
         self.weight = UninitializedParameter(device=device)
         self.bias = UninitializedParameter(device=device)
-        
+
         # Track whether the layer has been initialized
         self._kernel_size = None
-        
+
     def initialize_parameters(self, spatial_height: int, spatial_width: int):
         """Initialize the weight and bias parameters based on the spatial dimensions."""
         if self.has_uninitialized_params():
             self._kernel_size = (spatial_height, spatial_width)
-            
+
             # Initialize weight with proper shape
             self.weight = nn.Parameter(
                 torch.empty(
@@ -88,22 +88,24 @@ class LazyKernelConv2d(nn.Module):
                     device=self.weight.device,
                 )
             )
-            
+
             # Initialize bias
             self.bias = nn.Parameter(
                 torch.zeros(self.out_channels, device=self.bias.device)
             )
-            
+
             # Apply Kaiming initialization
-            nn.init.kaiming_normal_(self.weight, nonlinearity=self.nonlinearity)
-            nn.init.zeros_(self.bias)
-    
+            init_nonlinearity = self.nonlinearity
+            if init_nonlinearity != "gelu":
+                nn.init.kaiming_normal_(self.weight, nonlinearity=init_nonlinearity)
+                nn.init.zeros_(self.bias)
+
     def has_uninitialized_params(self) -> bool:
         """Check if the layer has uninitialized parameters."""
         return isinstance(self.weight, UninitializedParameter) or isinstance(
             self.bias, UninitializedParameter
         )
-    
+
     def _load_from_state_dict(
         self,
         state_dict,
@@ -116,18 +118,18 @@ class LazyKernelConv2d(nn.Module):
     ):
         """
         Custom state dict loading to handle uninitialized parameters.
-        
+
         If the layer is uninitialized and we're loading a state dict with initialized
         parameters, we need to materialize the parameters first.
         """
         weight_key = prefix + "weight"
         bias_key = prefix + "bias"
-        
+
         # Initialize the parameters if they are not
         if self.has_uninitialized_params() and weight_key in state_dict:
             loaded_weight = state_dict[weight_key]
             kernel_height, kernel_width = loaded_weight.shape[2], loaded_weight.shape[3]
-            
+
             self._kernel_size = (kernel_height, kernel_width)
             self.weight = nn.Parameter(
                 torch.empty_like(loaded_weight, device=self.weight.device)
@@ -135,7 +137,7 @@ class LazyKernelConv2d(nn.Module):
             self.bias = nn.Parameter(
                 torch.empty_like(state_dict[bias_key], device=self.bias.device)
             )
-        
+
         # Now call the parent's _load_from_state_dict to actually load the values
         super()._load_from_state_dict(
             state_dict,
@@ -146,14 +148,14 @@ class LazyKernelConv2d(nn.Module):
             unexpected_keys,
             error_msgs,
         )
-    
+
     def forward(self, x: Tensor) -> Tensor:
         """
         Forward pass. Initializes parameters on first call.
-        
+
         Args:
             x: Input tensor of shape (batch, in_channels, height, width)
-            
+
         Returns:
             Output tensor after convolution
         """
@@ -161,7 +163,7 @@ class LazyKernelConv2d(nn.Module):
             # Initialize based on input spatial dimensions
             _, _, spatial_height, spatial_width = x.shape
             self.initialize_parameters(spatial_height, spatial_width)
-        
+
         return F.conv2d(
             x,
             self.weight,
@@ -169,7 +171,7 @@ class LazyKernelConv2d(nn.Module):
             stride=self.stride,
             padding=self.padding,
         )
-    
+
     def extra_repr(self) -> str:
         """String representation of the layer."""
         if self._kernel_size is not None:
@@ -211,6 +213,8 @@ class CNN2D_DON(nn.Module):
         device: torch.device = torch.device("cpu"),
         normalization: str = "none",
         dropout_rate: float = 0.0,
+        global_pooling: bool = True,
+        n_points: int | list[int] | None = None,
     ) -> None:
         """
         Initialize 2D CNN Branch Network for DeepONet.
@@ -310,20 +314,46 @@ class CNN2D_DON(nn.Module):
 
         self.conv_network = nn.Sequential(*modules)
 
-        ## Final convolutional layer with dynamic kernel size (reduce dim to 1x1)
-        # Kernel size will be determined in first forward pass using LazyKernelConv2d
-        self.spatial_reduction_layer = LazyKernelConv2d(
-            in_channels=self.hidden_channels[-1],
-            out_channels=self.hidden_channels[-1],
-            stride=1,
-            padding=0,
-            device=device,
-            nonlinearity=self._activation_str,
-        )
+        ## Final convolutional layer or Flattening
+        self.global_pooling = global_pooling
+
+        if self.global_pooling:
+            ## Final convolutional layer with dynamic kernel size (reduce dim to 1x1)
+            # Kernel size will be determined in first forward pass using LazyKernelConv2d
+            self.spatial_reduction_layer = LazyKernelConv2d(
+                in_channels=self.hidden_channels[-1],
+                out_channels=self.hidden_channels[-1],
+                stride=1,
+                padding=0,
+                device=device,
+                nonlinearity=self._activation_str,
+            )
+            in_fnn_channels = self.hidden_channels[-1]
+        else:
+            # Calculate flattened dimension using dummy pass
+            if n_points is None:
+                raise ValueError(
+                    "n_points must be provided when global_pooling is False"
+                )
+
+            if isinstance(n_points, int):
+                nh, nw = n_points, n_points
+            else:
+                nh, nw = n_points[0], n_points[1]
+
+            with torch.no_grad():
+                # Define dummy input (batch=1, channels, height, width)
+                # Note: self.in_channels includes grid channels if include_grid is True
+                self.conv_network.to(device)
+                dummy = torch.zeros(1, self.in_channels, nh, nw, device=device)
+                dummy = self.conv_network(dummy)
+                flattened_dim = dummy.view(1, -1).shape[1]
+
+            in_fnn_channels = flattened_dim
 
         ## Final FNN layers after flattening
         self.fnn = FeedForwardNetwork(
-            in_channels=self.hidden_channels[-1],
+            in_channels=in_fnn_channels,
             out_channels=self.n_basis,
             hidden_channels=self.hidden_layers,
             activation_str=self._activation_str,
@@ -338,8 +368,6 @@ class CNN2D_DON(nn.Module):
 
         self.to(device)
         self.device = device
-
-
 
     @jaxtyped(typechecker=beartype)
     def forward(
@@ -366,11 +394,16 @@ class CNN2D_DON(nn.Module):
         # Pass through convolutional layers
         x = self.conv_network(x)
 
-        # Apply spatial reduction layer (reduce to 1x1)
-        # The LazyKernelConv2d will initialize on first forward pass
-        x = self.spatial_reduction_layer(x)
-        x = self.activation(x)
+        # Apply spatial reduction layer (reduce to 1x1) or just flatten
+        if self.global_pooling:
+            # The LazyKernelConv2d will initialize on first forward pass
+            x = self.spatial_reduction_layer(x)
+            x = self.activation(x)
+
         x = x.flatten(start_dim=1)
+
+        if not self.global_pooling:
+            x = self.activation(x)
 
         # Pass through FeedForward network
         x = self.fnn(x)
