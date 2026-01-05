@@ -3,6 +3,7 @@ This file contains the necessary functions to load the data for the Fourier Neur
 """
 
 import os
+import pickle
 import random
 
 import h5py
@@ -59,6 +60,8 @@ def NO_load_data_model(
         # "navier_stokes_zongyi" #todo
         ###
         "fhn": FitzHughNagumo,
+        "fhn_prova": FHN_Prova,
+        "fhn_prova_don": FHN_Prova,
         "hh": HodgkinHuxley,
         "ord": OHaraRudy,
         ###
@@ -2578,6 +2581,167 @@ def MatReader_ord(fields: list[str], file_path: str) -> dict[str, torch.Tensor]:
             raise KeyError(f"Field {field} not found in the dataset.")
 
     return tensors
+
+
+class FHN1D_DON_Dataset(Dataset):
+    def __init__(
+        self,
+        input_tensor,
+        voltage_tensor,
+        gating_tensor,
+        input_norm,
+        voltage_norm,
+        gating_norm,
+    ):
+        self.input_tensor = input_tensor
+        self.voltage_tensor = voltage_tensor
+        self.gating_tensor = gating_tensor
+        self.input_norm = input_norm
+        self.voltage_norm = voltage_norm
+        self.gating_norm = gating_norm
+
+        # Create grid (Trunk input)
+        # Shared across all samples
+        x = torch.linspace(0, 1, 100)
+        t = torch.linspace(0, 40, 100)
+        T, X = torch.meshgrid(t, x, indexing="ij")
+        self.grid = torch.stack([T.flatten(), X.flatten()], dim=1)  # (10000, 2)
+
+    def __len__(self):
+        return self.input_tensor.shape[0]
+
+    def __getitem__(self, idx):
+        # Branch Input: (100, 100, 1)
+        # Input tensors are already encoded
+        # input_tensor[idx] is (100, 100)
+        branch_in = self.input_tensor[idx].unsqueeze(-1).float()
+
+        # Trunk Input: (10000, 2)
+        trunk_in = self.grid.float()
+
+        # Target: (100, 100, 2)
+        # voltage[idx], gating[idx] are (100, 100)
+        v = self.voltage_tensor[idx]
+        g = self.gating_tensor[idx]
+        target = torch.stack([v, g], dim=-1).float()
+
+        return branch_in, trunk_in, target
+
+
+#########################################
+# FHN_Prova class
+#########################################
+class FHN_Prova:
+    def __init__(
+        self,
+        network_properties,
+        batch_size,
+        training_samples=None,
+        in_dist=True,
+        search_path=None,
+        data_path=None,
+        s=None,
+    ):
+        """
+        Class to load the FHN 1D dataset as done in FHN_1D.py
+        Matches interface of other dataset classes.
+        """
+
+        torch.manual_seed(123)
+        np.random.seed(123)
+        random.seed(123)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed(123)
+
+        # Use find_file to locate the data files, which is more robust and consistent with other datasets
+        # datasets.py imports find_file from utilities
+        if search_path is None:
+            search_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+        try:
+            training_file_path = find_file("fhn_1d_training.pkl", search_path)
+            test_file_path = find_file("fhn_1d_test.pkl", search_path)
+        except Exception as e:
+            # Fallback if find_file fails or if we want to try the hardcoded path
+            if data_path is None:
+                data_path = "data/fhn/"
+
+            project_root = "/home/max/Documents/PhD/HyperNOs/"
+            if not os.path.exists(data_path) and os.path.exists(
+                os.path.join(project_root, data_path)
+            ):
+                data_path = os.path.join(project_root, data_path)
+
+            training_file_path = os.path.join(data_path, "fhn_1d_training.pkl")
+            test_file_path = os.path.join(data_path, "fhn_1d_test.pkl")
+
+        if not os.path.exists(training_file_path):
+            # print debug info
+            print(f"DEBUG: Current CWD: {os.getcwd()}")
+            print(f"DEBUG: Search path: {search_path}")
+            raise FileNotFoundError(f"Training file not found at {training_file_path}")
+
+        with open(training_file_path, "rb") as file_training:
+            dataset_training = pickle.load(file_training)
+
+        # transform the input from [n_example] to [n_example,n_pts,n_pts]
+        input_training = torch.tensor(dataset_training["input"])
+        voltage_training = torch.tensor(dataset_training["Voltage"])
+        gating_training = torch.tensor(dataset_training["gating"])
+
+        self.input_normalizer = minmaxGlobalNormalizer(input_training)
+        self.voltage_normalizer = minmaxGlobalNormalizer(voltage_training)
+        self.gating_normalizer = minmaxGlobalNormalizer(gating_training)
+
+        # Use CPU generator to avoid RuntimeError in DataLoader
+        generator = torch.Generator(device="cpu")
+
+        self.train_set = FHN1D_DON_Dataset(
+            self.input_normalizer.encode(input_training),
+            self.voltage_normalizer.encode(voltage_training),
+            self.gating_normalizer.encode(gating_training),
+            self.input_normalizer,
+            self.voltage_normalizer,
+            self.gating_normalizer,
+        )
+
+        self.train_loader = DataLoader(
+            self.train_set,
+            batch_size=batch_size,
+            shuffle=True,
+            generator=generator,
+            collate_fn=deeponet_collate_fn,
+        )
+
+        # load the test
+        # test_file_path already located above
+        if not os.path.exists(test_file_path):
+            raise FileNotFoundError(f"Test file not found at {test_file_path}")
+
+        with open(test_file_path, "rb") as file_test:
+            dataset_test = pickle.load(file_test)
+
+        # transform the input from [n_example] to [n_example,n_pts,n_pts]
+        input_test = torch.tensor(dataset_test["input"])
+        voltage_test = torch.tensor(dataset_test["Voltage"])
+        gating_test = torch.tensor(dataset_test["gating"])
+
+        self.test_set = FHN1D_DON_Dataset(
+            self.input_normalizer.encode(input_test),
+            self.voltage_normalizer.encode(voltage_test),
+            self.gating_normalizer.encode(gating_test),
+            self.input_normalizer,
+            self.voltage_normalizer,
+            self.gating_normalizer,
+        )
+
+        self.test_loader = DataLoader(
+            self.test_set,
+            batch_size=batch_size,
+            shuffle=True,
+            generator=generator,
+            collate_fn=deeponet_collate_fn,
+        )
 
 
 class OHaraRudy:
