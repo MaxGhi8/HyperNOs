@@ -59,6 +59,14 @@ def tune_hyperparameters(
         actual_loss_fn = get(loss_fn_ref)
         actual_loss_phys = get(loss_phys_ref)
 
+        # # Merge with default hyperparameters if available
+        # # default_hyper_params is a list at this point (due to logic below or input)
+        # # We take the first element as the base configuration
+        # if default_hyper_params and isinstance(default_hyper_params, list) and len(default_hyper_params) > 0:
+        #     full_config = default_hyper_params[0].copy()
+        #     full_config.update(config)
+        #     config = full_config
+
         dataset = actual_dataset_builder(config)
         model = actual_model_builder(config)
 
@@ -89,7 +97,6 @@ def tune_hyperparameters(
         stop_last_trials=True,
     )
 
-    # Define the search algorithm
     search_alg = HyperOptSearch(
         metric="relative_loss",
         mode="min",
@@ -137,6 +144,7 @@ def train_model(
     checkpoint_freq: int = 500,
     loss_phys=lambda x, y: 0.0,
 ):
+    model = model.to(device)
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=learning_rate,
