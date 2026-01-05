@@ -81,6 +81,8 @@ def train_model_without_ray(
     folder = f"../tests/{experiment_name}"
     mode_hyperparams = experiment_name.split("_")[-1]
     name_model = f"../tests/{experiment_name}/model_{model.__class__.__name__}_{mode_hyperparams}_{dataset.__class__.__name__}"
+    
+    model = model.to(device)
 
     # Create the right folder if it doesn't exist
     if not os.path.isdir(folder):

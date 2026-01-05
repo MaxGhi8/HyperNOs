@@ -11,7 +11,7 @@ from loss_fun import loss_selector
 from neuralop.models import TFNO
 from train import train_fixed_model
 from utilities import get_plot_function
-
+from wrappers import wrap_model_builder
 
 def train_tfno(which_example: str, loss_fn_str: str):
 
@@ -40,12 +40,14 @@ def train_tfno(which_example: str, loss_fn_str: str):
         n_modes=(config["modes"], config["modes"]),
         hidden_channels=config["width"],
         n_layers=config["n_layers"],
-        in_channels=config["input_dim"] + 2,  # for the grid
+        in_channels=config["input_dim"],
         out_channels=config["out_dim"],
         factorization="tucker",
         implementation="factorized",
         rank=config["rank"],
     )
+    # Wrap the model builder
+    model_builder = wrap_model_builder(model_builder, which_example + "_neural_operator")
 
     # Define the dataset builder
     dataset_builder = lambda config: NO_load_data_model(

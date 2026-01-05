@@ -2,6 +2,7 @@ from .AirfoilWrapper import AirfoilWrapper
 from .BAMPNO_Continuation_Wrapper import BAMPNO_Continuation_Wrapper
 from .CrossTrussWrapper import CrossTrussWrapper
 from .StiffnessMatrixWrapper import StiffnessMatrixWrapper
+from .PermuteWrapper import PermuteWrapper
 
 
 def wrap_model(model, which_example):
@@ -16,6 +17,8 @@ def wrap_model(model, which_example):
             return StiffnessMatrixWrapper(model)
         case "bampno_continuation":
             return BAMPNO_Continuation_Wrapper(model)
+        case str(x) if x.endswith("_neural_operator"):
+            return PermuteWrapper(model)
         case _:
             print(f"No wrapper defined for {which_example}, returning the original model")
 

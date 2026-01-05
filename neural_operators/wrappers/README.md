@@ -10,3 +10,4 @@ The main file is `wrap_model.py`, which provides a general utility for wrapping 
 - **BAMPNO_Continuation_Wrapper.py**: Wrapper involving BAMPNO (possibly Batch Active Memory PNO) and continuation methods.
 - **CrossTrussWrapper.py**: Wrapper for cross-truss structure problems.
 - **StiffnessMatrixWrapper.py**: Wrapper managing stiffness matrices in structural mechanics problems.
+- **PermuteWrapper.py**: Wrapper that permutes input dimensions (Last -> Second) and output dimensions (Second -> Last).
