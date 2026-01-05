@@ -1,19 +1,19 @@
 """
-In this example I fix all the hyperparameters for the UNO model and train it.
+In this example I fix all the hyperparameters for the FNO model and train it.
 """
 
 import os
 import sys
 
-sys.path.append("..")
+sys.path.append("../../")
 from datasets import NO_load_data_model
 from loss_fun import loss_selector
-from neuralop.models import UNO
+from neuralop.models import TFNO
 from train import train_fixed_model
 from utilities import get_plot_function
 from wrappers import wrap_model_builder
 
-def train_uno(which_example: str, loss_fn_str: str):
+def train_tfno(which_example: str, loss_fn_str: str):
 
     default_hyper_params = {
         "training_samples": 1024,
@@ -25,25 +25,26 @@ def train_uno(which_example: str, loss_fn_str: str):
         "scheduler_gamma": 0.98,
         "beta": 1,
         "width": 64,
-        "n_layers": 5,
+        "modes": 16,
+        "n_layers": 4,
         "input_dim": 1,
         "out_dim": 1,
-        "problem_dim": 2,
+        "rank": 0.05,
         "FourierF": 0,
         "retrain": 4,
+        "problem_dim": 2,
     }
 
     # Define the model builders
-    # UNO Signature: (in_channels, out_channels, hidden_channels, ...)
-    model_builder = lambda config: UNO(
-        in_channels=config["input_dim"],
-        out_channels=config["out_dim"],
+    model_builder = lambda config: TFNO(
+        n_modes=(config["modes"], config["modes"]),
         hidden_channels=config["width"],
         n_layers=config["n_layers"],
-        uno_out_channels=[config["width"], config["width"]*2, config["width"]*2, config["width"]*2, config["width"]],
-        uno_n_modes=[[config.get("modes", 16), config.get("modes", 16)]] * 5,
-        uno_scalings=[[1.0, 1.0], [0.5, 0.5], [1.0, 1.0], [2.0, 2.0], [1.0, 1.0]],
-        channel_mlp_skip="linear",
+        in_channels=config["input_dim"],
+        out_channels=config["out_dim"],
+        factorization="tucker",
+        implementation="factorized",
+        rank=config["rank"],
     )
     # Wrap the model builder
     model_builder = wrap_model_builder(model_builder, which_example + "_neural_operator")
@@ -66,10 +67,10 @@ def train_uno(which_example: str, loss_fn_str: str):
         beta=default_hyper_params["beta"],
     )
 
-    experiment_name = f"UNO/{which_example}/loss_{loss_fn_str}"
+    experiment_name = f"TFNO/{which_example}/loss_{loss_fn_str}_mode_testing"
 
     # Create the right folder if it doesn't exist
-    folder = f"../tests/{experiment_name}"
+    folder = f"../../tests/{experiment_name}"
     if not os.path.isdir(folder):
         print("Generated new folder")
         os.makedirs(folder, exist_ok=True)
@@ -88,8 +89,9 @@ def train_uno(which_example: str, loss_fn_str: str):
         experiment_name,
         get_plot_function(which_example, "input"),
         get_plot_function(which_example, "output"),
+        output_folder=folder,
     )
 
 
 if __name__ == "__main__":
-    train_uno("poisson", "L1")
+    train_tfno("poisson", "L1")

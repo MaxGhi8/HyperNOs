@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 import warnings
 
-sys.path.append("..")
+sys.path.append("../../")
 from datasets import NO_load_data_model
 from neuralop.models import TFNO, UQNO
 from train import train_fixed_model
@@ -153,7 +153,7 @@ def train_uqno(which_example: str, loss_fn_str: str):
     experiment_name = f"UQNO/{which_example}/quantile_0.9"
 
     # Create the right folder if it doesn't exist
-    folder = f"../tests/{experiment_name}"
+    folder = f"../../tests/{experiment_name}"
     if not os.path.isdir(folder):
         print("Generated new folder")
         os.makedirs(folder, exist_ok=True)
@@ -183,6 +183,7 @@ def train_uqno(which_example: str, loss_fn_str: str):
         experiment_name,
         get_plot_function(which_example, "input"),
         uqno_plotter,
+        output_folder=folder,
     )
 
 
