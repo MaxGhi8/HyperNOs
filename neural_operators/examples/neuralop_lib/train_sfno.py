@@ -42,6 +42,7 @@ def train_sfno(which_example: str, loss_fn_str: str):
         in_channels=config["input_dim"],
         out_channels=config["out_dim"],
     )
+    
     # Wrap the model builder
     model_builder = wrap_model_builder(model_builder, which_example + "_neural_operator")
 

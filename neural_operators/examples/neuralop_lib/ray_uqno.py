@@ -121,6 +121,7 @@ def ray_uqno(which_example: str, loss_fn_str: str):
         # Wrap with our custom wrapper
         return UQNO_Wrapper(model)
 
+    # Bypass standard wrapper as we included our own
     model_builder = wrap_model_builder(build_uqno, which_example)
 
     # Define the dataset builder

@@ -61,6 +61,7 @@ def ray_tfno(which_example: str, loss_fn_str: str):
         implementation="factorized",
         rank=config["rank"],
     )
+    
     # Wrap the model builder
     model_builder = wrap_model_builder(model_builder, which_example + "_neural_operator")
 

@@ -132,8 +132,7 @@ def train_uqno(which_example: str, loss_fn_str: str):
         # Wrap with our custom wrapper
         return UQNO_Wrapper(model)
 
-    # Use which_example WITHOUT _neural_operator suffix to avoid double wrapping/errors
-    # The wrap_model_builder will return the model as is (which is our UQNO_Wrapper)
+    # Bypass standard wrapper as we included our own
     model_builder = wrap_model_builder(build_uqno, which_example)
 
     # Define the dataset builder
