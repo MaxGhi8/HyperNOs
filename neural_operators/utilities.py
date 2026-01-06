@@ -97,7 +97,7 @@ def count_params(model):
     bytes_tot = 0
     for par in model.parameters():
         tmp = reduce(
-            operator.mul, list(par.shape + (2,) if par.is_complex() else par.shape)
+            operator.mul, list(par.shape + (2,) if par.is_complex() else par.shape), 1
         )
         par_tot += tmp
         bytes_tot += tmp * par.data.element_size()
@@ -113,7 +113,7 @@ def count_weight_params(model):
     for name, par in model.named_parameters():
         if "weight" in name:
             tmp = reduce(
-                operator.mul, list(par.shape + (2,) if par.is_complex() else par.shape)
+                operator.mul, list(par.shape + (2,) if par.is_complex() else par.shape), 1
             )
             par_tot += tmp
             bytes_tot += tmp * par.data.element_size()

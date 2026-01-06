@@ -39,12 +39,15 @@ def tune_hyperparameters(
         )
 
     # Initialize Ray
-    init(
-        address="auto",
-        runtime_env={
-            "env_vars": {"PYTHONPATH": os.path.dirname(os.path.abspath(__file__))},
-        },
-    )
+    try:
+        init(
+            address="auto",
+            runtime_env={
+                "env_vars": {"PYTHONPATH": os.path.dirname(os.path.abspath(__file__))},
+            },
+        )
+    except ConnectionError:
+        print("Could not find running Ray instance. Run `ray start --head` first.")
 
     # puts large builders in Ray's object store
     dataset_builder_ref = put(dataset_builder)
