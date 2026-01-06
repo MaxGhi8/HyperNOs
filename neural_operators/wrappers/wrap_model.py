@@ -1,9 +1,11 @@
+
 from .AirfoilWrapper import AirfoilWrapper
 from .BAMPNO_Continuation_Wrapper import BAMPNO_Continuation_Wrapper
 from .CrossTrussWrapper import CrossTrussWrapper
 from .StiffnessMatrixWrapper import StiffnessMatrixWrapper
 from .PermuteWrapper import PermuteWrapper
 from .DeepXDEDeepONetWrapper import DeepXDEDeepONetWrapper
+from .DeepXDEMIONetWrapper import DeepXDEMIONetWrapper
 
 
 def wrap_model(model, which_example):
@@ -20,7 +22,9 @@ def wrap_model(model, which_example):
             return BAMPNO_Continuation_Wrapper(model)
         case str(x) if x.endswith("_neural_operator"):
             return PermuteWrapper(model)
-        case str(x) if x.endswith("_deepxde") or x.endswith("_pod_deepxde"):
+        case str(x) if x.endswith("_mionet_deepxde"):
+            return DeepXDEMIONetWrapper(model)
+        case str(x) if x.endswith("_deepxde"):
             return DeepXDEDeepONetWrapper(model)
         case _:
             print(f"No wrapper defined for {which_example}, returning the original model")
