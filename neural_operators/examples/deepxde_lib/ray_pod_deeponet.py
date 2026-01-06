@@ -1,22 +1,16 @@
 """
-Train a POD-MIONet model using DeepXDE.
+This script runs Ray Tune hyperparameter optimization for the DeepXDE POD-DeepONet model.
 """
 
 import os
-import sys
-import torch
-import deepxde as dde
-import numpy as np
-
 # Ensure DeepXDE uses PyTorch backend
 os.environ["DDE_BACKEND"] = "pytorch"
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-from datasets import NO_load_data_model
-from loss_fun import loss_selector
-from train import train_fixed_model
-from utilities import get_plot_function
-from wrappers import wrap_model_builder
+import sys
+import deepxde as dde
+import torch
+import numpy as np
+from ray import tune
 
 # DeepXDE changes default tensor type to CUDA if available, which breaks datasets.py DataLoader generator
 if torch.cuda.is_available():
@@ -24,13 +18,19 @@ if torch.cuda.is_available():
     if hasattr(torch, "set_default_device"):
         torch.set_default_device("cpu")
 
-def train_pod_mionet(which_example: str, loss_fn_str: str):
+sys.path.append("../../")
+from datasets import NO_load_data_model
+from loss_fun import loss_selector
+from tune import tune_hyperparameters
+from wrappers import wrap_model_builder
 
-    # Fixed hyperparameters
+def ray_pod_deeponet(which_example: str, loss_fn_str: str):
+
+    # Base hyperparameters
     default_hyper_params = {
         "training_samples": 1024,
         "learning_rate": 0.001,
-        "epochs": 100,
+        "epochs": 100, 
         "batch_size": 32,
         "weight_decay": 1e-5,
         "scheduler_step": 10,
@@ -38,12 +38,27 @@ def train_pod_mionet(which_example: str, loss_fn_str: str):
         "beta": 1,
         "width": 64, # Grid size
         "branch_depth": 2,
-        "network_width": 32, # This acts as 'p' (number of modes/outputs of branch)
+        "network_width": 32, # Acts as p (number of modes)
         "retrain": 4,
         "problem_dim": 2,
-        "out_dim": 1,
+        "out_dim": 1, 
         "FourierF": 0,
     }
+
+    # Define the search space
+    config_space = {
+        "learning_rate": tune.loguniform(1e-4, 1e-2),
+        "network_width": tune.choice([32, 64]),
+    }
+
+    # Set all the other parameters to fixed values
+    fixed_params = {
+        **default_hyper_params,
+    }
+    parameters_to_tune = config_space.keys()
+    for param in parameters_to_tune:
+        fixed_params.pop(param, None)
+    config_space.update(fixed_params)
 
     #####################################
     # Compute POD basis
@@ -55,28 +70,26 @@ def train_pod_mionet(which_example: str, loss_fn_str: str):
         "retrain": default_hyper_params["retrain"],
     }
     
-    # Temporarily get a loader for all training samples to compute POD
     dataset = NO_load_data_model(
         which_example=which_example,
         no_architecture=dataset_config,
         batch_size=default_hyper_params["training_samples"],
         training_samples=default_hyper_params["training_samples"],
     )
-
     train_loader = dataset.train_loader
-         
-    # Get all training data
+
+    # We group all the data into one single tensor
     y_train_list = []
     for _, y in train_loader:
         y_train_list.append(y)
-    y_train = torch.cat(y_train_list, dim=0)
+    
+    y_train = torch.cat(y_train_list, dim=0) # Shape: (Total_Samples, W, W, C)
     
     # Flatten spatial dims for POD: (N, W*W*C)
     N, W, _, C = y_train.shape
     y_train_flat = y_train.view(N, -1)
     data_matrix = y_train_flat.transpose(0, 1) # (W*W*C, N)
     
-    # Compute POD (SVD)
     print("Computing POD basis...")
     try:
         U, S, V = torch.linalg.svd(data_matrix, full_matrices=False)
@@ -85,12 +98,6 @@ def train_pod_mionet(which_example: str, loss_fn_str: str):
         U, S, Vh = np.linalg.svd(data_matrix.cpu().numpy(), full_matrices=False)
         U = torch.from_numpy(U).to(y_train.device)
     
-    # Number of modes 'p' defined by network_width
-    pod_modes = default_hyper_params["network_width"]
-    pod_basis = U[:, :pod_modes] # (Features, p)
-    
-    print(f"POD Basis shape: {pod_basis.shape}\n")
-
     #####################################
     # Define the model builder
     #####################################
@@ -98,26 +105,23 @@ def train_pod_mionet(which_example: str, loss_fn_str: str):
         # Input size for branch: width * width * in_channels
         input_dim = config["width"] * config["width"] * (1 + 2 * config.get("FourierF", 0))
         
-        # Output dim of branch must match number of POD modes
-        p = pod_basis.shape[1]
+        # Number of modes 'p' defined by network_width
+        pod_modes = config["network_width"]
+        pod_basis_slice = U[:, :pod_modes] # (Features, p)
+        p = pod_modes
         
-        # Branch net 1
-        layer_sizes_branch1 = [input_dim] + [config["network_width"]] * config["branch_depth"] + [p]
-        # Branch net 2
-        layer_sizes_branch2 = [input_dim] + [config["network_width"]] * config["branch_depth"] + [p]
+        # Branch net
+        layer_sizes_branch = [input_dim] + [config["network_width"]] * config["branch_depth"] + [p]
         
-        # Initialize PODMIONet
-        basis_tensor = pod_basis.float()
-        
-        model = dde.nn.PODMIONet(
-            pod_basis=basis_tensor,
-            layer_sizes_branch1=layer_sizes_branch1,
-            layer_sizes_branch2=layer_sizes_branch2,
+        # Initialize PODDeepONet.
+        model = dde.nn.PODDeepONet(
+            pod_basis=pod_basis_slice.float(),
+            layer_sizes_branch=layer_sizes_branch,
             activation="relu",
             kernel_initializer="Glorot normal",
             layer_sizes_trunk=None # POD-only mode
         )
-
+        
         model.out_dim = config["out_dim"]
         
         # Manually register pod_basis as a buffer so it moves to device with the model
@@ -125,17 +129,15 @@ def train_pod_mionet(which_example: str, loss_fn_str: str):
             basis = model.pod_basis
             del model.pod_basis
             model.register_buffer("pod_basis", basis)
-
-        # Reset default tensor type and device
+        
         if torch.cuda.is_available():
-            torch.set_default_tensor_type("torch.FloatTensor")
+            torch.set_default_dtype(torch.float32)
             if hasattr(torch, "set_default_device"):
                 torch.set_default_device("cpu")
             
         return model
 
-    # Wrap the model builder
-    model_builder = wrap_model_builder(model_builder, which_example + "_mionet_deepxde")
+    model_builder = wrap_model_builder(model_builder, which_example + "_deepxde")
 
     # Define the dataset builder
     dataset_builder = lambda config: NO_load_data_model(
@@ -145,7 +147,7 @@ def train_pod_mionet(which_example: str, loss_fn_str: str):
             "retrain": config["retrain"],
         },
         batch_size=config["batch_size"],
-        training_samples=config["training_samples"],
+        training_samples=default_hyper_params["training_samples"],
     )
 
     # Define the loss function
@@ -155,31 +157,24 @@ def train_pod_mionet(which_example: str, loss_fn_str: str):
         beta=default_hyper_params["beta"],
     )
 
-    
-    # Experiment's name and path
-    experiment_name = f"PODMIONet/{which_example}/losss_{loss_fn_str}_testing"
-
-    folder = f"../../tests/{experiment_name}"
-    if not os.path.isdir(folder):
-        print("Generated new folder")
-        os.makedirs(folder, exist_ok=True)
-
-    with open(folder + "/norm_info.txt", "w") as f:
-        f.write("Norm used during the training:\n")
-        f.write(f"{loss_fn_str}\n")
-
-    # Train the model
-    train_fixed_model(
-        default_hyper_params,
+    # Call the library function to tune the hyperparameters
+    best_result = tune_hyperparameters(
+        config_space,
         model_builder,
         dataset_builder,
         loss_fn,
-        experiment_name,
-        get_plot_function(which_example, "input"),
-        get_plot_function(which_example, "output"),
-        output_folder=folder,
+        default_hyper_params=[default_hyper_params],
+        num_samples=10,
+        max_epochs=default_hyper_params["epochs"],
+        checkpoint_freq=default_hyper_params["epochs"],
+        grace_period=default_hyper_params["epochs"]//5,
+        reduction_factor=4,
+        runs_per_cpu=10.0, 
+        runs_per_gpu=1.0,
     )
+
+    print("Best hyperparameters found were: ", best_result.config)
 
 
 if __name__ == "__main__":
-    train_pod_mionet("poisson", "L1")
+    ray_pod_deeponet("poisson", "L1")
