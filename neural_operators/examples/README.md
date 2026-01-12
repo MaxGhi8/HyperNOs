@@ -34,6 +34,7 @@ The following models are available across the directory and its subfolders:
 - **TFNO** (Tensorized Fourier Neural Operator)
 - **UNO** (U-Net Neural Operator)
 - **UQNO** (Uncertainty Quantification Neural Operator)
+- **LocalNO** (Local Neural Operator)
 
 ## Script Types
 

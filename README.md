@@ -10,7 +10,7 @@ HyperNOs allows users to easily integrate and use models from popular neural-ope
 
 I already implemented some examples of usage with the following popular libraries:
 
-- **[NeuralOperator](https://github.com/neuraloperator/neuraloperator)**: Implement neural operator architectures like FNO, SFNO, TFNO, UNO, GINO, and many others.
+- **[NeuralOperator](https://github.com/neuraloperator/neuraloperator)**: Implement neural operator architectures like FNO, SFNO, TFNO, UNO, GINO, LocalNO, and many others.
 - **[DeepXDE](https://github.com/lululxvi/deepxde)**: Implement operator learning models like DeepONet, MIONet, POD-DeepONet, POD-MIONet.
 
 You can find examples of how to use these models in the `neural_operators/examples` directory with two dedicated subdirectories: `deepxde_lib` and `neuralop_lib`. There are implemented examples both for training a given architecture and for hyperparameter optimization routines.
