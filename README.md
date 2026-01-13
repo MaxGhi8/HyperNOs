@@ -2,7 +2,9 @@
 
 ## Introduction
 
-HyperNOs is a Python project focused on the implementation of completely automatic, distributed and parallel neural operators hyperparameter optimization. The project aims to provide a framework for training neural operator models using Pytorch and Ray Tune for hyperparameter tuning.
+HyperNOs is a Python project focused on the implementation of completely automatic, distributed and parallel neural operators hyperparameter optimization. The project aims to provide a framework for training neural operator models using Pytorch and Ray Tune for hyperparameter tuning. The library is designed to be highly flexible, making it easy to use with any kind of model and dataset. In the context of Neural Operators, where architecture design is still an active area of research, performing extensive hyperparameter optimization is crucial to obtain state-of-the-art results.
+
+For a more detailed explanation of the library and its capabilities, please refer to our article: [HyperNOs: Automated and Parallel Library for Neural Operators Research](https://link.springer.com/article/10.1007/s40574-025-00516-0).
 
 ## Supported Libraries
 
@@ -77,6 +79,42 @@ To set up the HyperNOs project, follow these steps:
    ```
    > [!WARNING]
    > As before, for **Windows**, if you are on WSL and get the error `/bin/bash^M: bad interpreter. No such file or directory` try to run `sed -i -e 's/\r$//' download_trained_model.sh` and then rerun the script `./download_trained_model.sh`.
+
+## Usage
+
+After installation, you can run the provided examples in the `neural_operators/examples` directory.
+
+### Basic Training
+
+To train a model (e.g., FNO) on a single machine, simply run the corresponding python script:
+
+```bash
+cd neural_operators/examples/
+python train_fno.py
+```
+
+### Hyperparameter Optimization with Ray Tune
+
+You can use Ray Tune to optimize hyperparameters.
+
+#### Local Machine
+
+To run Ray Tune on your local machine, first start a Ray head node:
+
+```bash
+ray start --head
+```
+
+Then run the Ray script:
+
+```bash
+cd neural_operators/examples/
+python ray_fno.py
+```
+
+#### Cluster (Slurm)
+
+For running on a cluster using Slurm, we provide a template script. Please refer to [SLURM_USAGE.md](SLURM_USAGE.md) for detailed instructions on how to configure and submit jobs using `template.slurm`.
 
 ## Citation
 
