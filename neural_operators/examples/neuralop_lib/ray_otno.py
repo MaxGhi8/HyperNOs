@@ -62,8 +62,7 @@ def ray_otno(which_example: str, loss_fn_str: str):
     )
     
     # Wrap the model builder
-    experiment_tag = f"OTNO_{which_example}"
-    model_builder = wrap_model_builder(model_builder, experiment_tag)
+    model_builder = wrap_model_builder(model_builder, f"OTNO_{which_example}")
 
     # Define the dataset builder
     dataset_builder = lambda config: NO_load_data_model(

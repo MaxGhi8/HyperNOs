@@ -47,10 +47,7 @@ def train_otno(which_example: str, loss_fn_str: str):
     )
     
     # Wrap the model builder
-    # Note: wrap_model checks for "OTNO" startswith to use OTNOWrapper
-    # We pass "OTNO" + which_example to ensure uniqueness if needed, or just rely on the prefix
-    experiment_tag = f"OTNO_{which_example}"
-    model_builder = wrap_model_builder(model_builder, experiment_tag)
+    model_builder = wrap_model_builder(model_builder, f"OTNO_{which_example}")
 
     # Define the dataset builder
     dataset_builder = lambda config: NO_load_data_model(
