@@ -31,9 +31,11 @@ The following models are available across the directory and its subfolders:
 - **FNOGNO** (Fourier Neural Operator with Graph Neural Operator)
 - **GINO** (Graph-Informed Neural Operator)
 - **SFNO** (Spherical Fourier Neural Operator)
+- **CODANO** (Codomain Attention Neural Operator)
 - **TFNO** (Tensorized Fourier Neural Operator)
 - **UNO** (U-Net Neural Operator)
 - **UQNO** (Uncertainty Quantification Neural Operator)
+- **RNO** (Recurrent Neural Operator)
 - **LocalNO** (Local Neural Operator)
 - **OTNO** (Optimal Transport Neural Operator)
 
