@@ -42,6 +42,8 @@ To set up the HyperNOs project, follow these steps:
    pip install -r requirements.txt
    ```
 
+   If you want to use the `neuraloperator` library, since we use the cutting-edge features of NeuralOperator, please install the library directly from GitHub and not with pip, you can found the instructions [here](https://github.com/neuraloperator/neuraloperator).
+
    > [!WARNING]
    > For PyTorch, more attention may be needed during installation. We describe the default installation; however, we highly recommend following the [official documentation](https://pytorch.org/get-started/locally/) to install the correct version for your system. You can check your CUDA driver version by running `nvidia-smi` in your terminal to ensure compatibility.
 

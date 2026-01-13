@@ -8,7 +8,7 @@ from ray import tune
 sys.path.append("../../")
 from datasets import NO_load_data_model
 from loss_fun import loss_selector
-from neuralop.models import LocalFNO
+from neuralop.models import LocalNO
 from tune import tune_hyperparameters
 from wrappers import wrap_model_builder
 
@@ -51,7 +51,7 @@ def ray_local_no(which_example: str, loss_fn_str: str):
     config_space.update(fixed_params)
 
     # Define the model builders
-    model_builder = lambda config: LocalFNO(
+    model_builder = lambda config: LocalNO(
         n_modes=(config["modes"], config["modes"]),
         hidden_channels=config["width"],
         n_layers=config["n_layers"],
@@ -61,6 +61,7 @@ def ray_local_no(which_example: str, loss_fn_str: str):
         factorization="tucker",
         implementation="factorized",
         rank=config["rank"],
+        disco_layers=False,
     )
     
     # Wrap the model builder
