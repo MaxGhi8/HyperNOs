@@ -35,6 +35,7 @@ The following models are available across the directory and its subfolders:
 - **UNO** (U-Net Neural Operator)
 - **UQNO** (Uncertainty Quantification Neural Operator)
 - **LocalNO** (Local Neural Operator)
+- **OTNO** (Optimal Transport Neural Operator)
 
 ## Script Types
 

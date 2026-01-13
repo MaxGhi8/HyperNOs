@@ -6,6 +6,7 @@ from .StiffnessMatrixWrapper import StiffnessMatrixWrapper
 from .PermuteWrapper import PermuteWrapper
 from .DeepXDEDeepONetWrapper import DeepXDEDeepONetWrapper
 from .DeepXDEMIONetWrapper import DeepXDEMIONetWrapper
+from .OTNOWrapper import OTNOWrapper
 
 
 def wrap_model(model, which_example):
@@ -26,6 +27,8 @@ def wrap_model(model, which_example):
             return DeepXDEMIONetWrapper(model)
         case str(x) if x.endswith("_deepxde"):
             return DeepXDEDeepONetWrapper(model)
+        case str(x) if x.startswith("OTNO"):
+            return OTNOWrapper(model)
         case _:
             print(f"No wrapper defined for {which_example}, returning the original model")
 
