@@ -519,15 +519,23 @@ try:
         model = model.to(device)
         checkpoint = torch.load(name_model, weights_only=True, map_location=device)
 
-        if "_metadata" in checkpoint["state_dict"]:
-            del checkpoint["state_dict"]["_metadata"]
+        # if "_metadata" in checkpoint["state_dict"]:
+        #     del checkpoint["state_dict"]["_metadata"]
 
         model.load_state_dict(checkpoint["state_dict"])
 
     except Exception as e:
-        print(f"Model not found, trying to load the model with torch.load(). Error: {e}")
-        # save with torch.save(model)
-        # model = torch.load(name_model, weights_only=False, map_location=device)
+        print(f"Model not found or weights_only load failed. Error: {e}")
+        print("Trying to load with weights_only=False...")
+        try:
+            checkpoint = torch.load(name_model, weights_only=False, map_location=device)
+            if "_metadata" in checkpoint["state_dict"]:
+                del checkpoint["state_dict"]["_metadata"]
+            model.load_state_dict(checkpoint["state_dict"])
+            print("Model loaded successfully with weights_only=False.")
+        except Exception as e2:
+            print(f"Fallback load failed: {e2}")
+            raise e2
 
 except Exception:
     raise ValueError(
