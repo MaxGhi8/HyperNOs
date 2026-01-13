@@ -31,6 +31,14 @@ import json
 import os
 import sys
 import time
+from unittest.mock import MagicMock
+
+# Mock torch_harmonics to allow importing LocalNO without it installed
+if 'torch_harmonics' not in sys.modules:
+    mock_harmonics = MagicMock()
+    sys.modules['torch_harmonics'] = mock_harmonics
+    sys.modules['torch_harmonics.quadrature'] = MagicMock()
+    sys.modules['torch_harmonics.filter_basis'] = MagicMock()
 
 sys.path.append("..")
 
@@ -38,7 +46,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import torch
 from architectures import CNO, FNO, ResidualNetwork
-from neuralop.models import TFNO, CODANO, RNO, OTNO, UNO
+from neuralop.models import TFNO, CODANO, RNO, OTNO, UNO, LocalNO
+import deepxde as dde
 from beartype import beartype
 from cli.utilities_recover_model import get_tensors, test_fun, test_plot_samples
 from datasets import NO_load_data_model
@@ -107,7 +116,7 @@ def parse_arguments():
     parser.add_argument(
         "architecture",
         type=str,
-        choices=["FNO", "CNO", "ResNet", "FNO_lin", "BAMPNO", "TFNO", "CODANO", "RNO", "OTNO", "UNO"],
+        choices=["FNO", "CNO", "ResNet", "FNO_lin", "BAMPNO", "TFNO", "CODANO", "RNO", "OTNO", "UNO", "LocalNO", "DeepONet", "MIONet", "PODDeepONet", "PODMIONet"],
         help="Select the architecture to use.",
     )
     parser.add_argument(
@@ -160,6 +169,14 @@ Norm_dict = {"L1": 0, "L2": 1, "H1": 2, "L1_SMOOTH": 3, "MSE": 4}
 
 # upload the model and the hyperparameters
 folder = f"../tests/{arc}/{which_example}/loss_{loss_fn_str}_mode_{mode_str}/"
+
+# Here I load the possibility to not have the _mode_ in the folder name (to handle both json and dict loading)
+if not os.path.exists(folder):
+    alt_folder = f"../tests/{arc}/{which_example}/loss_{loss_fn_str}_{mode_str}/"
+    if os.path.exists(alt_folder):
+        print(f"Standard folder not found, using alternative path: {alt_folder}")
+        folder = alt_folder
+
 files = os.listdir(folder)
 name_model = folder + [file for file in files if file.startswith("model_")][0]
 print("Model name: ", name_model)
@@ -188,6 +205,12 @@ try:
         print("Loaded hyperparameters from chosed_hyperparams.json")
 
     #### Load the datasets
+    # DeepXDE changes default tensor type to CUDA if available, which breaks datasets.py DataLoader generator
+    if torch.cuda.is_available():
+        torch.set_default_dtype(torch.float32)
+        if hasattr(torch, "set_default_device"):
+            torch.set_default_device("cpu")
+
     try:
         example = NO_load_data_model(
             which_example=which_example,
@@ -398,6 +421,100 @@ try:
                     channel_mlp_skip="linear",
                 )
                 model = wrap_model(model, which_example + "_neural_operator")
+
+            case "LocalNO":
+                model = LocalNO(
+                    n_modes=(default_hyper_params["modes"], default_hyper_params["modes"]),
+                    hidden_channels=default_hyper_params["width"],
+                    n_layers=default_hyper_params["n_layers"],
+                    in_channels=default_hyper_params["input_dim"],
+                    out_channels=default_hyper_params["out_dim"],
+                    default_in_shape=(64, 64),
+                    factorization="tucker",
+                    implementation="factorized",
+                    rank=default_hyper_params["rank"],
+                    disco_layers=False,
+                )
+                model = wrap_model(model, which_example + "_neural_operator")
+
+            case "DeepONet":
+                input_dim = default_hyper_params["width"] * default_hyper_params["width"] * (1 + 2 * default_hyper_params.get("FourierF", 0))
+                p = default_hyper_params["network_width"]
+                layer_sizes_branch = [input_dim] + [default_hyper_params["network_width"]] * default_hyper_params["branch_depth"] + [p]
+                layer_sizes_trunk = [2] + [default_hyper_params["network_width"]] * default_hyper_params["trunk_depth"] + [p]
+
+                model = dde.nn.DeepONetCartesianProd(
+                    layer_sizes_branch,
+                    layer_sizes_trunk,
+                    "relu",
+                    "Glorot normal"
+                )
+                model.out_dim = default_hyper_params["out_dim"]
+                model = wrap_model(model, which_example + "_deepxde")
+
+            case "MIONet":
+                input_dim = default_hyper_params["width"] * default_hyper_params["width"] * (1 + 2 * default_hyper_params.get("FourierF", 0))
+                p = default_hyper_params["network_width"]
+                layer_sizes_branch = [input_dim] + [default_hyper_params["network_width"]] * default_hyper_params["branch_depth"] + [p]
+                layer_sizes_trunk = [2] + [default_hyper_params["network_width"]] * default_hyper_params["trunk_depth"] + [p]
+
+                model = dde.nn.MIONetCartesianProd(
+                    layer_sizes_branch, # Branch 1
+                    layer_sizes_branch, # Branch 2 (Assuming symmetric/same size for now based on training script)
+                    layer_sizes_trunk,
+                    "relu",
+                    "Glorot normal"
+                )
+                model.out_dim = default_hyper_params["out_dim"]
+                model = wrap_model(model, which_example + "_mionet_deepxde")
+
+            case "PODDeepONet":
+                input_dim = default_hyper_params["width"] * default_hyper_params["width"] * (1 + 2 * default_hyper_params.get("FourierF", 0))
+                p = default_hyper_params["network_width"]
+                layer_sizes_branch = [input_dim] + [default_hyper_params["network_width"]] * default_hyper_params["branch_depth"] + [p]
+                
+                # Dummy basis for instantiation. Will be overwritten by loaded state_dict.
+                # Shape: (Features, p) -> (input_dim, p)
+                dummy_basis = torch.zeros(input_dim, p)
+
+                model = dde.nn.PODDeepONet(
+                    pod_basis=dummy_basis,
+                    layer_sizes_branch=layer_sizes_branch,
+                    activation="relu",
+                    kernel_initializer="Glorot normal",
+                    layer_sizes_trunk=None
+                )
+                model.out_dim = default_hyper_params["out_dim"]
+                
+                # Ensure buffer registration matches logic needed for loading
+                if hasattr(model, "pod_basis"):
+                    del model.pod_basis
+                    model.register_buffer("pod_basis", dummy_basis)
+
+                model = wrap_model(model, which_example + "_deepxde")
+
+            case "PODMIONet":
+                input_dim = default_hyper_params["width"] * default_hyper_params["width"] * (1 + 2 * default_hyper_params.get("FourierF", 0))
+                p = default_hyper_params["network_width"]
+                layer_sizes_branch = [input_dim] + [default_hyper_params["network_width"]] * default_hyper_params["branch_depth"] + [p]
+                
+                dummy_basis = torch.zeros(input_dim, p)
+
+                model = dde.nn.PODMIONet(
+                    pod_basis=dummy_basis,
+                    layer_sizes_branch1=layer_sizes_branch,
+                    layer_sizes_branch2=layer_sizes_branch,
+                    activation="relu",
+                    kernel_initializer="Glorot normal",
+                    layer_sizes_trunk=None
+                )
+                model.out_dim = default_hyper_params["out_dim"]
+
+                if hasattr(model, "pod_basis"):
+                    del model.pod_basis
+                    model.register_buffer("pod_basis", dummy_basis)
+
+                model = wrap_model(model, which_example + "_mionet_deepxde")
 
         model = model.to(device)
         checkpoint = torch.load(name_model, weights_only=True, map_location=device)
