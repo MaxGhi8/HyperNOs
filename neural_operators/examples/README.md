@@ -1,13 +1,19 @@
-# Examples
+## Codebase Structure: Custom vs Official
 
-This directory provides example scripts demonstrating how to train and configure various neural operators.
+This repository contains both **custom implementations** of Neural Operators and wrappers around **official libraries**.
 
-## Subdirectories
+### 1. Custom Implementations (Root Examples)
 
-The examples are organized into two main subfolders containing library-specific implementations:
+Scripts directly in this folder (e.g., `train_fno.py`, `train_cno.py`) use our **custom architectures** located in `../architectures/`.
 
-- **`deepxde_lib`**: Contains examples using the DeepXDE library.
-- **`neuralop_lib`**: Contains examples using the NeuralOperator library.
+### 2. Official Library Wrappers
+
+We also provide subfolders demonstrating how to use official libraries within our pipeline:
+
+- **`neuralop_lib/`**: Examples using the official `neuraloperator` library (e.g., `TFNO`, `CODANO`, `UNO`, `RNO`, `LocalNO`, `OTNO`).
+- **`deepxde_lib/`**: Examples using `deepxde` (e.g., `DeepONet`, `MIONet`, `POD-DeepONet`, `POD-MIONet`).
+
+This dual approach allows us to benchmark our custom models against community standards and easily integrate new findings.
 
 ## Available Models
 
