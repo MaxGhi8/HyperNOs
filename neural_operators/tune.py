@@ -11,6 +11,7 @@ if 'torch_harmonics' not in sys.modules:
     sys.modules['torch_harmonics.filter_basis'] = MagicMock()
 
 import torch
+import ray
 from ray import get, init, put, train, tune
 from ray.train import Checkpoint
 from ray.tune.schedulers import ASHAScheduler
@@ -48,15 +49,53 @@ def tune_hyperparameters(
         )
 
     # Initialize Ray
-    try:
+    if ray.is_initialized():
+        ray.shutdown()
+
+    # Debug: Check environment variable
+    ray_addr = os.environ.get("RAY_ADDRESS")
+    print(f"DEBUG: RAY_ADDRESS is {ray_addr}")
+
+    runtime_env = {
+        "env_vars": {"PYTHONPATH": os.path.dirname(os.path.abspath(__file__))},
+    }
+
+    if ray_addr:
+        try:
+            init(
+                address="auto",
+                ignore_reinit_error=True,
+                runtime_env=runtime_env,
+            )
+            print("Ray initialized (connected to existing cluster).")
+        except Exception as e:
+            print(f"Could not connect to existing cluster: {e}. Falling back to local initialization...")
+            if ray.is_initialized():
+                ray.shutdown()
+            
+            # Use a fresh temp dir to avoid zombie sessions
+            tmp_dir = tempfile.mkdtemp(prefix="ray_hypernos_")
+            print(f"DEBUG: Starting local Ray in {tmp_dir}")
+            
+            init(
+                address=None,
+                ignore_reinit_error=True,
+                runtime_env=runtime_env,
+                _temp_dir=tmp_dir,
+            )
+            print("Ray initialized (local fallback).")
+    else:
+        # Use a fresh temp dir to avoid zombie sessions
+        tmp_dir = tempfile.mkdtemp(prefix="ray_hypernos_")
+        print(f"DEBUG: Starting local Ray in {tmp_dir}")
+        
         init(
-            address="auto",
-            runtime_env={
-                "env_vars": {"PYTHONPATH": os.path.dirname(os.path.abspath(__file__))},
-            },
+            address=None,
+            ignore_reinit_error=True,
+            runtime_env=runtime_env,
+            _temp_dir=tmp_dir,
         )
-    except ConnectionError:
-        print("Could not find running Ray instance. Run `ray start --head` first.")
+        print("Ray initialized (local).")
 
     # puts large builders in Ray's object store
     dataset_builder_ref = put(dataset_builder)
