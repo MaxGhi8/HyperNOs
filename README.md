@@ -84,6 +84,13 @@ To set up the HyperNOs project, follow these steps:
 
 After installation, you can run the provided examples in the `neural_operators/examples` directory.
 
+### Interactive Tutorials
+
+We provide interactive Jupyter Notebooks in the `notebook/` directory to help you get started:
+
+- [Training Tutorial](notebook/tutorial_train.ipynb): Learn how to train a Neural Operator.
+- [Ray Tune Tutorial](notebook/tutorial_ray.ipynb): Learn how to tune hyperparameters of a Neural Operator.
+
 ### Basic Training
 
 To train a model (e.g., FNO) on a single machine, simply run the corresponding python script:
