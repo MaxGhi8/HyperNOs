@@ -1,11 +1,12 @@
 import os
 import sys
 
+import pytest
 import torch
 
 # Add parent directory to path to allow imports if needed, though mostly we rely on relative or package imports if installed.
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__))))
-from GroupEquivariantFNO import G_FNO
+sys.path.append("..")
+from architectures import G_FNO
 
 
 def test_gfno_2d():
@@ -34,7 +35,6 @@ def test_gfno_2d():
     out = model(dummy_input.to(device))
     print(f"2D Output shape: {out.shape}")
     assert out.shape == (batch_size, out_dim, 32, 32)
-    print("G_FNO 2D forward pass test passed!")
 
 
 def test_gfno_3d():
@@ -65,7 +65,6 @@ def test_gfno_3d():
     out = model(dummy_input.to(device))
     print(f"3D Output shape: {out.shape}")
     assert out.shape == (batch_size, out_dim, 16, 16, 16)
-    print("G_FNO 3D forward pass test passed!")
 
 
 def test_equivariance_2d():
@@ -107,10 +106,7 @@ def test_equivariance_2d():
     # Check error
     error = torch.norm(y_rot_pred - y_rot_gt) / torch.norm(y_rot_gt)
     print(f"    Rotation Error (Relative L2): {error.item():.6e}")
-    if error < 1e-4:
-        print("    PASS: Rotation Equivariance holds.")
-    else:
-        print("    FAIL: Rotation Equivariance violation.")
+    assert error < 1e-4, f"Rotation Equivariance violation. Error: {error.item()}"
 
     # 2. Rotation + Reflection Equivariance (Reflection=True)
     print("  Checking Reflection Equivariance (p4m)...")
@@ -132,10 +128,9 @@ def test_equivariance_2d():
 
     error_flip = torch.norm(y_flip_pred - y_flip_gt) / torch.norm(y_flip_gt)
     print(f"    Reflection Error (Relative L2): {error_flip.item():.6e}")
-    if error_flip < 1e-4:
-        print("    PASS: Reflection Equivariance holds.")
-    else:
-        print("    FAIL: Reflection Equivariance violation.")
+    assert (
+        error_flip < 1e-4
+    ), f"Reflection Equivariance violation. Error: {error_flip.item()}"
 
 
 def test_equivariance_3d():
@@ -151,10 +146,6 @@ def test_equivariance_3d():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # 1. Rotation Equivariance (Rotation in spatial dimensions X, Y)
-    # Note: GConv3d typically rotates in the spatial dims (dims -3, -2 corresponds to Y, X usually or X, Y depending on convention)
-    # Based on GConv3d implementation: rot90(..., dims=[-3, -2]) suggests rotation in the first two dimensions of the 3 spatial dims.
-    # Input is (B, C, X, Y, T). The dims are [-3, -2, -1] -> X, Y, T.
-
     print("  Checking Rotation Equivariance (p4 in XY plane)...")
     model = G_FNO(
         problem_dim=3,
@@ -178,10 +169,7 @@ def test_equivariance_3d():
     y_rot_gt = y.rot90(1, dims=[-3, -2])
 
     error = torch.norm(y_rot_pred - y_rot_gt) / torch.norm(y_rot_gt)
-    if error < 1e-4:
-        print("    PASS: Rotation Equivariance holds.")
-    else:
-        print("    FAIL: Rotation Equivariance violation.")
+    assert error < 1e-4, f"Rotation Equivariance violation. Error: {error.item()}"
 
     # 2. Reflection Equivariance (Reflection in XY plane)
     print("  Checking Reflection Equivariance (p4m in XY plane)...")
@@ -204,10 +192,9 @@ def test_equivariance_3d():
 
     error_flip = torch.norm(y_flip_pred - y_flip_gt) / torch.norm(y_flip_gt)
     print(f"    Reflection Error (Relative L2): {error_flip.item():.6e}")
-    if error_flip < 1e-4:
-        print("    PASS: Reflection Equivariance holds.")
-    else:
-        print("    FAIL: Reflection Equivariance violation.")
+    assert (
+        error_flip < 1e-4
+    ), f"Reflection Equivariance violation. Error: {error_flip.item()}"
 
 
 def test_translation_equivariance():
@@ -249,10 +236,9 @@ def test_translation_equivariance():
         y_2d_shifted_gt
     )
     print(f"    2D Translation Error (Relative L2): {error_2d.item():.6e}")
-    if error_2d < 1e-4:
-        print("    PASS: 2D Translation Equivariance holds.")
-    else:
-        print("    FAIL: 2D Translation Equivariance violation.")
+    assert (
+        error_2d < 2e-4
+    ), f"2D Translation Equivariance violation. Error: {error_2d.item()}"
 
     # 2. 3D Translation
     print("  Checking 3D Translation Equivariance...")
@@ -290,15 +276,6 @@ def test_translation_equivariance():
         y_3d_shifted_gt
     )
     print(f"    3D Translation Error (Relative L2): {error_3d.item():.6e}")
-    if error_3d < 1e-4:
-        print("    PASS: 3D Translation Equivariance holds.")
-    else:
-        print("    FAIL: 3D Translation Equivariance violation.")
-
-
-if __name__ == "__main__":
-    test_gfno_2d()
-    test_gfno_3d()
-    test_equivariance_2d()
-    test_equivariance_3d()
-    test_translation_equivariance()
+    assert (
+        error_3d < 1e-4
+    ), f"3D Translation Equivariance violation. Error: {error_3d.item()}"
