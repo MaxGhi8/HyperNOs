@@ -1,0 +1,28 @@
+{
+	"training_properties": {
+		"training_samples": 256,
+		"val_samples": 128,
+		"test_samples": 128,
+		"learning_rate": 0.001,
+		"epochs": 1000,
+		"batch_size": 32,
+		"weight_decay": 1e-6,
+		"scheduler_step": 10,
+		"scheduler_gamma": 0.98,
+		"beta": 1
+	},
+	"fno_architecture": {
+		"problem_dim": 2,
+		"in_dim": 1,
+		"d_v": 16,
+		"out_dim": 1,
+		"L": 2,
+		"modes": 24,
+		"time_modes": 0,
+		"fun_act": "leaky_relu",
+		"reflection": 0,
+		"padding": 0,
+		"FourierF": 0,
+		"retrain": 4
+	}
+}
