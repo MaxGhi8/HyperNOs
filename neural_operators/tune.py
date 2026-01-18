@@ -57,7 +57,7 @@ def tune_hyperparameters(
     print(f"DEBUG: RAY_ADDRESS is {ray_addr}")
 
     runtime_env = {
-        "env_vars": {"PYTHONPATH": os.path.dirname(os.path.abspath(__file__))},
+        "env_vars": {"PYTHONPATH": f"{os.path.dirname(os.path.dirname(os.path.abspath(__file__)))}:{os.path.dirname(os.path.abspath(__file__))}"},
     }
 
     if ray_addr:
