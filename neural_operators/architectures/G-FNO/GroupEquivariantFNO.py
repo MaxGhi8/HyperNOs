@@ -42,6 +42,12 @@ def activation(
 # GConv2d
 #########################################
 class GConv2d(nn.Module):
+    """
+    Group equivariant 2D convolutional layer.
+    This is needed both for the lifting and the projection, to implement G-equivariance convolution with kernel size 1;
+    both for the kernel integral layer to multiply the Fourier transform.
+    """
+
     def __init__(
         self,
         in_channels: int,
@@ -51,7 +57,7 @@ class GConv2d(nn.Module):
         first_layer: bool = False,
         last_layer: bool = False,
         spectral: bool = False,
-        Hermitian: bool = True,
+        Hermitian: bool = False,  #!
         reflection: bool = False,
     ):
         super().__init__()
@@ -63,11 +69,17 @@ class GConv2d(nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.reflection = reflection
+        self.Hermitian = Hermitian
+        self.first_layer = first_layer
+        self.last_layer = last_layer
+
         self.rt_group_size = 4
         self.group_size = self.rt_group_size * (1 + reflection)
+
         self.kernel_size_Y = kernel_size
         self.kernel_size_X = kernel_size // 2 + 1 if Hermitian else kernel_size
-        self.Hermitian = Hermitian
+
+        self.B = nn.Parameter(torch.empty(1, out_channels, 1, 1)) if bias else None
 
         if first_layer or last_layer:
             self.W = nn.Parameter(
@@ -80,10 +92,22 @@ class GConv2d(nn.Module):
                     dtype=dtype,
                 )
             )
+
         else:
             if self.Hermitian:
                 self.W = nn.ParameterDict(
                     {
+                        "00_modes": torch.nn.Parameter(
+                            torch.empty(
+                                out_channels,
+                                1,
+                                in_channels,
+                                self.group_size,
+                                1,
+                                1,
+                                dtype=torch.float,
+                            )
+                        ),
                         "y0_modes": torch.nn.Parameter(
                             torch.empty(
                                 out_channels,
@@ -106,19 +130,9 @@ class GConv2d(nn.Module):
                                 dtype=dtype,
                             )
                         ),
-                        "00_modes": torch.nn.Parameter(
-                            torch.empty(
-                                out_channels,
-                                1,
-                                in_channels,
-                                self.group_size,
-                                1,
-                                1,
-                                dtype=torch.float,
-                            )
-                        ),
                     }
                 )
+
             else:
                 self.W = nn.Parameter(
                     torch.empty(
@@ -131,19 +145,20 @@ class GConv2d(nn.Module):
                         dtype=dtype,
                     )
                 )
-        self.first_layer = first_layer
-        self.last_layer = last_layer
-        self.B = nn.Parameter(torch.empty(1, out_channels, 1, 1)) if bias else None
+
         self.eval_build = True
         self.reset_parameters()
         self.get_weight()
 
     def reset_parameters(self):
+        # Initialize weights W
         if self.Hermitian:
             for v in self.W.values():
                 nn.init.kaiming_uniform_(v, a=math.sqrt(5))
         else:
             nn.init.kaiming_uniform_(self.W, a=math.sqrt(5))
+
+        # Initialize bias B
         if self.B is not None:
             nn.init.kaiming_uniform_(self.B, a=math.sqrt(5))
 
@@ -155,6 +170,9 @@ class GConv2d(nn.Module):
         else:
             return
 
+        # Impose Hermitian symmetry and construct the final weights
+        # After that the weights have the shape (out_channels, 1, in_channels, *group_size, kernel_size, kernel_size)
+        # Moreover self.kernel_size_Y = kernel_size
         if self.Hermitian:
             self.weights = torch.cat(
                 [
@@ -175,13 +193,17 @@ class GConv2d(nn.Module):
         else:
             self.weights = self.W[:]
 
+        # Adjust weights for first and last layer
         if self.first_layer or self.last_layer:
             self.weights = self.weights.repeat(1, self.group_size, 1, 1, 1)
 
+            # Rotate weights for p4 group
             for k in range(1, self.rt_group_size):
                 self.weights[:, k] = self.weights[:, k].rot90(k=k, dims=[-2, -1])
 
+            # Reflect weights for p4m group
             if self.reflection:
+                # self.rt_group_size = 4
                 self.weights[:, self.rt_group_size :] = self.weights[
                     :, : self.rt_group_size
                 ].flip(dims=[-2])
@@ -192,18 +214,21 @@ class GConv2d(nn.Module):
                 )
                 if self.B is not None:
                     self.bias = self.B.repeat_interleave(repeats=self.group_size, dim=1)
-            else:
+            elif self.last_layer:
                 self.weights = self.weights.transpose(2, 1).reshape(
                     self.out_channels, -1, self.kernel_size_Y, self.kernel_size_Y
                 )
                 self.bias = self.B
 
+        # Adjust weights for intermediate layers
         else:
             self.weights = self.weights.repeat(1, self.group_size, 1, 1, 1, 1)
 
+            # Rotate weights for p4 group
             for k in range(1, self.rt_group_size):
                 self.weights[:, k] = self.weights[:, k - 1].rot90(dims=[-2, -1])
 
+                # Reflect weights for p4m group
                 if self.reflection:
                     self.weights[:, k] = torch.cat(
                         [
@@ -241,22 +266,32 @@ class GConv2d(nn.Module):
             if self.B is not None:
                 self.bias = self.B.repeat_interleave(repeats=self.group_size, dim=1)
 
+        # Hermitian symmetry
         if self.Hermitian:
             self.weights = self.weights[..., -self.kernel_size_X :]
 
     def forward(self, x):
         self.get_weight()
+
         # output is of shape (batch * out_channels, number of group elements, ny, nx)
         x = nn.functional.conv2d(input=x, weight=self.weights)
+
         if self.B is not None:
             x = x + self.bias
+
         return x
 
 
-# ----------------------------------------
+#########################################
 # GConv3d
-# ----------------------------------------
+#########################################
 class GConv3d(nn.Module):
+    """
+    Group equivariant 3D convolutional layer.
+    Similar to GConv2d, but operates on (batch, channels, x, y, t).
+    Used for lifting (scalar->group), projection (group->scalar), and group convolutions (group->group).
+    """
+
     def __init__(
         self,
         in_channels,
@@ -271,18 +306,26 @@ class GConv3d(nn.Module):
         reflection=False,
     ):
         super().__init__()
+
+        assert kernel_size % 2 == 1, "kernel size must be odd"
+
+        dtype = torch.cfloat if spectral else torch.float
+
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.reflection = reflection
+        self.Hermitian = Hermitian
+        self.first_layer = first_layer
+        self.last_layer = last_layer
+
         self.rt_group_size = 4
         self.group_size = self.rt_group_size * (1 + reflection)
-        assert kernel_size % 2 == 1, "kernel size must be odd"
-        dtype = torch.cfloat if spectral else torch.float
+
         self.kernel_size_Y = kernel_size
         self.kernel_size_X = kernel_size // 2 + 1 if Hermitian else kernel_size
         self.kernel_size_T_full = kernel_size_T
         self.kernel_size_T = kernel_size_T // 2 + 1 if Hermitian else kernel_size_T
-        self.Hermitian = Hermitian
+
         if first_layer or last_layer:
             self.W = nn.Parameter(
                 torch.empty(
@@ -355,9 +398,9 @@ class GConv3d(nn.Module):
                         dtype=dtype,
                     )
                 )
-        self.first_layer = first_layer
-        self.last_layer = last_layer
+
         self.B = nn.Parameter(torch.empty(1, out_channels, 1, 1, 1)) if bias else None
+
         self.eval_build = True
         self.reset_parameters()
         self.get_weight()
@@ -368,6 +411,7 @@ class GConv3d(nn.Module):
                 nn.init.kaiming_uniform_(v, a=math.sqrt(5))
         else:
             nn.init.kaiming_uniform_(self.W, a=math.sqrt(5))
+
         if self.B is not None:
             nn.init.kaiming_uniform_(self.B, a=math.sqrt(5))
 
@@ -379,6 +423,9 @@ class GConv3d(nn.Module):
         else:
             return
 
+        # Impose Hermitian symmetry and construct the final weights
+        # After that the weights have the shape (out_channels, 1, in_channels, *group_size, kernel_size, kernel_size, kernel_size)
+        # Moreover self.kernel_size_Y = kernel_size
         if self.Hermitian:
             self.weights = torch.cat(
                 [
@@ -408,10 +455,15 @@ class GConv3d(nn.Module):
             self.weights = self.W[:]
 
         if self.first_layer or self.last_layer:
+            # For lifting (first_layer) or projection (last_layer), we deal with scalar <-> group transitions.
+            # We first expand the weights to match the group size.
             self.weights = self.weights.repeat(1, self.group_size, 1, 1, 1, 1)
+
+            # Rotate weights for p4 group
             for k in range(1, self.rt_group_size):
                 self.weights[:, k] = self.weights[:, k].rot90(k=k, dims=[-3, -2])
 
+            # Reflect weights for p4m group
             if self.reflection:
                 self.weights[:, self.rt_group_size :] = self.weights[
                     :, : self.rt_group_size
@@ -437,11 +489,14 @@ class GConv3d(nn.Module):
                 )
                 self.bias = self.B
         else:
+            # Case: Group -> Group convolution (hidden layers)
             self.weights = self.weights.repeat(1, self.group_size, 1, 1, 1, 1, 1)
 
+            # Rotate weights for p4 group
             for k in range(1, self.rt_group_size):
                 self.weights[:, k] = self.weights[:, k - 1].rot90(dims=[-3, -2])
 
+                # Reflect weights for p4m group
                 if self.reflection:
                     self.weights[:, k] = torch.cat(
                         [
@@ -480,20 +535,24 @@ class GConv3d(nn.Module):
             if self.B is not None:
                 self.bias = self.B.repeat_interleave(repeats=self.group_size, dim=1)
 
+        # Hermitian symmetry
         if self.Hermitian:
             self.weights = self.weights[..., -self.kernel_size_T :]
 
     def forward(self, x):
         self.get_weight()
+
         x = nn.functional.conv3d(input=x, weight=self.weights)
+
         if self.B is not None:
             x = x + self.bias
+
         return x
 
 
-# ----------------------------------------
+########################################
 # G_MLP
-# ----------------------------------------
+########################################
 class G_MLP(nn.Module):
     """
     Unified MLP/Conv structure for G-FNO.
@@ -508,6 +567,7 @@ class G_MLP(nn.Module):
         mid_channels,
         reflection=False,
         last_layer=False,
+        first_layer=False,
         fun_act="gelu",
     ):
         super(G_MLP, self).__init__()
@@ -520,6 +580,7 @@ class G_MLP(nn.Module):
                 out_channels=mid_channels,
                 kernel_size=1,
                 reflection=reflection,
+                first_layer=first_layer,
             )
             self.mlp2 = GConv2d(
                 in_channels=mid_channels,
@@ -528,6 +589,7 @@ class G_MLP(nn.Module):
                 reflection=reflection,
                 last_layer=last_layer,
             )
+
         elif self.problem_dim == 3:
             self.mlp1 = GConv3d(
                 in_channels=in_channels,
@@ -535,6 +597,7 @@ class G_MLP(nn.Module):
                 kernel_size=1,
                 kernel_size_T=1,
                 reflection=reflection,
+                first_layer=first_layer,
             )
             self.mlp2 = GConv3d(
                 in_channels=mid_channels,
@@ -548,15 +611,17 @@ class G_MLP(nn.Module):
             raise ValueError("G_FNO only supports 2D and 3D problems.")
 
     def forward(self, x):
+
         x = self.mlp1(x)
         x = activation(x, self.fun_act)
         x = self.mlp2(x)
+
         return x
 
 
-# ----------------------------------------
+########################################
 # G_FourierLayer
-# ----------------------------------------
+########################################
 class G_FourierLayer(nn.Module):
     """
     Unified Group Fourier Layer.
@@ -590,6 +655,7 @@ class G_FourierLayer(nn.Module):
                 spectral=True,
                 Hermitian=True,
             )
+
         elif self.problem_dim == 3:
             # GSpectralConv3d logic
             assert time_modes is not None, "time_modes must be provided for 3D GFNO"
@@ -604,6 +670,7 @@ class G_FourierLayer(nn.Module):
                 spectral=True,
                 Hermitian=True,
             )
+
         else:
             raise ValueError("G_FNO only supports 2D and 3D problems.")
 
@@ -631,11 +698,14 @@ class G_FourierLayer(nn.Module):
                 .nonzero()
                 .item()
             )
+
+            # RFFT2
             x_ft = torch.fft.fftshift(torch.fft.rfft2(x), dim=-2)
             x_ft = x_ft[
                 ..., (freq0_y - self.modes + 1) : (freq0_y + self.modes), : self.modes
             ]
 
+            # Weighted multiplication
             out_ft = torch.zeros(
                 batchsize,
                 self.weights.shape[0],
@@ -648,6 +718,7 @@ class G_FourierLayer(nn.Module):
                 ..., (freq0_y - self.modes + 1) : (freq0_y + self.modes), : self.modes
             ] = self.compl_mul2d(x_ft, self.weights)
 
+            # IRFFT2
             x = torch.fft.irfft2(
                 torch.fft.ifftshift(out_ft, dim=-2), s=(x.size(-2), x.size(-1))
             )
@@ -664,6 +735,7 @@ class G_FourierLayer(nn.Module):
                 .item()
             )
 
+            # RFFT3
             x_ft = torch.fft.fftshift(
                 torch.fft.rfftn(x, dim=[-3, -2, -1]), dim=[-3, -2]
             )
@@ -674,6 +746,7 @@ class G_FourierLayer(nn.Module):
                 : self.time_modes,
             ]
 
+            # Weighted multiplication
             out_ft = torch.zeros(
                 batchsize,
                 self.weights.shape[0],
@@ -690,6 +763,7 @@ class G_FourierLayer(nn.Module):
                 : self.time_modes,
             ] = self.compl_mul3d(x_ft, self.weights)
 
+            # IRFFT3
             x = torch.fft.irfftn(
                 torch.fft.ifftshift(out_ft, dim=[-3, -2]),
                 s=(x.size(-3), x.size(-2), x.size(-1)),
@@ -698,21 +772,12 @@ class G_FourierLayer(nn.Module):
         return x
 
 
-# ----------------------------------------------------------------------------------------------------------------------
+########################################
 # G_FNO
-# ----------------------------------------------------------------------------------------------------------------------
-class output_denormalizer_class(nn.Module):
-    def __init__(self, output_normalizer) -> None:
-        super(output_denormalizer_class, self).__init__()
-        self.output_normalizer = output_normalizer
-
-    def forward(self, x):
-        return self.output_normalizer.decode(x)
-
-
+########################################
 class G_FNO(nn.Module):
     """
-    G_FNO module refactored to match FNO.py structure.
+    Group equivariant FNO.
     """
 
     def __init__(
@@ -728,14 +793,10 @@ class G_FNO(nn.Module):
         reflection: bool = False,
         padding: int = 0,
         device: torch.device = torch.device("cpu"),
-        example_output_normalizer=None,
     ):
         super(G_FNO, self).__init__()
         self.problem_dim = problem_dim
-        # Note: G-FNO logic includes grid inside P lifting usually, but we'll follow FNO.py pattern
-        # The original G-FNO had in_channels = num_channels * initial_step + grid_dim
-        # We assume in_dim passed here ALREADY accounts for what we want, OR we add problem_dim
-        self.in_dim = in_dim + self.problem_dim
+        self.in_dim = in_dim
         self.d_v = d_v
         self.out_dim = out_dim
         self.L = L
@@ -747,31 +808,34 @@ class G_FNO(nn.Module):
         self.device = device
         self.group_size = 4 * (1 + reflection)
 
-        # Output denormalizer
-        self.output_denormalizer = (
-            nn.Identity()
-            if example_output_normalizer is None
-            else output_denormalizer_class(example_output_normalizer)
-        )
-
         # Lifting (P)
-        if self.problem_dim == 2:
-            self.p = GConv2d(
-                in_channels=self.in_dim,
-                out_channels=self.d_v,
-                kernel_size=1,
-                reflection=reflection,
-                first_layer=True,
-            )
-        elif self.problem_dim == 3:
-            self.p = GConv3d(
-                in_channels=self.in_dim,
-                out_channels=self.d_v,
-                kernel_size=1,
-                kernel_size_T=1,
-                reflection=reflection,
-                first_layer=True,
-            )
+        self.p = G_MLP(
+            problem_dim=self.problem_dim,
+            in_channels=self.in_dim,
+            out_channels=self.d_v,
+            mid_channels=self.d_v * 4,
+            reflection=reflection,
+            first_layer=True,
+            fun_act=self.fun_act,
+        )
+        # Linear Projection case
+        # if self.problem_dim == 2:
+        #     self.p = GConv2d(
+        #         in_channels=self.in_dim,
+        #         out_channels=self.d_v,
+        #         kernel_size=1,
+        #         reflection=reflection,
+        #         first_layer=True,
+        #     )
+        # elif self.problem_dim == 3:
+        #     self.p = GConv3d(
+        #         in_channels=self.in_dim,
+        #         out_channels=self.d_v,
+        #         kernel_size=1,
+        #         kernel_size_T=1,
+        #         reflection=reflection,
+        #         first_layer=True,
+        #     )
 
         # Layers
         self.integrals = nn.ModuleList()
@@ -780,6 +844,7 @@ class G_FNO(nn.Module):
         self.norms = nn.ModuleList()
 
         for _ in range(self.L):
+            # Integral Fourier Layer
             self.integrals.append(
                 G_FourierLayer(
                     problem_dim=self.problem_dim,
@@ -790,6 +855,8 @@ class G_FNO(nn.Module):
                     reflection=reflection,
                 )
             )
+
+            # MLP
             self.mlps.append(
                 G_MLP(
                     problem_dim=self.problem_dim,
@@ -799,6 +866,8 @@ class G_FNO(nn.Module):
                     reflection=reflection,
                 )
             )
+
+            # Affine weights for skip connection
             if self.problem_dim == 2:
                 self.ws.append(
                     GConv2d(
@@ -820,8 +889,6 @@ class G_FNO(nn.Module):
                 )
 
             # Original G-FNO uses GNorm (InstanceNorm3d).
-            # Note: GNorm implementation in original code:
-            # x.view(batch, -1, group_size, x, y) -> norm -> view back
             self.norms.append(
                 nn.InstanceNorm3d(self.d_v)
                 if self.problem_dim == 2
@@ -829,8 +896,6 @@ class G_FNO(nn.Module):
             )  # We will handle reshaping in forward
 
         # Projection (Q)
-        # Original G-FNO used GMLP with last_layer=True for Q.
-        # It had mid_channels = width * 4.
         self.q = G_MLP(
             problem_dim=self.problem_dim,
             in_channels=self.d_v,
@@ -840,23 +905,28 @@ class G_FNO(nn.Module):
             last_layer=True,
             fun_act=self.fun_act,
         )
+        # Linear Projection case
+        # if self.problem_dim == 2:
+        #     self.p = GConv2d(
+        #         in_channels=self.d_v,
+        #         out_channels=self.out_dim,
+        #         kernel_size=1,
+        #         reflection=reflection,
+        #         last_layer=True,
+        #     )
+        # elif self.problem_dim == 3:
+        #     self.p = GConv3d(
+        #         in_channels=self.d_v,
+        #         out_channels=self.out_dim,
+        #         kernel_size=1,
+        #         kernel_size_T=1,
+        #         reflection=reflection,
+        #         last_layer=True,
+        #     )
 
         self.to(device)
 
     def g_norm(self, x, norm_layer):
-        # x shape: (batch_size * group_size * out_channels, xy...) ?
-        # Wait, the original forward in GConv returns (batch * out_channels, group_elements, ny, nx) ??
-        # No, check GConv2d forward:
-        # x = nn.functional.conv2d(input=x, weight=self.weights)
-        # weight shape: (out_channels * group_size, in_channels * group_size, k, k)
-        # So output x has shape (batch, out_channels * group_size, ny, nx)
-        #
-        # Original GNorm:
-        # x = x.view(x.shape[0], -1, self.group_size, x.shape[-2], x.shape[-1])
-        # x = self.norm(x) # InstanceNorm3d(width)
-        #
-        # If problem_dim=3, similar logic?
-        # Let's align with original GNorm logic.
 
         if self.problem_dim == 2:
             # x: (batch, channels*group_size, x, y)
@@ -865,57 +935,40 @@ class G_FNO(nn.Module):
             x = x.view(batch, c, self.group_size, nx, ny)
             x = norm_layer(x)
             x = x.view(batch, c_g, nx, ny)
+
         elif self.problem_dim == 3:
             # x: (batch, channels*group_size, x, y, t)
-            batch, c_g, nx, ny, nt = x.shape
-            c = c_g // self.group_size
-            # InstanceNorm3d expects (N, C, D, H, W)
-            # Here we have 5 dims + batch = 6 dims? No.
-            # GNorm in original code used InstanceNorm3d(width).
-            # It reshaped to (batch, width, group_size, x, y) for 2D case.
-            # For 3D case? Original GNorm was not used/defined for 3D specifically in the snippet provided for GFNO3d??
-            # Wait, GFNO2d uses GNorm. GFNO3d snippet didn't show GNorm usage in the provided file content?
-            # Let's check G-FNO3d source code again.
-            # Ah, GFNO3d does NOT use GNorm in the layers!
-            # It simply does:
-            # x1 = self.conv0(x)
-            # x1 = self.mlp0(x1)
-            # x2 = self.w0(x)
-            # x = x1 + x2
-            # x = F.gelu(x)
-            # So no norm for 3D?
             pass
 
         return x
 
     def forward(self, x):
         # x shape: (batch, in_channels, *spatial_dims)
-        # FNO.py expectation: "n_batch {self.in_channels} *n_x"
 
+        #! no grid concatenation for the moment (it is not translation invariant)
         # Grid concatenation
-        if self.problem_dim == 2:
-            grid = self.get_grid_2d(x.shape).to(x.device)
-        elif self.problem_dim == 3:
-            grid = self.get_grid_3d(x.shape).to(x.device)
-        else:
-            raise ValueError("Dimension not supported")
+        # if self.problem_dim == 2:
+        #     grid = self.get_grid_2d(x.shape).to(x.device)
 
-        x = torch.cat((grid, x), dim=1)  # dim 1 is channels
+        # elif self.problem_dim == 3:
+        #     grid = self.get_grid_3d(x.shape).to(x.device)
+
+        # else:
+        #     raise ValueError("Dimension not supported")
+        # x = torch.cat((grid, x), dim=1)  # dim 1 is channels
 
         # Lifting P
         x = self.p(x)
 
         # Layers
         for i in range(self.L):
-            x_res = x
 
             # Integral
             x1 = self.integrals[i](x)
 
-            # Norm (Only for 2D based on original code?)
+            # Note: For 3D, original code didn't use norm. We stick to that.
             if self.problem_dim == 2:
                 x1 = self.g_norm(x1, self.norms[i])
-            # Note: For 3D, original code didn't use norm. We stick to that.
 
             # MLP
             x1 = self.mlps[i](x1)
@@ -927,16 +980,14 @@ class G_FNO(nn.Module):
             x = x1 + x2
 
             # Activation
-            if (
-                i < self.L - 1
-            ):  # Usually activation is everywhere but last layer logic varies
+            if i < self.L - 1:
                 x = activation(x, self.fun_act)
             else:
-                # Last layer before Q?
-                # Original GFNO2d/3d had gelu after every block.
-                x = activation(x, self.fun_act)
+                x = activation(
+                    x, self.fun_act
+                )  # At the moment I use the same activation for the last layer
 
-        # Padding (If valid logic required, implemented in original GFNO via simple slicing)
+        # Padding
         if self.padding > 0:
             if self.problem_dim == 2:
                 x = x[..., : -self.padding, : -self.padding]
@@ -945,16 +996,6 @@ class G_FNO(nn.Module):
 
         # Projection Q
         x = self.q(x)
-
-        # Permute for output?
-        # FNO.py returns (batch, out_channels, *spatial)
-        # GConv2d output: (batch, out_channels * group_size, nx, ny)
-        # GMLP (Q) last_layer=True logic:
-        # GConv2d last_layer=True: -> collapses group dim -> (batch, out_channels, nx, ny)
-        # So it should be fine.
-
-        # Denormalize
-        x = self.output_denormalizer(x)
 
         return x
 
