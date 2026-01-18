@@ -11,7 +11,7 @@
 		"scheduler_gamma": 0.98,
 		"beta": 1
 	},
-	"fno_architecture": {
+	"g_fno_architecture": {
 		"problem_dim": 2,
 		"in_dim": 1,
 		"d_v": 16,
