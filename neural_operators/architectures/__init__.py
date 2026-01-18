@@ -12,6 +12,9 @@ from .FNO.FNO_utilities import (
     count_params_fno,
 )
 
+# Group equivariant FNO architecture
+from .G_FNO.GroupEquivariantFNO import G_FNO
+
 # RationalNN architecture
 from .RationalNN.RationalNN import (
     RationalStandardNetwork,
