@@ -3,8 +3,9 @@ This file contains the group equivariant architectures and modules of the G-FNO 
 refactored to match the structure of the standard FNO implementation.
 """
 
-from functools import cache
 import math
+from functools import cache
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -13,9 +14,10 @@ from beartype import beartype
 from jaxtyping import Complex, Float, jaxtyped
 from torch import Tensor
 
-# ----------------------------------------
+
+#########################################
 # Activation Functions
-# ----------------------------------------
+#########################################
 @jaxtyped(typechecker=beartype)
 def activation(
     x: Float[Tensor, "n_samples *n d"], activation_str: str
@@ -36,34 +38,99 @@ def activation(
         raise ValueError("Not implemented activation function")
 
 
-# ----------------------------------------------------------------------------------------------------------------------
+#########################################
 # GConv2d
-# ----------------------------------------------------------------------------------------------------------------------
+#########################################
 class GConv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, bias=True, first_layer=False, last_layer=False,
-                 spectral=False, Hermitian=False, reflection=False):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        bias: bool = True,
+        first_layer: bool = False,
+        last_layer: bool = False,
+        spectral: bool = False,
+        Hermitian: bool = True,
+        reflection: bool = False,
+    ):
         super().__init__()
+
+        assert kernel_size % 2 == 1, "kernel size must be odd"
+
+        dtype = torch.cfloat if spectral else torch.float
+
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.reflection = reflection
         self.rt_group_size = 4
         self.group_size = self.rt_group_size * (1 + reflection)
-        assert kernel_size % 2 == 1, "kernel size must be odd"
-        dtype = torch.cfloat if spectral else torch.float
         self.kernel_size_Y = kernel_size
         self.kernel_size_X = kernel_size // 2 + 1 if Hermitian else kernel_size
         self.Hermitian = Hermitian
+
         if first_layer or last_layer:
-            self.W = nn.Parameter(torch.empty(out_channels, 1, in_channels, self.kernel_size_Y, self.kernel_size_X, dtype=dtype))
+            self.W = nn.Parameter(
+                torch.empty(
+                    out_channels,
+                    1,
+                    in_channels,
+                    self.kernel_size_Y,
+                    self.kernel_size_X,
+                    dtype=dtype,
+                )
+            )
         else:
             if self.Hermitian:
-                self.W = nn.ParameterDict({
-                    'y0_modes': torch.nn.Parameter(torch.empty(out_channels, 1, in_channels, self.group_size, self.kernel_size_X - 1, 1, dtype=dtype)),
-                    'yposx_modes': torch.nn.Parameter(torch.empty(out_channels, 1, in_channels, self.group_size, self.kernel_size_Y, self.kernel_size_X - 1, dtype=dtype)),
-                    '00_modes': torch.nn.Parameter(torch.empty(out_channels, 1, in_channels, self.group_size, 1, 1, dtype=torch.float))
-                })
+                self.W = nn.ParameterDict(
+                    {
+                        "y0_modes": torch.nn.Parameter(
+                            torch.empty(
+                                out_channels,
+                                1,
+                                in_channels,
+                                self.group_size,
+                                self.kernel_size_X - 1,
+                                1,
+                                dtype=dtype,
+                            )
+                        ),
+                        "yposx_modes": torch.nn.Parameter(
+                            torch.empty(
+                                out_channels,
+                                1,
+                                in_channels,
+                                self.group_size,
+                                self.kernel_size_Y,
+                                self.kernel_size_X - 1,
+                                dtype=dtype,
+                            )
+                        ),
+                        "00_modes": torch.nn.Parameter(
+                            torch.empty(
+                                out_channels,
+                                1,
+                                in_channels,
+                                self.group_size,
+                                1,
+                                1,
+                                dtype=torch.float,
+                            )
+                        ),
+                    }
+                )
             else:
-                self.W = nn.Parameter(torch.empty(out_channels, 1, in_channels, self.group_size, self.kernel_size_Y, self.kernel_size_X, dtype=dtype))
+                self.W = nn.Parameter(
+                    torch.empty(
+                        out_channels,
+                        1,
+                        in_channels,
+                        self.group_size,
+                        self.kernel_size_Y,
+                        self.kernel_size_X,
+                        dtype=dtype,
+                    )
+                )
         self.first_layer = first_layer
         self.last_layer = last_layer
         self.B = nn.Parameter(torch.empty(1, out_channels, 1, 1)) if bias else None
@@ -89,8 +156,22 @@ class GConv2d(nn.Module):
             return
 
         if self.Hermitian:
-            self.weights = torch.cat([self.W['y0_modes'].conj().flip(dims=[-2]), self.W['00_modes'], self.W['y0_modes']], dim=-2)
-            self.weights = torch.cat([self.W['yposx_modes'].conj().rot90(k=2, dims=[-2, -1]), self.weights, self.W['yposx_modes']], dim=-1)
+            self.weights = torch.cat(
+                [
+                    self.W["y0_modes"].conj().flip(dims=[-2]),
+                    self.W["00_modes"],
+                    self.W["y0_modes"],
+                ],
+                dim=-2,
+            )
+            self.weights = torch.cat(
+                [
+                    self.W["yposx_modes"].conj().rot90(k=2, dims=[-2, -1]),
+                    self.weights,
+                    self.W["yposx_modes"],
+                ],
+                dim=-1,
+            )
         else:
             self.weights = self.W[:]
 
@@ -101,14 +182,20 @@ class GConv2d(nn.Module):
                 self.weights[:, k] = self.weights[:, k].rot90(k=k, dims=[-2, -1])
 
             if self.reflection:
-                self.weights[:, self.rt_group_size:] = self.weights[:, :self.rt_group_size].flip(dims=[-2])
+                self.weights[:, self.rt_group_size :] = self.weights[
+                    :, : self.rt_group_size
+                ].flip(dims=[-2])
 
             if self.first_layer:
-                self.weights = self.weights.view(-1, self.in_channels, self.kernel_size_Y, self.kernel_size_Y)
+                self.weights = self.weights.view(
+                    -1, self.in_channels, self.kernel_size_Y, self.kernel_size_Y
+                )
                 if self.B is not None:
                     self.bias = self.B.repeat_interleave(repeats=self.group_size, dim=1)
             else:
-                self.weights = self.weights.transpose(2, 1).reshape(self.out_channels, -1, self.kernel_size_Y, self.kernel_size_Y)
+                self.weights = self.weights.transpose(2, 1).reshape(
+                    self.out_channels, -1, self.kernel_size_Y, self.kernel_size_Y
+                )
                 self.bias = self.B
 
         else:
@@ -118,24 +205,44 @@ class GConv2d(nn.Module):
                 self.weights[:, k] = self.weights[:, k - 1].rot90(dims=[-2, -1])
 
                 if self.reflection:
-                    self.weights[:, k] = torch.cat([self.weights[:, k, :, self.rt_group_size - 1].unsqueeze(2),
-                                                    self.weights[:, k, :, :(self.rt_group_size - 1)],
-                                                    self.weights[:, k, :, (self.rt_group_size + 1):],
-                                                    self.weights[:, k, :, self.rt_group_size].unsqueeze(2)], dim=2)
+                    self.weights[:, k] = torch.cat(
+                        [
+                            self.weights[:, k, :, self.rt_group_size - 1].unsqueeze(2),
+                            self.weights[:, k, :, : (self.rt_group_size - 1)],
+                            self.weights[:, k, :, (self.rt_group_size + 1) :],
+                            self.weights[:, k, :, self.rt_group_size].unsqueeze(2),
+                        ],
+                        dim=2,
+                    )
                 else:
-                    self.weights[:, k] = torch.cat([self.weights[:, k, :, -1].unsqueeze(2), self.weights[:, k, :, :-1]], dim=2)
+                    self.weights[:, k] = torch.cat(
+                        [
+                            self.weights[:, k, :, -1].unsqueeze(2),
+                            self.weights[:, k, :, :-1],
+                        ],
+                        dim=2,
+                    )
 
             if self.reflection:
-                self.weights[:, self.rt_group_size:] = torch.cat(
-                    [self.weights[:, :self.rt_group_size, :, self.rt_group_size:],
-                     self.weights[:, :self.rt_group_size, :, :self.rt_group_size]], dim=3).flip([-2])
+                self.weights[:, self.rt_group_size :] = torch.cat(
+                    [
+                        self.weights[:, : self.rt_group_size, :, self.rt_group_size :],
+                        self.weights[:, : self.rt_group_size, :, : self.rt_group_size],
+                    ],
+                    dim=3,
+                ).flip([-2])
 
-            self.weights = self.weights.view(self.out_channels * self.group_size, self.in_channels * self.group_size, self.kernel_size_Y, self.kernel_size_Y)
+            self.weights = self.weights.view(
+                self.out_channels * self.group_size,
+                self.in_channels * self.group_size,
+                self.kernel_size_Y,
+                self.kernel_size_Y,
+            )
             if self.B is not None:
                 self.bias = self.B.repeat_interleave(repeats=self.group_size, dim=1)
 
         if self.Hermitian:
-             self.weights = self.weights[..., -self.kernel_size_X:]
+            self.weights = self.weights[..., -self.kernel_size_X :]
 
     def forward(self, x):
         self.get_weight()
@@ -146,12 +253,23 @@ class GConv2d(nn.Module):
         return x
 
 
-# ----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------
 # GConv3d
-# ----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------
 class GConv3d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, kernel_size_T, bias=True, first_layer=False, last_layer=False,
-                 spectral=False, Hermitian=False, reflection=False):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        kernel_size,
+        kernel_size_T,
+        bias=True,
+        first_layer=False,
+        last_layer=False,
+        spectral=False,
+        Hermitian=False,
+        reflection=False,
+    ):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -166,24 +284,77 @@ class GConv3d(nn.Module):
         self.kernel_size_T = kernel_size_T // 2 + 1 if Hermitian else kernel_size_T
         self.Hermitian = Hermitian
         if first_layer or last_layer:
-            self.W = nn.Parameter(torch.empty(out_channels, 1, in_channels, self.kernel_size_Y, self.kernel_size_X,
-                                  self.kernel_size_T, dtype=dtype))
+            self.W = nn.Parameter(
+                torch.empty(
+                    out_channels,
+                    1,
+                    in_channels,
+                    self.kernel_size_Y,
+                    self.kernel_size_X,
+                    self.kernel_size_T,
+                    dtype=dtype,
+                )
+            )
         else:
             if self.Hermitian:
-                self.W = nn.ParameterDict({
-                    'y00_modes':torch.nn.Parameter(torch.empty(out_channels, 1, in_channels, self.group_size,
-                                                               self.kernel_size_X - 1, 1, 1, dtype=torch.cfloat)),
-                    'yposx0_modes': torch.nn.Parameter(torch.empty(out_channels, 1, in_channels, self.group_size,
-                                                                   self.kernel_size_Y, self.kernel_size_X - 1, 1,
-                                                                   dtype=torch.cfloat)),
-                    '000_modes':torch.nn.Parameter(torch.empty(out_channels, 1, in_channels, self.group_size, 1, 1, 1)),
-                    'yxpost_modes':torch.nn.Parameter(torch.empty(out_channels, 1, in_channels, self.group_size,
-                                                                  self.kernel_size_Y, self.kernel_size_Y,
-                                                                  self.kernel_size_T - 1, dtype=torch.cfloat))
-                })
+                self.W = nn.ParameterDict(
+                    {
+                        "y00_modes": torch.nn.Parameter(
+                            torch.empty(
+                                out_channels,
+                                1,
+                                in_channels,
+                                self.group_size,
+                                self.kernel_size_X - 1,
+                                1,
+                                1,
+                                dtype=torch.cfloat,
+                            )
+                        ),
+                        "yposx0_modes": torch.nn.Parameter(
+                            torch.empty(
+                                out_channels,
+                                1,
+                                in_channels,
+                                self.group_size,
+                                self.kernel_size_Y,
+                                self.kernel_size_X - 1,
+                                1,
+                                dtype=torch.cfloat,
+                            )
+                        ),
+                        "000_modes": torch.nn.Parameter(
+                            torch.empty(
+                                out_channels, 1, in_channels, self.group_size, 1, 1, 1
+                            )
+                        ),
+                        "yxpost_modes": torch.nn.Parameter(
+                            torch.empty(
+                                out_channels,
+                                1,
+                                in_channels,
+                                self.group_size,
+                                self.kernel_size_Y,
+                                self.kernel_size_Y,
+                                self.kernel_size_T - 1,
+                                dtype=torch.cfloat,
+                            )
+                        ),
+                    }
+                )
             else:
-                self.W = nn.Parameter(torch.empty(out_channels, 1, in_channels, self.group_size, self.kernel_size_Y,
-                                                  self.kernel_size_X, self.kernel_size_T, dtype=dtype))
+                self.W = nn.Parameter(
+                    torch.empty(
+                        out_channels,
+                        1,
+                        in_channels,
+                        self.group_size,
+                        self.kernel_size_Y,
+                        self.kernel_size_X,
+                        self.kernel_size_T,
+                        dtype=dtype,
+                    )
+                )
         self.first_layer = first_layer
         self.last_layer = last_layer
         self.B = nn.Parameter(torch.empty(1, out_channels, 1, 1, 1)) if bias else None
@@ -209,12 +380,30 @@ class GConv3d(nn.Module):
             return
 
         if self.Hermitian:
-            self.weights = torch.cat([self.W['y00_modes'].conj().flip((-3,)), self.W["000_modes"], self.W["y00_modes"]],
-                                     dim=-3)
-            self.weights = torch.cat([self.W['yposx0_modes'].conj().rot90(k=2, dims=[-3, -2]), self.weights,
-                                      self.W['yposx0_modes']], dim=-2)
-            self.weights = torch.cat([self.W['yxpost_modes'].conj().rot90(k=2, dims=[-3, -2]).flip((-1,)), self.weights,
-                                      self.W['yxpost_modes']], dim=-1)
+            self.weights = torch.cat(
+                [
+                    self.W["y00_modes"].conj().flip((-3,)),
+                    self.W["000_modes"],
+                    self.W["y00_modes"],
+                ],
+                dim=-3,
+            )
+            self.weights = torch.cat(
+                [
+                    self.W["yposx0_modes"].conj().rot90(k=2, dims=[-3, -2]),
+                    self.weights,
+                    self.W["yposx0_modes"],
+                ],
+                dim=-2,
+            )
+            self.weights = torch.cat(
+                [
+                    self.W["yxpost_modes"].conj().rot90(k=2, dims=[-3, -2]).flip((-1,)),
+                    self.weights,
+                    self.W["yxpost_modes"],
+                ],
+                dim=-1,
+            )
         else:
             self.weights = self.W[:]
 
@@ -224,16 +413,28 @@ class GConv3d(nn.Module):
                 self.weights[:, k] = self.weights[:, k].rot90(k=k, dims=[-3, -2])
 
             if self.reflection:
-                self.weights[:, self.rt_group_size:] = self.weights[:, :self.rt_group_size].flip(dims=[-3])
+                self.weights[:, self.rt_group_size :] = self.weights[
+                    :, : self.rt_group_size
+                ].flip(dims=[-3])
 
             if self.first_layer:
-                self.weights = self.weights.view(-1, self.in_channels, self.kernel_size_Y, self.kernel_size_Y,
-                                                 self.kernel_size_T)
+                self.weights = self.weights.view(
+                    -1,
+                    self.in_channels,
+                    self.kernel_size_Y,
+                    self.kernel_size_Y,
+                    self.kernel_size_T,
+                )
                 if self.B is not None:
                     self.bias = self.B.repeat_interleave(repeats=self.group_size, dim=1)
             else:
-                self.weights = self.weights.transpose(2, 1).reshape(self.out_channels, -1, self.kernel_size_Y,
-                                                                    self.kernel_size_Y, self.kernel_size_T)
+                self.weights = self.weights.transpose(2, 1).reshape(
+                    self.out_channels,
+                    -1,
+                    self.kernel_size_Y,
+                    self.kernel_size_Y,
+                    self.kernel_size_T,
+                )
                 self.bias = self.B
         else:
             self.weights = self.weights.repeat(1, self.group_size, 1, 1, 1, 1, 1)
@@ -242,26 +443,45 @@ class GConv3d(nn.Module):
                 self.weights[:, k] = self.weights[:, k - 1].rot90(dims=[-3, -2])
 
                 if self.reflection:
-                    self.weights[:, k] = torch.cat([self.weights[:, k, :, self.rt_group_size - 1].unsqueeze(2),
-                                                    self.weights[:, k, :, :(self.rt_group_size - 1)],
-                                                    self.weights[:, k, :, (self.rt_group_size + 1):],
-                                                    self.weights[:, k, :, self.rt_group_size].unsqueeze(2)], dim=2)
+                    self.weights[:, k] = torch.cat(
+                        [
+                            self.weights[:, k, :, self.rt_group_size - 1].unsqueeze(2),
+                            self.weights[:, k, :, : (self.rt_group_size - 1)],
+                            self.weights[:, k, :, (self.rt_group_size + 1) :],
+                            self.weights[:, k, :, self.rt_group_size].unsqueeze(2),
+                        ],
+                        dim=2,
+                    )
                 else:
-                    self.weights[:, k] = torch.cat([self.weights[:, k, :, -1].unsqueeze(2), self.weights[:, k, :, :-1]],
-                                                   dim=2)
+                    self.weights[:, k] = torch.cat(
+                        [
+                            self.weights[:, k, :, -1].unsqueeze(2),
+                            self.weights[:, k, :, :-1],
+                        ],
+                        dim=2,
+                    )
 
             if self.reflection:
-                self.weights[:, self.rt_group_size:] = torch.cat(
-                    [self.weights[:, :self.rt_group_size, :, self.rt_group_size:],
-                     self.weights[:, :self.rt_group_size, :, :self.rt_group_size]], dim=3).flip([-3])
+                self.weights[:, self.rt_group_size :] = torch.cat(
+                    [
+                        self.weights[:, : self.rt_group_size, :, self.rt_group_size :],
+                        self.weights[:, : self.rt_group_size, :, : self.rt_group_size],
+                    ],
+                    dim=3,
+                ).flip([-3])
 
-            self.weights = self.weights.view(self.out_channels * self.group_size, self.in_channels * self.group_size,
-                                             self.kernel_size_Y, self.kernel_size_Y, self.kernel_size_T_full)
+            self.weights = self.weights.view(
+                self.out_channels * self.group_size,
+                self.in_channels * self.group_size,
+                self.kernel_size_Y,
+                self.kernel_size_Y,
+                self.kernel_size_T_full,
+            )
             if self.B is not None:
                 self.bias = self.B.repeat_interleave(repeats=self.group_size, dim=1)
 
         if self.Hermitian:
-            self.weights = self.weights[..., -self.kernel_size_T:]
+            self.weights = self.weights[..., -self.kernel_size_T :]
 
     def forward(self, x):
         self.get_weight()
@@ -271,28 +491,61 @@ class GConv3d(nn.Module):
         return x
 
 
-
-# ----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------
 # G_MLP
-# ----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------
 class G_MLP(nn.Module):
     """
     Unified MLP/Conv structure for G-FNO.
     Equivalent to GMLP2d / GMLP3d but integrated with the FNO style.
     """
-    def __init__(self, problem_dim, in_channels, out_channels, mid_channels, reflection=False, last_layer=False, fun_act='gelu'):
+
+    def __init__(
+        self,
+        problem_dim,
+        in_channels,
+        out_channels,
+        mid_channels,
+        reflection=False,
+        last_layer=False,
+        fun_act="gelu",
+    ):
         super(G_MLP, self).__init__()
         self.problem_dim = problem_dim
         self.fun_act = fun_act
 
         if self.problem_dim == 2:
-            self.mlp1 = GConv2d(in_channels=in_channels, out_channels=mid_channels, kernel_size=1, reflection=reflection)
-            self.mlp2 = GConv2d(in_channels=mid_channels, out_channels=out_channels, kernel_size=1, reflection=reflection, last_layer=last_layer)
+            self.mlp1 = GConv2d(
+                in_channels=in_channels,
+                out_channels=mid_channels,
+                kernel_size=1,
+                reflection=reflection,
+            )
+            self.mlp2 = GConv2d(
+                in_channels=mid_channels,
+                out_channels=out_channels,
+                kernel_size=1,
+                reflection=reflection,
+                last_layer=last_layer,
+            )
         elif self.problem_dim == 3:
-            self.mlp1 = GConv3d(in_channels=in_channels, out_channels=mid_channels, kernel_size=1, kernel_size_T=1, reflection=reflection)
-            self.mlp2 = GConv3d(in_channels=mid_channels, out_channels=out_channels, kernel_size=1, kernel_size_T=1, reflection=reflection, last_layer=last_layer)
+            self.mlp1 = GConv3d(
+                in_channels=in_channels,
+                out_channels=mid_channels,
+                kernel_size=1,
+                kernel_size_T=1,
+                reflection=reflection,
+            )
+            self.mlp2 = GConv3d(
+                in_channels=mid_channels,
+                out_channels=out_channels,
+                kernel_size=1,
+                kernel_size_T=1,
+                reflection=reflection,
+                last_layer=last_layer,
+            )
         else:
-             raise ValueError("G_FNO only supports 2D and 3D problems.")
+            raise ValueError("G_FNO only supports 2D and 3D problems.")
 
     def forward(self, x):
         x = self.mlp1(x)
@@ -301,15 +554,24 @@ class G_MLP(nn.Module):
         return x
 
 
-# ----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------
 # G_FourierLayer
-# ----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------
 class G_FourierLayer(nn.Module):
     """
     Unified Group Fourier Layer.
     Wraps GSpectralConv2d/GSpectralConv3d logic.
     """
-    def __init__(self, problem_dim, in_channels, out_channels, modes, time_modes=None, reflection=False):
+
+    def __init__(
+        self,
+        problem_dim,
+        in_channels,
+        out_channels,
+        modes,
+        time_modes=None,
+        reflection=False,
+    ):
         super(G_FourierLayer, self).__init__()
         self.problem_dim = problem_dim
         self.in_channels = in_channels
@@ -318,16 +580,30 @@ class G_FourierLayer(nn.Module):
         self.reflection = reflection
 
         if self.problem_dim == 2:
-             # GSpectralConv2d logic
-             self.conv = GConv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=2 * modes - 1,
-                                reflection=reflection, bias=False, spectral=True, Hermitian=True)
+            # GSpectralConv2d logic
+            self.conv = GConv2d(
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=2 * modes - 1,
+                reflection=reflection,
+                bias=False,
+                spectral=True,
+                Hermitian=True,
+            )
         elif self.problem_dim == 3:
-             # GSpectralConv3d logic
-             assert time_modes is not None, "time_modes must be provided for 3D GFNO"
-             self.time_modes = time_modes
-             self.conv = GConv3d(in_channels=in_channels, out_channels=out_channels, kernel_size=2 * modes - 1,
-                                 kernel_size_T=2 * time_modes - 1, reflection=reflection, bias=False, spectral=True,
-                                 Hermitian=True)
+            # GSpectralConv3d logic
+            assert time_modes is not None, "time_modes must be provided for 3D GFNO"
+            self.time_modes = time_modes
+            self.conv = GConv3d(
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=2 * modes - 1,
+                kernel_size_T=2 * time_modes - 1,
+                reflection=reflection,
+                bias=False,
+                spectral=True,
+                Hermitian=True,
+            )
         else:
             raise ValueError("G_FNO only supports 2D and 3D problems.")
 
@@ -350,30 +626,74 @@ class G_FourierLayer(nn.Module):
         self.get_weight()
 
         if self.problem_dim == 2:
-            freq0_y = (torch.fft.fftshift(torch.fft.fftfreq(x.shape[-2])) == 0).nonzero().item()
+            freq0_y = (
+                (torch.fft.fftshift(torch.fft.fftfreq(x.shape[-2])) == 0)
+                .nonzero()
+                .item()
+            )
             x_ft = torch.fft.fftshift(torch.fft.rfft2(x), dim=-2)
-            x_ft = x_ft[..., (freq0_y - self.modes + 1):(freq0_y + self.modes), :self.modes]
+            x_ft = x_ft[
+                ..., (freq0_y - self.modes + 1) : (freq0_y + self.modes), : self.modes
+            ]
 
-            out_ft = torch.zeros(batchsize, self.weights.shape[0], x.size(-2), x.size(-1) // 2 + 1, dtype=torch.cfloat, device=x.device)
-            out_ft[..., (freq0_y - self.modes + 1):(freq0_y + self.modes), :self.modes] = self.compl_mul2d(x_ft, self.weights)
+            out_ft = torch.zeros(
+                batchsize,
+                self.weights.shape[0],
+                x.size(-2),
+                x.size(-1) // 2 + 1,
+                dtype=torch.cfloat,
+                device=x.device,
+            )
+            out_ft[
+                ..., (freq0_y - self.modes + 1) : (freq0_y + self.modes), : self.modes
+            ] = self.compl_mul2d(x_ft, self.weights)
 
-            x = torch.fft.irfft2(torch.fft.ifftshift(out_ft, dim=-2), s=(x.size(-2), x.size(-1)))
+            x = torch.fft.irfft2(
+                torch.fft.ifftshift(out_ft, dim=-2), s=(x.size(-2), x.size(-1))
+            )
 
         elif self.problem_dim == 3:
-            freq0_x = (torch.fft.fftshift(torch.fft.fftfreq(x.shape[-2])) == 0).nonzero().item()
-            freq0_y = (torch.fft.fftshift(torch.fft.fftfreq(x.shape[-3])) == 0).nonzero().item()
+            freq0_x = (
+                (torch.fft.fftshift(torch.fft.fftfreq(x.shape[-2])) == 0)
+                .nonzero()
+                .item()
+            )
+            freq0_y = (
+                (torch.fft.fftshift(torch.fft.fftfreq(x.shape[-3])) == 0)
+                .nonzero()
+                .item()
+            )
 
-            x_ft = torch.fft.fftshift(torch.fft.rfftn(x, dim=[-3, -2, -1]), dim=[-3, -2])
-            x_ft = x_ft[..., (freq0_y - self.modes + 1):(freq0_y + self.modes),
-                        (freq0_x - self.modes + 1):(freq0_x + self.modes),
-                        :self.time_modes]
+            x_ft = torch.fft.fftshift(
+                torch.fft.rfftn(x, dim=[-3, -2, -1]), dim=[-3, -2]
+            )
+            x_ft = x_ft[
+                ...,
+                (freq0_y - self.modes + 1) : (freq0_y + self.modes),
+                (freq0_x - self.modes + 1) : (freq0_x + self.modes),
+                : self.time_modes,
+            ]
 
-            out_ft = torch.zeros(batchsize, self.weights.shape[0], x.size(-3), x.size(-2), x.size(-1) // 2 + 1,
-                                 dtype=torch.cfloat, device=x.device)
-            out_ft[..., (freq0_y - self.modes + 1):(freq0_y + self.modes),
-                   (freq0_x - self.modes + 1):(freq0_x + self.modes), :self.time_modes] = self.compl_mul3d(x_ft, self.weights)
+            out_ft = torch.zeros(
+                batchsize,
+                self.weights.shape[0],
+                x.size(-3),
+                x.size(-2),
+                x.size(-1) // 2 + 1,
+                dtype=torch.cfloat,
+                device=x.device,
+            )
+            out_ft[
+                ...,
+                (freq0_y - self.modes + 1) : (freq0_y + self.modes),
+                (freq0_x - self.modes + 1) : (freq0_x + self.modes),
+                : self.time_modes,
+            ] = self.compl_mul3d(x_ft, self.weights)
 
-            x = torch.fft.irfftn(torch.fft.ifftshift(out_ft, dim=[-3, -2]), s=(x.size(-3), x.size(-2), x.size(-1)))
+            x = torch.fft.irfftn(
+                torch.fft.ifftshift(out_ft, dim=[-3, -2]),
+                s=(x.size(-3), x.size(-2), x.size(-1)),
+            )
 
         return x
 
@@ -394,11 +714,12 @@ class G_FNO(nn.Module):
     """
     G_FNO module refactored to match FNO.py structure.
     """
+
     def __init__(
         self,
         problem_dim: int,
         in_dim: int,
-        d_v: int, # width (mid_channels)
+        d_v: int,  # width (mid_channels)
         out_dim: int,
         L: int,
         modes: int,
@@ -407,7 +728,7 @@ class G_FNO(nn.Module):
         reflection: bool = False,
         padding: int = 0,
         device: torch.device = torch.device("cpu"),
-        example_output_normalizer = None,
+        example_output_normalizer=None,
     ):
         super(G_FNO, self).__init__()
         self.problem_dim = problem_dim
@@ -435,9 +756,22 @@ class G_FNO(nn.Module):
 
         # Lifting (P)
         if self.problem_dim == 2:
-            self.p = GConv2d(in_channels=self.in_dim, out_channels=self.d_v, kernel_size=1, reflection=reflection, first_layer=True)
+            self.p = GConv2d(
+                in_channels=self.in_dim,
+                out_channels=self.d_v,
+                kernel_size=1,
+                reflection=reflection,
+                first_layer=True,
+            )
         elif self.problem_dim == 3:
-            self.p = GConv3d(in_channels=self.in_dim, out_channels=self.d_v, kernel_size=1, kernel_size_T=1, reflection=reflection, first_layer=True)
+            self.p = GConv3d(
+                in_channels=self.in_dim,
+                out_channels=self.d_v,
+                kernel_size=1,
+                kernel_size_T=1,
+                reflection=reflection,
+                first_layer=True,
+            )
 
         # Layers
         self.integrals = nn.ModuleList()
@@ -446,30 +780,53 @@ class G_FNO(nn.Module):
         self.norms = nn.ModuleList()
 
         for _ in range(self.L):
-            self.integrals.append(G_FourierLayer(
-                problem_dim=self.problem_dim,
-                in_channels=self.d_v,
-                out_channels=self.d_v,
-                modes=self.modes,
-                time_modes=self.time_modes,
-                reflection=reflection
-            ))
-            self.mlps.append(G_MLP(
-                problem_dim=self.problem_dim,
-                in_channels=self.d_v,
-                out_channels=self.d_v,
-                mid_channels=self.d_v,
-                reflection=reflection
-            ))
+            self.integrals.append(
+                G_FourierLayer(
+                    problem_dim=self.problem_dim,
+                    in_channels=self.d_v,
+                    out_channels=self.d_v,
+                    modes=self.modes,
+                    time_modes=self.time_modes,
+                    reflection=reflection,
+                )
+            )
+            self.mlps.append(
+                G_MLP(
+                    problem_dim=self.problem_dim,
+                    in_channels=self.d_v,
+                    out_channels=self.d_v,
+                    mid_channels=self.d_v,
+                    reflection=reflection,
+                )
+            )
             if self.problem_dim == 2:
-                self.ws.append(GConv2d(in_channels=self.d_v, out_channels=self.d_v, kernel_size=1, reflection=reflection))
+                self.ws.append(
+                    GConv2d(
+                        in_channels=self.d_v,
+                        out_channels=self.d_v,
+                        kernel_size=1,
+                        reflection=reflection,
+                    )
+                )
             elif self.problem_dim == 3:
-                self.ws.append(GConv3d(in_channels=self.d_v, out_channels=self.d_v, kernel_size=1, kernel_size_T=1, reflection=reflection))
+                self.ws.append(
+                    GConv3d(
+                        in_channels=self.d_v,
+                        out_channels=self.d_v,
+                        kernel_size=1,
+                        kernel_size_T=1,
+                        reflection=reflection,
+                    )
+                )
 
             # Original G-FNO uses GNorm (InstanceNorm3d).
             # Note: GNorm implementation in original code:
             # x.view(batch, -1, group_size, x, y) -> norm -> view back
-            self.norms.append(nn.InstanceNorm3d(self.d_v) if self.problem_dim == 2 else nn.InstanceNorm3d(self.d_v)) # We will handle reshaping in forward
+            self.norms.append(
+                nn.InstanceNorm3d(self.d_v)
+                if self.problem_dim == 2
+                else nn.InstanceNorm3d(self.d_v)
+            )  # We will handle reshaping in forward
 
         # Projection (Q)
         # Original G-FNO used GMLP with last_layer=True for Q.
@@ -481,7 +838,7 @@ class G_FNO(nn.Module):
             mid_channels=self.d_v * 4,
             reflection=reflection,
             last_layer=True,
-            fun_act=self.fun_act
+            fun_act=self.fun_act,
         )
 
         self.to(device)
@@ -502,32 +859,32 @@ class G_FNO(nn.Module):
         # Let's align with original GNorm logic.
 
         if self.problem_dim == 2:
-             # x: (batch, channels*group_size, x, y)
-             batch, c_g, nx, ny = x.shape
-             c = c_g // self.group_size
-             x = x.view(batch, c, self.group_size, nx, ny)
-             x = norm_layer(x)
-             x = x.view(batch, c_g, nx, ny)
+            # x: (batch, channels*group_size, x, y)
+            batch, c_g, nx, ny = x.shape
+            c = c_g // self.group_size
+            x = x.view(batch, c, self.group_size, nx, ny)
+            x = norm_layer(x)
+            x = x.view(batch, c_g, nx, ny)
         elif self.problem_dim == 3:
-             # x: (batch, channels*group_size, x, y, t)
-             batch, c_g, nx, ny, nt = x.shape
-             c = c_g // self.group_size
-             # InstanceNorm3d expects (N, C, D, H, W)
-             # Here we have 5 dims + batch = 6 dims? No.
-             # GNorm in original code used InstanceNorm3d(width).
-             # It reshaped to (batch, width, group_size, x, y) for 2D case.
-             # For 3D case? Original GNorm was not used/defined for 3D specifically in the snippet provided for GFNO3d??
-             # Wait, GFNO2d uses GNorm. GFNO3d snippet didn't show GNorm usage in the provided file content?
-             # Let's check G-FNO3d source code again.
-             # Ah, GFNO3d does NOT use GNorm in the layers!
-             # It simply does:
-             # x1 = self.conv0(x)
-             # x1 = self.mlp0(x1)
-             # x2 = self.w0(x)
-             # x = x1 + x2
-             # x = F.gelu(x)
-             # So no norm for 3D?
-             pass
+            # x: (batch, channels*group_size, x, y, t)
+            batch, c_g, nx, ny, nt = x.shape
+            c = c_g // self.group_size
+            # InstanceNorm3d expects (N, C, D, H, W)
+            # Here we have 5 dims + batch = 6 dims? No.
+            # GNorm in original code used InstanceNorm3d(width).
+            # It reshaped to (batch, width, group_size, x, y) for 2D case.
+            # For 3D case? Original GNorm was not used/defined for 3D specifically in the snippet provided for GFNO3d??
+            # Wait, GFNO2d uses GNorm. GFNO3d snippet didn't show GNorm usage in the provided file content?
+            # Let's check G-FNO3d source code again.
+            # Ah, GFNO3d does NOT use GNorm in the layers!
+            # It simply does:
+            # x1 = self.conv0(x)
+            # x1 = self.mlp0(x1)
+            # x2 = self.w0(x)
+            # x = x1 + x2
+            # x = F.gelu(x)
+            # So no norm for 3D?
+            pass
 
         return x
 
@@ -541,9 +898,9 @@ class G_FNO(nn.Module):
         elif self.problem_dim == 3:
             grid = self.get_grid_3d(x.shape).to(x.device)
         else:
-             raise ValueError("Dimension not supported")
+            raise ValueError("Dimension not supported")
 
-        x = torch.cat((grid, x), dim=1) # dim 1 is channels
+        x = torch.cat((grid, x), dim=1)  # dim 1 is channels
 
         # Lifting P
         x = self.p(x)
@@ -570,19 +927,21 @@ class G_FNO(nn.Module):
             x = x1 + x2
 
             # Activation
-            if i < self.L - 1: # Usually activation is everywhere but last layer logic varies
+            if (
+                i < self.L - 1
+            ):  # Usually activation is everywhere but last layer logic varies
                 x = activation(x, self.fun_act)
             else:
-                 # Last layer before Q?
-                 # Original GFNO2d/3d had gelu after every block.
-                 x = activation(x, self.fun_act)
+                # Last layer before Q?
+                # Original GFNO2d/3d had gelu after every block.
+                x = activation(x, self.fun_act)
 
         # Padding (If valid logic required, implemented in original GFNO via simple slicing)
         if self.padding > 0:
             if self.problem_dim == 2:
-                x = x[..., :-self.padding, :-self.padding]
+                x = x[..., : -self.padding, : -self.padding]
             elif self.problem_dim == 3:
-                x = x[..., :-self.padding, :-self.padding, :-self.padding]
+                x = x[..., : -self.padding, : -self.padding, : -self.padding]
 
         # Projection Q
         x = self.q(x)
@@ -599,7 +958,6 @@ class G_FNO(nn.Module):
 
         return x
 
-
     @cache
     def get_grid_2d(self, shape: torch.Size) -> Tensor:
         batchsize, size_x, size_y = shape[0], shape[2], shape[3]
@@ -613,9 +971,15 @@ class G_FNO(nn.Module):
     def get_grid_3d(self, shape: torch.Size) -> Tensor:
         batchsize, size_x, size_y, size_z = shape[0], shape[2], shape[3], shape[4]
         gridx = torch.tensor(np.linspace(0, 1, size_x), dtype=torch.float)
-        gridx = gridx.reshape(1, 1, size_x, 1, 1).repeat([batchsize, 1, 1, size_y, size_z])
+        gridx = gridx.reshape(1, 1, size_x, 1, 1).repeat(
+            [batchsize, 1, 1, size_y, size_z]
+        )
         gridy = torch.tensor(np.linspace(0, 1, size_y), dtype=torch.float)
-        gridy = gridy.reshape(1, 1, 1, size_y, 1).repeat([batchsize, 1, size_x, 1, size_z])
+        gridy = gridy.reshape(1, 1, 1, size_y, 1).repeat(
+            [batchsize, 1, size_x, 1, size_z]
+        )
         gridz = torch.tensor(np.linspace(0, 1, size_z), dtype=torch.float)
-        gridz = gridz.reshape(1, 1, 1, 1, size_z).repeat([batchsize, 1, size_x, size_y, 1])
+        gridz = gridz.reshape(1, 1, 1, 1, size_z).repeat(
+            [batchsize, 1, size_x, size_y, 1]
+        )
         return torch.cat((gridx, gridy, gridz), dim=1)
