@@ -210,8 +210,95 @@ def test_equivariance_3d():
         print("    FAIL: Reflection Equivariance violation.")
 
 
+def test_translation_equivariance():
+    print("\nTesting G_FNO Translation Equivariance...")
+    batch_size = 1
+    in_dim = 1
+    out_dim = 1
+    d_v = 16
+    modes = 8
+    depth = 2
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # 1. 2D Translation
+    print("  Checking 2D Translation Equivariance...")
+    model_2d = G_FNO(
+        problem_dim=2,
+        in_dim=in_dim,
+        d_v=d_v,
+        out_dim=out_dim,
+        L=depth,
+        modes=modes,
+        reflection=False,
+    ).to(device)
+    model_2d.eval()
+
+    # Create input constant everywhere except a subsquare
+    x_2d = torch.zeros(batch_size, in_dim, 32, 32).to(device)
+    x_2d[..., 10:22, 10:22] = 1.0
+
+    # Translate input (circular shift)
+    shift_x, shift_y = 5, 5
+    x_2d_shifted = torch.roll(x_2d, shifts=(shift_x, shift_y), dims=(-2, -1))
+
+    y_2d = model_2d(x_2d)
+    y_2d_shifted_pred = model_2d(x_2d_shifted)
+    y_2d_shifted_gt = torch.roll(y_2d, shifts=(shift_x, shift_y), dims=(-2, -1))
+
+    error_2d = torch.norm(y_2d_shifted_pred - y_2d_shifted_gt) / torch.norm(
+        y_2d_shifted_gt
+    )
+    print(f"    2D Translation Error (Relative L2): {error_2d.item():.6e}")
+    if error_2d < 1e-4:
+        print("    PASS: 2D Translation Equivariance holds.")
+    else:
+        print("    FAIL: 2D Translation Equivariance violation.")
+
+    # 2. 3D Translation
+    print("  Checking 3D Translation Equivariance...")
+    modes_3d = 4
+    time_modes = 4
+    model_3d = G_FNO(
+        problem_dim=3,
+        in_dim=in_dim,
+        d_v=d_v,
+        out_dim=out_dim,
+        L=depth,
+        modes=modes_3d,
+        time_modes=time_modes,
+        reflection=False,
+    ).to(device)
+    model_3d.eval()
+
+    # Create input constant everywhere except a sub-cube
+    x_3d = torch.zeros(batch_size, in_dim, 16, 16, 16).to(device)
+    x_3d[..., 4:12, 4:12, 4:12] = 1.0
+
+    # Translate input
+    shift_x, shift_y, shift_z = 3, 3, 3
+    x_3d_shifted = torch.roll(
+        x_3d, shifts=(shift_x, shift_y, shift_z), dims=(-3, -2, -1)
+    )
+
+    y_3d = model_3d(x_3d)
+    y_3d_shifted_pred = model_3d(x_3d_shifted)
+    y_3d_shifted_gt = torch.roll(
+        y_3d, shifts=(shift_x, shift_y, shift_z), dims=(-3, -2, -1)
+    )
+
+    error_3d = torch.norm(y_3d_shifted_pred - y_3d_shifted_gt) / torch.norm(
+        y_3d_shifted_gt
+    )
+    print(f"    3D Translation Error (Relative L2): {error_3d.item():.6e}")
+    if error_3d < 1e-4:
+        print("    PASS: 3D Translation Equivariance holds.")
+    else:
+        print("    FAIL: 3D Translation Equivariance violation.")
+
+
 if __name__ == "__main__":
     test_gfno_2d()
     test_gfno_3d()
     test_equivariance_2d()
     test_equivariance_3d()
+    test_translation_equivariance()
