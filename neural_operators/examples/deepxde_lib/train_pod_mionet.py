@@ -115,6 +115,8 @@ def train_pod_mionet(which_example: str, loss_fn_str: str):
             layer_sizes_branch2=layer_sizes_branch2,
             activation="relu",
             kernel_initializer="Glorot normal",
+            num_outputs=config["out_dim"],
+            multi_output_strategy="independent" if config["out_dim"] > 1 else None,
             layer_sizes_trunk=None # POD-only mode
         )
 
