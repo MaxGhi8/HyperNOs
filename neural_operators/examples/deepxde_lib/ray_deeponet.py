@@ -75,7 +75,9 @@ def ray_deeponet(which_example: str, loss_fn_str: str):
             layer_sizes_branch,
             layer_sizes_trunk,
             "relu",
-            "Glorot normal"
+            "Glorot normal",
+            num_outputs=config["out_dim"],
+            multi_output_strategy="independent" if config["out_dim"] > 1 else None
         )
         
         model.out_dim = config["out_dim"]
