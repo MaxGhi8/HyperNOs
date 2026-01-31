@@ -35,14 +35,14 @@ def ray_samedof_fno(
     }
     # Approximate the total number of parameters (constant factor can be dropped)
     # total_default_params = count_params_fno(fixed_params, accurate=False)
-    total_default_params = 20_000_000
+    total_default_params = 200_000_000
 
     # Define the hyperparameter search space
     config_space = {
         "learning_rate": tune.quniform(1e-4, 1e-2, 1e-5),
         "weight_decay": tune.quniform(1e-6, 1e-3, 1e-6),
         "scheduler_gamma": tune.quniform(0.75, 0.99, 0.01),
-        "width": tune.choice([4, 8, 16, 32, 48, 64, 80, 96, 112, 128]),
+        "width": tune.randint(4, 2_000),
         "n_layers": tune.randint(1, 6),
         "fun_act": tune.choice(["tanh", "relu", "gelu", "leaky_relu"]),
         "fno_arc": tune.choice(["Classic", "Zongyi", "Residual"]),
@@ -131,4 +131,9 @@ def ray_samedof_fno(
 
 
 if __name__ == "__main__":
-    ray_samedof_fno("darcy", "default", "L2", 32)
+    ray_samedof_fno(
+        "bampno_continuation",
+        "best",
+        "L2",
+        47,
+    )

@@ -3867,7 +3867,7 @@ class BAMPNO_continuation:
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -4011,7 +4011,7 @@ class BAMPNO:
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
