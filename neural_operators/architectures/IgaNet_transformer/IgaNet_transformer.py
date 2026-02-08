@@ -24,6 +24,8 @@ def activation_fun(activation_str: str) -> nn.Module:
         return nn.LeakyReLU()
     elif activation_str == "sigmoid":
         return nn.Sigmoid()
+    elif activation_str == "softmax":
+        return nn.Softmax(dim=-1)
     else:
         raise ValueError(f"Not implemented activation function: {activation_str}")
 
