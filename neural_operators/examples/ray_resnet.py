@@ -116,8 +116,8 @@ def ray_resnet(which_example: str, filename: str, mode_hyperparams: str):
         dataset_builder,
         loss_fn,
         [default_hyper_params],
-        runs_per_cpu=6.0,
-        runs_per_gpu=0.5,
+        runs_per_cpu=10.0,
+        runs_per_gpu=1.0,
         grace_period=400,
         reduction_factor=4,
         max_epochs=5000,
@@ -128,6 +128,6 @@ def ray_resnet(which_example: str, filename: str, mode_hyperparams: str):
 if __name__ == "__main__":
     ray_resnet(
         "afieti_homogeneous_neumann",
-        "dataset_homogeneous_Neumann_rhs_fixed_l_0_deg_2_geo06.mat",
-        "default",
+        "dataset_homogeneous_Neumann_rhs_fixed_l_4_deg_3.mat",
+        "best",
     )
