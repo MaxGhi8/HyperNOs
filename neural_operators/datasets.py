@@ -3099,6 +3099,9 @@ class AFIETI_transformer:
         x[:, :, 1] = input[:, N + 1 :: 2]  # y
         # x[:, :, 2] = 0 -> already zero, z
         x[:, :, 3] = torch.ones_like(x[:, :, 3])  # w
+        # print(
+        #     f"DEBUG: f shape: {f.shape}, x shape: {x.shape}, output shape: {output.shape}"
+        # )
 
         # Training data
         f_train, x_train, output_train = (

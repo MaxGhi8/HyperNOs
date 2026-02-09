@@ -38,13 +38,18 @@ def train_iganet_transformer(which_example: str, filename: str, mode_hyperparams
         "scheduler_gamma": tune.quniform(0.75, 0.99, 0.01),
         "dropout_rate": tune.quniform(0.0, 0.01, 1e-3),
         "activation_str": tune.choice(["relu", "gelu", "softmax"]),
-        "n_heads": tune.randint(1, 15),
-        # Hidden_dim is determined by n_heads * head_dim, so n_head divides hidden_dim
-        "head_dim": tune.randint(4, 16),
-        "hidden_dim": tune.sample_from(
-            lambda spec: spec.config.n_heads * spec.config.head_dim
+        # n_heads must divide hidden_dim; head_dim = hidden_dim / n_heads
+        "n_heads": tune.choice(
+            [
+                i
+                for i in range(1, default_hyper_params["hidden_dim"] + 1)
+                if default_hyper_params["hidden_dim"] % i == 0
+            ]
         ),
-        "n_heads_A": tune.randint(1, 15),
+        "head_dim": tune.sample_from(
+            lambda spec: default_hyper_params["hidden_dim"] // spec.config.n_heads
+        ),
+        # "n_heads_A": tune.randint(1, 15),
         "n_layers_geo": tune.randint(1, 5),
     }
 
@@ -114,12 +119,12 @@ def train_iganet_transformer(which_example: str, filename: str, mode_hyperparams
         dataset_builder,
         loss_fn,
         [default_hyper_params],
-        runs_per_cpu=12.0,
+        runs_per_cpu=10.0,
         runs_per_gpu=1.0,
         grace_period=125,
         reduction_factor=4,
         max_epochs=500,
-        checkpoint_freq=1000,
+        checkpoint_freq=1001,
     )
 
 
