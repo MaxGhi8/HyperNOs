@@ -42,7 +42,7 @@ def train_iganet_transformer(which_example: str, filename: str, mode_hyperparams
         "n_heads": tune.choice(
             [
                 i
-                for i in range(1, default_hyper_params["hidden_dim"] + 1)
+                for i in range(1, default_hyper_params["hidden_dim"])
                 if default_hyper_params["hidden_dim"] % i == 0
             ]
         ),
@@ -132,5 +132,5 @@ if __name__ == "__main__":
     train_iganet_transformer(
         "afieti_homogeneous_neumann",
         "dataset_homogeneous_Neumann_l_0_deg_2_crazygeom.mat",
-        "default",
+        "best",
     )
