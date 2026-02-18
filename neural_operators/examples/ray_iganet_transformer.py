@@ -37,7 +37,7 @@ def train_iganet_transformer(which_example: str, filename: str, mode_hyperparams
         "weight_decay": tune.quniform(1e-6, 1e-3, 1e-6),
         "scheduler_gamma": tune.quniform(0.75, 0.99, 0.01),
         "dropout_rate": tune.quniform(0.0, 0.01, 1e-3),
-        "activation_str": tune.choice(["relu", "gelu", "softmax"]),
+        "activation_str": tune.choice(["relu", "gelu"]),
         # n_heads must divide hidden_dim; head_dim = hidden_dim / n_heads
         "n_heads": tune.choice(
             [

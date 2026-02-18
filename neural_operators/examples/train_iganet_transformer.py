@@ -105,5 +105,5 @@ if __name__ == "__main__":
     train_iganet_transformer(
         "afieti_homogeneous_neumann",
         "dataset_homogeneous_Neumann_l_0_deg_2_crazygeom.mat",
-        "default",
+        "best",
     )
