@@ -15,7 +15,7 @@
 		"problem_dim": 1,
 		"n_dofs": 625,
 		"n_control_points": 625,
-		"hidden_dim": 40,
+		"hidden_dim": 120,
 		"n_heads_A": 1,
 		"n_heads": 4,
 		"head_dim": 30,
