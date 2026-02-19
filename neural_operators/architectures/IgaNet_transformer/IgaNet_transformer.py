@@ -277,14 +277,24 @@ class GeometryConditionedLinearOperator(nn.Module):
         K = torch.zeros_like(Z, device=Z.device)  # (n_samples, d, hidden_dim)
         for idx in range(self.n_heads_A):
             Q += self.W_Q[idx](Z)
-            K += self.W_K[idx](Z)
+            # K += self.W_K[idx](Z)
+            #! For the definitive positive alternative
+            K += self.W_Q[idx](Z)
+
         Q = Q / self.n_heads_A
         K = K / self.n_heads_A
 
         # 3. Compute Attention Matrix (Plain Form)
         # (n_samples, d, k) @ (n_samples, k, d) -> (n_samples, d, d)
-        attn_scores = torch.matmul(Q, K.transpose(-2, -1)) * self.scale
-        # attn_scores = torch.matmul(Z, Z.transpose(-2, -1)) * self.scale #! For the identity alternative
+        # attn_scores = torch.matmul(Q, K.transpose(-2, -1)) * self.scale
+        #! For the identity alternative
+        # attn_scores = torch.matmul(Z, Z.transpose(-2, -1)) * self.scale
+        #! For the definitive positive alternative
+        epsilon = 0.1 
+        attn_scores = (
+            torch.matmul(Q, K.transpose(-2, -1)) * self.scale
+            + torch.eye(self.n_dofs, device=Z.device).unsqueeze(0) * epsilon
+        )
 
         # Apply Softmax over the last dimension
         # A = F.softmax(attn_scores, dim=-1)
