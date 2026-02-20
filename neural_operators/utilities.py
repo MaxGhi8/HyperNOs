@@ -100,7 +100,7 @@ def count_params(model):
         if isinstance(par, UninitializedParameter):
             continue
         tmp = reduce(
-            operator.mul, list(par.shape + (2,) if par.is_complex() else par.shape)
+            operator.mul, list(par.shape + (2,) if par.is_complex() else par.shape), 1
         )
         par_tot += tmp
         bytes_tot += tmp * par.data.element_size()

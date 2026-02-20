@@ -260,7 +260,17 @@ class GeometryConditionedLinearOperator(nn.Module):
         # Post processing
         self.post_processing = zero_mean_imposition if zero_mean else nn.Identity()
 
+        # Learnable strictly positive epsilon
+        # Initialize such that softplus(raw_epsilon) approx 0.1
+        # softplus(x) = log(1 + exp(x)) => x = log(exp(0.1) - 1)
+        init_val = math.log(math.exp(0.1) - 1)
+        self.raw_epsilon = nn.Parameter(torch.tensor(init_val))
+
         self.to(device)
+
+    @property
+    def epsilon(self):
+        return F.softplus(self.raw_epsilon)
 
     @jaxtyped(typechecker=beartype)
     def construct_matrix(
@@ -290,10 +300,9 @@ class GeometryConditionedLinearOperator(nn.Module):
         #! For the identity alternative
         # attn_scores = torch.matmul(Z, Z.transpose(-2, -1)) * self.scale
         #! For the definitive positive alternative
-        epsilon = 0.1
         attn_scores = (
             torch.matmul(Q, K.transpose(-2, -1)) * self.scale
-            + torch.eye(self.n_dofs, device=Z.device).unsqueeze(0) * epsilon
+            + torch.eye(self.n_dofs, device=Z.device).unsqueeze(0) * self.epsilon
         )
 
         # Apply Softmax over the last dimension
@@ -314,7 +323,17 @@ class GeometryConditionedLinearOperator(nn.Module):
 
         # 1-2. Process geometry and construct A(g)
         A = self.construct_matrix(g)
+
+        # # To verify rank of the matrix
         # print(torch.linalg.matrix_rank(A))
+        # # To verify positive definiteness
+        # try:
+        #     torch.linalg.cholesky(A)
+        #     print("Matrix is Positive Definite")
+        #     min_eig = torch.linalg.eigvalsh(A).min()
+        #     print(f"Min Eigenvalue: {min_eig} (PD if > 0)")
+        # except RuntimeError:
+        #     print("Matrix is NOT Positive Definite")
 
         # 2. Apply Linear Operator
         # A: (n_samples, d, d), f: (n_samples, d)
