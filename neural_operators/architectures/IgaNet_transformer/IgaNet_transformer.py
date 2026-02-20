@@ -290,7 +290,7 @@ class GeometryConditionedLinearOperator(nn.Module):
         #! For the identity alternative
         # attn_scores = torch.matmul(Z, Z.transpose(-2, -1)) * self.scale
         #! For the definitive positive alternative
-        epsilon = 0.1 
+        epsilon = 0.1
         attn_scores = (
             torch.matmul(Q, K.transpose(-2, -1)) * self.scale
             + torch.eye(self.n_dofs, device=Z.device).unsqueeze(0) * epsilon
