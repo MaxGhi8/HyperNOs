@@ -1,0 +1,50 @@
+{
+	"training_properties": {
+		"training_samples": 256,
+		"val_samples": 128,
+		"test_samples": 128,
+		"learning_rate": 5e-4,
+		"epochs": 200,
+		"batch_size": 10,
+		"weight_decay": 0.01,
+		"scheduler_step": 20,
+		"scheduler_gamma": 0.95,
+		"beta": 1
+	},
+	"don_architecture": {
+		"branch_hyperparameters": {
+			"n_inputs": 1,
+			"n_points": [100, 100],
+			"channels_conv": [34, 48, 74, 74],
+			"hidden_layer": [140],
+			"kernel_size": [5, 5, 5, 3],
+			"stride": [2, 2, 2, 1],
+			"padding": [0, 0, 0, 0],
+			"include_grid": 0,
+			"act_fun": "relu",
+			"n_blocks": 3,
+			"normalization": "none",
+			"layer_norm": false,
+			"dropout_rate": 0.0,
+			"residual": 0,
+			"global_pooling": false
+		},
+		"trunk_hyperparameters": {
+			"n_inputs": 2,
+			"hidden_layer": [120, 120],
+			"act_fun": "relu",
+			"n_blocks": 3,
+			"layer_norm": false,
+			"dropout_rate": 0.0,
+			"residual": 0
+		},
+		"n_basis": 200,
+		"n_output": 2,
+		"size_grid": 100,
+		"dim": 2,
+		"FourierF": 0,
+		"retrain": 4,
+		"internal_normalization": false,
+		"problem_dim": 2
+	}
+}

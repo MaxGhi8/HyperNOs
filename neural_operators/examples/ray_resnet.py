@@ -40,7 +40,7 @@ def ray_resnet(which_example: str, filename: str, mode_hyperparams: str):
         "activation_str": tune.choice(
             ["tanh", "relu", "gelu", "leaky_relu", "sigmoid"]
         ),
-        "n_blocks": tune.randint(1, 8),
+        # "n_blocks": tune.randint(1, 8),
         "dropout_rate": tune.quniform(0.0, 0.5, 1e-2),
     }
     # Add the hyperparameters hidden_channels
@@ -48,7 +48,8 @@ def ray_resnet(which_example: str, filename: str, mode_hyperparams: str):
         lambda spec: [
             tune.choice([100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]).sample()
         ]
-        * tune.randint(1, 8).sample()
+        # * tune.randint(1, 8).sample()
+        * 3
     )
 
     # Set all the other parameters to fixed values
@@ -106,7 +107,7 @@ def ray_resnet(which_example: str, filename: str, mode_hyperparams: str):
     # model_builder = wrap_model_builder(model_builder, which_example) # TODO
 
     # Define the loss function
-    loss_fn = lpLoss(default_hyper_params["p"], False)
+    loss_fn = lpLoss(default_hyper_params["p"], True)
 
     # Call the library function to tune the hyperparameters
     tune_hyperparameters(
@@ -115,18 +116,18 @@ def ray_resnet(which_example: str, filename: str, mode_hyperparams: str):
         dataset_builder,
         loss_fn,
         [default_hyper_params],
-        runs_per_cpu=12.0,
+        runs_per_cpu=10.0,
         runs_per_gpu=1.0,
         grace_period=400,
         reduction_factor=4,
-        max_epochs=2000,
-        checkpoint_freq=1000,
+        max_epochs=5000,
+        checkpoint_freq=5000,
     )
 
 
 if __name__ == "__main__":
     ray_resnet(
         "afieti_homogeneous_neumann",
-        "dataset_homogeneous_Neumann_l_3_deg_3.mat",
-        "default",
+        "dataset_homogeneous_Neumann_rhs_fixed_l_4_deg_3.mat",
+        "best",
     )

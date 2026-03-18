@@ -1,6 +1,43 @@
+# BAMPNO architecture
+from .BAMPNO.BAMPNO import BAMPNO
+from .BAMPNO.BAMPNO_parallel import ParallelBAMPNO
+from .BAMPNO.BAMPNO_utilities import compute_modes, count_params_bampno
+from .BAMPNO.chebyshev_utilities import (
+    Chebyshev_grid_1d,
+    Chebyshev_grid_2d,
+    batched_coefficients_to_values,
+    batched_differentiate,
+    batched_differentiate_2d,
+    batched_integrate,
+    batched_values_to_coefficients,
+    coefficients_to_values,
+    differentiate,
+    integrate,
+    patched_coefficients_to_values,
+    patched_values_to_coefficients,
+    values_to_coefficients,
+)
+from .CNN.CNN2D import CNN2D
+
+# CNN architecture
+from .CNN.CNN2DResidualNetwork import CNN2DResidualNetwork, Conv2DResidualBlock
+
 # CNO architecture
 from .CNO.CNO import CNO
 from .CNO.CNO_utilities import compute_channel_multiplier, count_params_cno
+from .DON.CNN2D_DON import CNN2D_DON
+
+# DON architecture
+from .DON.DON import DeepONet
+from .DON.CNN2D_DON import CNN2D_DON, LazyKernelConv2d
+
+# FNN architecture
+from .FNN.FeedForwardNetwork import (
+    FeedForwardNetwork,
+    activation_fun,
+    centered_softmax,
+    zero_mean_imposition,
+)
 
 # FNO architecture
 from .FNO.FNO import FNO
@@ -15,6 +52,12 @@ from .FNO.FNO_utilities import (
 # Group equivariant FNO architecture
 from .G_FNO.GroupEquivariantFNO import G_FNO
 
+# IgaNet transformer architecture
+from .IgaNet_transformer.IgaNet_transformer import (
+    GeometryConditionedLinearOperator,
+    zero_mean_imposition,
+)
+
 # RationalNN architecture
 from .RationalNN.RationalNN import (
     RationalStandardNetwork,
@@ -24,6 +67,7 @@ from .RationalNN.RationalNN import (
 
 # ResNet architecture
 from .ResNet.ResidualNetwork import (
+    ResidualBlock,
     ResidualNetwork,
     centered_softmax,
     zero_mean_imposition,

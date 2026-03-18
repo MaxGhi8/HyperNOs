@@ -1,0 +1,37 @@
+{
+	"training_properties": {
+		"training_samples": 1200,
+		"val_samples": 150,
+		"test_samples": 150,
+		"learning_rate": 4.21e-3,
+		"epochs": 1000,
+		"batch_size": 32,
+		"weight_decay": 2.23e-4,
+		"scheduler_step": 10,
+		"scheduler_gamma": 0.95,
+		"beta": 1
+	},
+	"bampno_architecture": {
+		"problem_dim": 2,
+		"grid_filename": "Darcy_Lshape_chebyshev_60pts.mat",
+		"zero_BC": { "0": [1, 2, 3], "1": [1, 4], "2": [2, 3, 4] },
+		"continuity_condition": { "horizontal": [[2, 1]], "vertical": [[1, 0]] },
+		"n_patch": 3,
+		"n_pts": 20,
+		"d_v": 32,
+		"modes": 12,
+		"L": 4,
+		"internal_normalization": true,
+		"arc": "Zongyi",
+		"fun_act": "gelu",
+		"in_dim": 1,
+		"out_dim": 1,
+		"same_params": true,
+		"FFTnorm": null,
+		"FourierF": 0,
+		"RNN": false,
+		"include_grid": 1,
+		"weights_norm": null,
+		"retrain_seed": 4
+	}
+}

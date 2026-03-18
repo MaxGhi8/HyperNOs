@@ -67,8 +67,13 @@ def test_fun(
         ## Compute loss on the test set
         test_samples = 0
         for input_batch, output_batch in test_loader:
-            input_batch = input_batch.to(device)
-            test_samples += input_batch.shape[0]
+            if isinstance(input_batch, (list, tuple)):
+                input_batch = [i.to(device) for i in input_batch]
+                # Assuming batch dimension is in the first element for counting
+                test_samples += input_batch[0].shape[0]
+            else:
+                input_batch = input_batch.to(device)
+                test_samples += input_batch.shape[0]
             output_batch = output_batch.to(device)
 
             # compute the output
@@ -103,8 +108,12 @@ def test_fun(
         ## Compute loss on the training set
         training_samples = 0
         for input_batch, output_batch in train_loader:
-            input_batch = input_batch.to(device)
-            training_samples += input_batch.shape[0]
+            if isinstance(input_batch, (list, tuple)):
+                input_batch = [i.to(device) for i in input_batch]
+                training_samples += input_batch[0].shape[0]
+            else:
+                input_batch = input_batch.to(device)
+                training_samples += input_batch.shape[0]
             output_batch = output_batch.to(device)
             output_pred_batch = model(input_batch)
 
@@ -233,8 +242,13 @@ def get_tensors(model, test_loader, device: torch.device):
 
         ## Compute loss on the test set
         for input_batch, output_batch in test_loader:
-            input_batch = input_batch.to(device)
-            input_tensor = torch.cat((input_tensor, input_batch), dim=0)
+            if isinstance(input_batch, (list, tuple)):
+                input_batch = [i.to(device) for i in input_batch]
+                # For plotting purposes, we only keep the first separate input (branch input for DeepONet)
+                input_tensor = torch.cat((input_tensor, input_batch[0]), dim=0)
+            else:
+                input_batch = input_batch.to(device)
+                input_tensor = torch.cat((input_tensor, input_batch), dim=0)
 
             output_batch = output_batch.to(device)
             output_tensor = torch.cat((output_tensor, output_batch), dim=0)

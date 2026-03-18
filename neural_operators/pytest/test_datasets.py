@@ -7,6 +7,7 @@ import torch
 sys.path.append("..")
 from datasets import (
     AFIETI,
+    AFIETI_transformer,
     Airfoil,
     AllenCahn,
     Burgers_Zongyi,
@@ -350,6 +351,59 @@ def test_afieti_dataset():
     assert example.input_normalizer.std.shape[0] == example.s_in
     assert example.output_normalizer.mean.shape[0] == example.s_out
     assert example.output_normalizer.std.shape[0] == example.s_out
+
+
+def test_afieti_dataset_zero_mean_rhs():
+    batch_size = 100
+    training_samples = 1500
+    for filename in [
+        "dataset_homogeneous_Neumann_rhs_fixed_l_4_deg_3_NEW.mat",
+        "dataset_homogeneous_Neumann_rhs_fixed_l_5_deg_3_NEW.mat",
+    ]:
+        example = NO_load_data_model(
+            which_example="afieti_homogeneous_neumann",
+            no_architecture={
+                "FourierF": 0,
+                "retrain": -1,
+            },
+            batch_size=batch_size,
+            training_samples=training_samples,
+            in_dist=True,
+            filename=filename,
+        )
+        train_batch_input, _ = next(iter(example.train_loader))
+
+        # Check if the sum of each sample is zero
+        assert torch.allclose(
+            train_batch_input.sum(dim=1),
+            torch.zeros_like(train_batch_input.sum(dim=1)),
+            atol=1e-6,
+        )
+
+    for filename in [
+        "dataset_homogeneous_Neumann_l_3_deg_3.mat",
+        "dataset_homogeneous_Neumann_l_4_deg_3.mat",
+    ]:
+        example = NO_load_data_model(
+            which_example="afieti_homogeneous_neumann",
+            no_architecture={
+                "FourierF": 0,
+                "retrain": -1,
+            },
+            batch_size=batch_size,
+            training_samples=training_samples,
+            in_dist=True,
+            filename=filename,
+        )
+        train_batch_input, _ = next(iter(example.train_loader))
+        train_batch_input = train_batch_input[:, :-32]
+
+        # Check if the sum of each sample is zero
+        assert torch.allclose(
+            train_batch_input.sum(dim=1),
+            torch.zeros_like(train_batch_input.sum(dim=1)),
+            atol=1e-6,
+        )
 
 
 def test_bampno_dataset():
@@ -729,3 +783,71 @@ def test_afieti_fno_dataset():
         example.s_out,
         example.s_out,
     )
+
+
+def test_darcy_don():
+    batch_size = 10
+    training_samples = 160
+    example = NO_load_data_model(
+        which_example="darcy_don",
+        no_architecture={
+            "FourierF": 0,
+            "retrain": -1,
+        },
+        batch_size=batch_size,
+        training_samples=training_samples,
+    )
+
+    # Check for the dimensions of the input and output tensors
+    (train_branch_input, train_trunk_input), train_batch_output = next(
+        iter(example.train_loader)
+    )
+
+    assert train_branch_input.shape == (batch_size, example.s, example.s, 1)
+    assert train_trunk_input.shape == (example.s * example.s, 2)
+    assert train_batch_output.shape == (batch_size, example.s, example.s, 1)
+
+    (test_branch_input, test_trunk_input), test_batch_output = next(
+        iter(example.test_loader)
+    )
+    assert test_branch_input.shape == (batch_size, example.s, example.s, 1)
+    assert test_trunk_input.shape == (example.s * example.s, 2)
+    assert test_batch_output.shape == (batch_size, example.s, example.s, 1)
+
+    (val_branch_input, val_trunk_input), val_batch_output = next(
+        iter(example.val_loader)
+    )
+    assert val_branch_input.shape == (batch_size, example.s, example.s, 1)
+    assert val_trunk_input.shape == (example.s * example.s, 2)
+    assert val_batch_output.shape == (batch_size, example.s, example.s, 1)
+
+
+def test_afieti_transformer():
+    batch_size = 10
+    training_samples = 160
+    example = NO_load_data_model(
+        which_example="afieti_homogeneous_neumann_transformer",
+        no_architecture={
+            "FourierF": 0,
+            "retrain": -1,
+        },
+        batch_size=batch_size,
+        training_samples=training_samples,
+        filename="dataset_homogeneous_Neumann_l_0_deg_2_crazygeom.mat",
+    )
+
+    # Check for the dimensions of the input and output tensors
+    (rhs, geom), output = next(iter(example.train_loader))
+    assert rhs.shape == (batch_size, example.s_rhs)
+    assert geom.shape == (batch_size, example.s_geo, 4)
+    assert output.shape == (batch_size, example.s_rhs)
+
+    (rhs, geom), output = next(iter(example.val_loader))
+    assert rhs.shape == (batch_size, example.s_rhs)
+    assert geom.shape == (batch_size, example.s_geo, 4)
+    assert output.shape == (batch_size, example.s_rhs)
+
+    (rhs, geom), output = next(iter(example.test_loader))
+    assert rhs.shape == (batch_size, example.s_rhs)
+    assert geom.shape == (batch_size, example.s_geo, 4)
+    assert output.shape == (batch_size, example.s_rhs)

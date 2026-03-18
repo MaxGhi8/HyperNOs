@@ -3,6 +3,7 @@ This file contains the necessary functions to load the data for the Fourier Neur
 """
 
 import os
+import pickle
 import random
 
 import h5py
@@ -52,16 +53,20 @@ def NO_load_data_model(
         "disc_tran": DiscContTranslation,
         "airfoil": Airfoil,
         "darcy": Darcy,
+        "darcy_don": Darcy_DON,
         ###
         "burgers_zongyi": Burgers_Zongyi,
         "darcy_zongyi": Darcy_Zongyi,
         # "navier_stokes_zongyi" #todo
         ###
         "fhn": FitzHughNagumo,
+        "fhn_prova": FHN_Prova,
+        "fhn_prova_don": FHN_Prova,
         "hh": HodgkinHuxley,
         "ord": OHaraRudy,
         ###
         "afieti_homogeneous_neumann": AFIETI,
+        "afieti_homogeneous_neumann_transformer": AFIETI_transformer,
         "afieti_fno": AFIETI_FNO,
         ###
         "bampno": BAMPNO,
@@ -331,7 +336,9 @@ class ShearLayer:
 
         self.N_Fourier_F = network_properties["FourierF"]
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -525,7 +532,9 @@ class SinFrequency:
 
         self.N_Fourier_F = network_properties["FourierF"]
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -732,7 +741,9 @@ class WaveEquation:
 
         self.N_Fourier_F = network_properties["FourierF"]
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -928,7 +939,9 @@ class AllenCahn:
 
         self.N_Fourier_F = network_properties["FourierF"]
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -1114,7 +1127,9 @@ class ContTranslation:
 
         self.N_Fourier_F = network_properties["FourierF"]
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -1302,7 +1317,9 @@ class DiscContTranslation:
 
         self.N_Fourier_F = network_properties["FourierF"]
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -1492,7 +1509,9 @@ class Airfoil:
 
         self.N_Fourier_F = network_properties["FourierF"]
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -1590,6 +1609,7 @@ class DarcyDataset(Dataset):
         s=64,
         insample=True,
         search_path="/",
+        return_grid: bool = False,
     ):
         self.s = s
         if insample:
@@ -1619,6 +1639,10 @@ class DarcyDataset(Dataset):
                 self.start = 0
 
         self.N_Fourier_F = nf
+        self.return_grid = return_grid
+
+        self._coordinate_grid_cache = None
+        self._feature_grid_cache = None
 
     def __len__(self):
         return self.length
@@ -1651,24 +1675,167 @@ class DarcyDataset(Dataset):
         inputs = inputs[:, ::stride, ::stride]
         labels = labels[:, ::stride, ::stride]
 
-        if self.N_Fourier_F > 0:
-            grid = self.get_grid()
-            grid = grid.permute(2, 0, 1)
-            inputs = torch.cat((inputs, grid), 0)
+        coord_grid = None
+        if self.return_grid:
+            coord_grid = self.get_coordinate_grid()
 
-        return inputs.permute(1, 2, 0), labels.permute(1, 2, 0)
-
-    def get_grid(self):
-        x = torch.linspace(0, 1, self.s)
-        y = torch.linspace(0, 1, self.s)
-        x_grid, y_grid = torch.meshgrid(x, y, indexing="ij")
-        x_grid = x_grid.unsqueeze(-1)
-        y_grid = y_grid.unsqueeze(-1)
-        grid = torch.cat((x_grid, y_grid), -1)
         if self.N_Fourier_F > 0:
-            FF = FourierFeatures(1, self.N_Fourier_F, grid.device)
-            grid = FF(grid)
-        return grid
+            feature_grid = self.get_grid().permute(2, 0, 1)
+            inputs = torch.cat((inputs, feature_grid), 0)
+
+        branch_input = inputs.permute(1, 2, 0)
+        target = labels.permute(1, 2, 0)
+
+        if self.return_grid:
+            assert coord_grid is not None
+            trunk_input = coord_grid.reshape(-1, coord_grid.shape[-1])
+            return branch_input, trunk_input, target
+
+        return branch_input, target
+
+    def get_coordinate_grid(self) -> torch.Tensor:
+        if self._coordinate_grid_cache is None:
+            x = torch.linspace(0, 1, self.s, dtype=torch.float32)
+            y = torch.linspace(0, 1, self.s, dtype=torch.float32)
+            x_grid, y_grid = torch.meshgrid(x, y, indexing="ij")
+            x_grid = x_grid.unsqueeze(-1)
+            y_grid = y_grid.unsqueeze(-1)
+            self._coordinate_grid_cache = torch.cat((x_grid, y_grid), -1)
+        return self._coordinate_grid_cache
+
+    def get_grid(self) -> torch.Tensor:
+        if self.N_Fourier_F == 0:
+            return self.get_coordinate_grid()
+
+        if self._feature_grid_cache is None:
+            base_grid = self.get_coordinate_grid()
+            FF = FourierFeatures(1, self.N_Fourier_F, base_grid.device)
+            self._feature_grid_cache = FF(base_grid)
+
+        return self._feature_grid_cache
+
+
+def deeponet_collate_fn(batch):
+    """
+    Custom collate function for DeepONet that keeps trunk coordinates
+    shared across the batch (no batch dimension for trunk input).
+    """
+    branch_inputs = []
+    trunk_input = None
+    targets = []
+
+    for branch, trunk, target in batch:
+        branch_inputs.append(branch)
+        targets.append(target)
+        if trunk_input is None:
+            trunk_input = trunk  # Use trunk coords from first sample
+
+    branch_inputs = torch.stack(branch_inputs, dim=0)
+    targets = torch.stack(targets, dim=0)
+
+    return (branch_inputs, trunk_input), targets
+
+
+class Darcy_DON:
+    def __init__(
+        self,
+        network_properties,
+        batch_size,
+        training_samples=256,
+        s=64,
+        in_dist=True,
+        search_path="/",
+    ):
+        self.s = s
+        assert self.s <= 64
+
+        self.N_Fourier_F = network_properties["FourierF"]
+
+        # Create generator on the appropriate device
+        g = torch.Generator(device=torch.device("cpu"))
+
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
+            torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g.manual_seed(retrain)
+
+        # Change number of workers according to your preference
+        num_workers = 0
+
+        self.train_set = DarcyDataset(
+            "training",
+            self.N_Fourier_F,
+            training_samples,
+            s=self.s,
+            search_path=search_path,
+            return_grid=True,
+        )
+
+        self.train_loader = DataLoader(
+            self.train_set,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+            collate_fn=deeponet_collate_fn,
+        )
+        self.val_loader = DataLoader(
+            DarcyDataset(
+                "validation",
+                self.N_Fourier_F,
+                training_samples,
+                s=self.s,
+                search_path=search_path,
+                return_grid=True,
+            ),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+            collate_fn=deeponet_collate_fn,
+        )
+        self.test_loader = DataLoader(
+            DarcyDataset(
+                "testing",
+                self.N_Fourier_F,
+                training_samples,
+                s=self.s,
+                insample=in_dist,
+                search_path=search_path,
+                return_grid=True,
+            ),
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+            collate_fn=deeponet_collate_fn,
+        )
+
+    @property
+    def min_data(self):
+        return self.train_set.min_data
+
+    @property
+    def max_data(self):
+        return self.train_set.max_data
+
+    @property
+    def min_model(self):
+        return self.train_set.min_model
+
+    @property
+    def max_model(self):
+        return self.train_set.max_model
 
 
 class Darcy:
@@ -1686,7 +1853,9 @@ class Darcy:
 
         self.N_Fourier_F = network_properties["FourierF"]
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -1825,7 +1994,9 @@ class Darcy_Zongyi:
         self.TestDataPath = find_file("piececonst_r421_N1024_smooth2.mat", search_path)
         a_test, u_test = MatReader_darcy(self.TestDataPath)
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -1954,7 +2125,9 @@ class Burgers_Zongyi:
         self.DataPath = find_file("burgers_data_R10.mat", search_path)
         a, u = MatReader_burgers(self.DataPath)
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -2082,7 +2255,9 @@ class FitzHughNagumo:
         assert in_dist, "Out-of-distribution testing samples are not available"
         # s = 4 --> (5040)//s  = 1260 points
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -2246,7 +2421,9 @@ class HodgkinHuxley:
 
         # s = 4 --> (5040)//s  = 1260 points
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -2406,6 +2583,167 @@ def MatReader_ord(fields: list[str], file_path: str) -> dict[str, torch.Tensor]:
     return tensors
 
 
+class FHN1D_DON_Dataset(Dataset):
+    def __init__(
+        self,
+        input_tensor,
+        voltage_tensor,
+        gating_tensor,
+        input_norm,
+        voltage_norm,
+        gating_norm,
+    ):
+        self.input_tensor = input_tensor
+        self.voltage_tensor = voltage_tensor
+        self.gating_tensor = gating_tensor
+        self.input_norm = input_norm
+        self.voltage_norm = voltage_norm
+        self.gating_norm = gating_norm
+
+        # Create grid (Trunk input)
+        # Shared across all samples
+        x = torch.linspace(0, 1, 100)
+        t = torch.linspace(0, 40, 100)
+        T, X = torch.meshgrid(t, x, indexing="ij")
+        self.grid = torch.stack([T.flatten(), X.flatten()], dim=1)  # (10000, 2)
+
+    def __len__(self):
+        return self.input_tensor.shape[0]
+
+    def __getitem__(self, idx):
+        # Branch Input: (100, 100, 1)
+        # Input tensors are already encoded
+        # input_tensor[idx] is (100, 100)
+        branch_in = self.input_tensor[idx].unsqueeze(-1).float()
+
+        # Trunk Input: (10000, 2)
+        trunk_in = self.grid.float()
+
+        # Target: (100, 100, 2)
+        # voltage[idx], gating[idx] are (100, 100)
+        v = self.voltage_tensor[idx]
+        g = self.gating_tensor[idx]
+        target = torch.stack([v, g], dim=-1).float()
+
+        return branch_in, trunk_in, target
+
+
+#########################################
+# FHN_Prova class
+#########################################
+class FHN_Prova:
+    def __init__(
+        self,
+        network_properties,
+        batch_size,
+        training_samples=None,
+        in_dist=True,
+        search_path=None,
+        data_path=None,
+        s=None,
+    ):
+        """
+        Class to load the FHN 1D dataset as done in FHN_1D.py
+        Matches interface of other dataset classes.
+        """
+
+        torch.manual_seed(123)
+        np.random.seed(123)
+        random.seed(123)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed(123)
+
+        # Use find_file to locate the data files, which is more robust and consistent with other datasets
+        # datasets.py imports find_file from utilities
+        if search_path is None:
+            search_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+        try:
+            training_file_path = find_file("fhn_1d_training.pkl", search_path)
+            test_file_path = find_file("fhn_1d_test.pkl", search_path)
+        except Exception as e:
+            # Fallback if find_file fails or if we want to try the hardcoded path
+            if data_path is None:
+                data_path = "data/fhn/"
+
+            project_root = "/home/max/Documents/PhD/HyperNOs/"
+            if not os.path.exists(data_path) and os.path.exists(
+                os.path.join(project_root, data_path)
+            ):
+                data_path = os.path.join(project_root, data_path)
+
+            training_file_path = os.path.join(data_path, "fhn_1d_training.pkl")
+            test_file_path = os.path.join(data_path, "fhn_1d_test.pkl")
+
+        if not os.path.exists(training_file_path):
+            # print debug info
+            print(f"DEBUG: Current CWD: {os.getcwd()}")
+            print(f"DEBUG: Search path: {search_path}")
+            raise FileNotFoundError(f"Training file not found at {training_file_path}")
+
+        with open(training_file_path, "rb") as file_training:
+            dataset_training = pickle.load(file_training)
+
+        # transform the input from [n_example] to [n_example,n_pts,n_pts]
+        input_training = torch.tensor(dataset_training["input"])
+        voltage_training = torch.tensor(dataset_training["Voltage"])
+        gating_training = torch.tensor(dataset_training["gating"])
+
+        self.input_normalizer = minmaxGlobalNormalizer(input_training)
+        self.voltage_normalizer = minmaxGlobalNormalizer(voltage_training)
+        self.gating_normalizer = minmaxGlobalNormalizer(gating_training)
+
+        # Use CPU generator to avoid RuntimeError in DataLoader
+        generator = torch.Generator(device="cpu")
+
+        self.train_set = FHN1D_DON_Dataset(
+            self.input_normalizer.encode(input_training),
+            self.voltage_normalizer.encode(voltage_training),
+            self.gating_normalizer.encode(gating_training),
+            self.input_normalizer,
+            self.voltage_normalizer,
+            self.gating_normalizer,
+        )
+
+        self.train_loader = DataLoader(
+            self.train_set,
+            batch_size=batch_size,
+            shuffle=True,
+            generator=generator,
+            collate_fn=deeponet_collate_fn,
+        )
+
+        # load the test
+        # test_file_path already located above
+        if not os.path.exists(test_file_path):
+            raise FileNotFoundError(f"Test file not found at {test_file_path}")
+
+        with open(test_file_path, "rb") as file_test:
+            dataset_test = pickle.load(file_test)
+
+        # transform the input from [n_example] to [n_example,n_pts,n_pts]
+        input_test = torch.tensor(dataset_test["input"])
+        voltage_test = torch.tensor(dataset_test["Voltage"])
+        gating_test = torch.tensor(dataset_test["gating"])
+
+        self.test_set = FHN1D_DON_Dataset(
+            self.input_normalizer.encode(input_test),
+            self.voltage_normalizer.encode(voltage_test),
+            self.gating_normalizer.encode(gating_test),
+            self.input_normalizer,
+            self.voltage_normalizer,
+            self.gating_normalizer,
+        )
+
+        self.test_loader = DataLoader(
+            self.test_set,
+            batch_size=batch_size,
+            shuffle=True,
+            generator=generator,
+            collate_fn=deeponet_collate_fn,
+        )
+
+
 class OHaraRudy:
     def __init__(
         self,
@@ -2466,7 +2804,9 @@ class OHaraRudy:
             "x_s2_dataset",
         ]
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -2604,7 +2944,10 @@ class AFIETI:
         assert in_dist, "Out-of-distribution testing samples are not available"
         assert s == 1, "Sampling rate must be 1, no subsampling allowed in this example"
 
-        g = torch.Generator()
+        # g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -2705,6 +3048,146 @@ class AFIETI:
 
 
 # ------------------------------------------------------------------------------
+# AF-IETI data
+# Training samples (16000)
+# Testing samples (2000)
+# Validation samples (2000)
+
+
+class AFIETI_transformer:
+    def __init__(
+        self,
+        filename: str,
+        network_properties: dict,
+        batch_size: int,
+        training_samples: int,
+        s=1,
+        in_dist=True,
+        search_path="/",
+    ):
+        # assert training_samples <= 16000, "Training samples must be less than 3000"
+        assert in_dist, "Out-of-distribution testing samples are not available"
+        assert s == 1, "Sampling rate must be 1, no subsampling allowed in this example"
+
+        # g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=torch.device("cpu"))
+
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
+            torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            # torch.use_deterministic_algorithms(True)
+            g.manual_seed(retrain)
+
+        self.TrainDataPath = find_file(filename, search_path)
+        reader = h5py.File(self.TrainDataPath, "r")
+        input = torch.from_numpy(reader["input"][:]).type(torch.float32)
+        output = torch.from_numpy(reader["output"][:]).type(torch.float32)
+
+        # Process the input to separate rhs and geometry
+        N = 625  # separation index between rhs and geometry
+        f = input[:, :N]  # rhs
+        x = torch.zeros(input.shape[0], input[[0], N:].shape[1] // 2, 4)
+        x[:, :, 0] = input[:, N::2]  # x
+        x[:, :, 1] = input[:, N + 1 :: 2]  # y
+        # x[:, :, 2] = 0 -> already zero, z
+        x[:, :, 3] = torch.ones_like(x[:, :, 3])  # w
+        # print(
+        #     f"DEBUG: f shape: {f.shape}, x shape: {x.shape}, output shape: {output.shape}"
+        # )
+
+        # Training data
+        f_train, x_train, output_train = (
+            f[:training_samples, ::s],
+            x[:training_samples, ::s, :],
+            output[:training_samples, ::s],
+        )
+
+        # Compute mean and std (for gaussian point-wise normalization)
+        self.input_normalizer = UnitGaussianNormalizer(x_train)
+        self.output_normalizer = UnitGaussianNormalizer(output_train)
+
+        # Normalize
+        # x_train = self.input_normalizer.encode(x_train)
+        # output_train = self.output_normalizer.encode(output_train)
+
+        # Validation data
+        f_val, x_val, output_val = (
+            f[training_samples : training_samples + 2000, ::s],
+            x[training_samples : training_samples + 2000, ::s, :],
+            output[training_samples : training_samples + 2000, ::s],
+        )
+        # x_val = self.input_normalizer.encode(x_val)
+        # output_val = self.output_normalizer.encode(output_val)
+
+        # Test data
+        f_test, x_test, output_test = (
+            f[training_samples + 2000 :, ::s],
+            x[training_samples + 2000 :, ::s, :],
+            output[training_samples + 2000 :, ::s],
+        )
+        # x_test = self.input_normalizer.encode(x_test)
+        # output_test = self.output_normalizer.encode(output_test)
+
+        # Small Dataset wrapper so that each input is a tuple (x_i, f_i)
+        class AFIETITransformerDataset(torch.utils.data.Dataset):
+            def __init__(self, x: torch.Tensor, f: torch.Tensor, y: torch.Tensor):
+                self.x = x
+                self.f = f
+                self.y = y
+
+            def __len__(self):
+                return self.y.shape[0]
+
+            def __getitem__(self, idx):
+                # Return input as tuple (x_i, f_i) and target y_i
+                return (self.f[idx], self.x[idx]), self.y[idx]
+
+        train_set = AFIETITransformerDataset(x_train, f_train, output_train)
+        val_set = AFIETITransformerDataset(x_val, f_val, output_val)
+        test_set = AFIETITransformerDataset(x_test, f_test, output_test)
+
+        # Change number of workers according to your preference
+        num_workers = 0
+
+        self.train_loader = DataLoader(
+            train_set,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.val_loader = DataLoader(
+            val_set,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.test_loader = DataLoader(
+            test_set,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+
+        self.s_rhs = f.shape[1]
+        self.s_geo = x_train.shape[1]
+        self.s_out = output_test.shape[1]
+
+
+# ------------------------------------------------------------------------------
 # AFIETI_FNO data
 # Training samples (1600)
 # Testing samples (200)
@@ -2722,10 +3205,12 @@ class AFIETI_FNO:
         in_dist=True,
         search_path="/",
     ):
-        assert training_samples <= 1600, "Training samples must be less than 3000"
+        assert training_samples <= 3600, "Training samples must be less than 3000"
         assert in_dist, "Out-of-distribution testing samples are not available"
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -2749,8 +3234,8 @@ class AFIETI_FNO:
         output_train = output[:training_samples, ::s, ::s].unsqueeze(-1)
 
         # Compute mean and std (for gaussian point-wise normalization)
-        self.input_normalizer_rhs = UnitGaussianNormalizer(rhs_train.unsqueeze(-1))
-        self.output_normalizer = UnitGaussianNormalizer(output_train)
+        self.input_normalizer = minmaxGlobalNormalizer(rhs_train.unsqueeze(-1))
+        self.output_normalizer = minmaxGlobalNormalizer(output_train)
 
         # Normalize
         # rhs_train = self.input_normalizer_rhs.encode(rhs_train)
@@ -2908,7 +3393,9 @@ class CrossTruss(Dataset):
                 (inputs_test, ff_grid.repeat(inputs_test.shape[0], 1, 1, 1)), -1
             )
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -3035,7 +3522,9 @@ class StiffnessMatrix(Dataset):
                 (inputs_test, ff_grid.repeat(inputs_test.shape[0], 1, 1, 1)), -1
             )
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -3110,7 +3599,9 @@ class CoeffRHS_1d:
         assert training_samples <= 1200, "Training samples must be less than 3000"
         assert in_dist, "Out-of-distribution testing samples are not available"
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -3238,7 +3729,9 @@ class CoeffRHS:
         assert training_samples <= 1200, "Training samples must be less than 3000"
         assert in_dist, "Out-of-distribution testing samples are not available"
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -3375,7 +3868,9 @@ class BAMPNO_continuation:
         assert training_samples <= 12000, "Training samples must be less than 12000"
         assert in_dist, "Out-of-distribution testing samples are not available"
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -3517,7 +4012,9 @@ class BAMPNO:
         assert training_samples <= 12000, "Training samples must be less than 3000"
         assert in_dist, "Out-of-distribution testing samples are not available"
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -3679,7 +4176,9 @@ class BAMPNO_old:
         assert training_samples <= 1000, "Training samples must be less than 3000"
         assert in_dist, "Out-of-distribution testing samples are not available"
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -3781,7 +4280,9 @@ class Eigenfunction:
         assert training_samples <= 1200, "Training samples must be less than 3000"
         assert in_dist, "Out-of-distribution testing samples are not available"
 
-        g = torch.Generator()
+        # Create generator on the appropriate device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        g = torch.Generator(device=device)
 
         retrain = network_properties["retrain"]
         if retrain > 0:

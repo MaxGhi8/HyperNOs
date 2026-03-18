@@ -17,6 +17,7 @@ from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from tensorboardX import SummaryWriter
 from torch import Tensor
+from torch.nn.parameter import UninitializedParameter
 
 
 #########################################
@@ -96,6 +97,8 @@ def count_params(model):
     par_tot = 0
     bytes_tot = 0
     for par in model.parameters():
+        if isinstance(par, UninitializedParameter):
+            continue
         tmp = reduce(
             operator.mul, list(par.shape + (2,) if par.is_complex() else par.shape), 1
         )
@@ -112,6 +115,8 @@ def count_weight_params(model):
 
     for name, par in model.named_parameters():
         if "weight" in name:
+            if isinstance(par, UninitializedParameter):
+                continue
             tmp = reduce(
                 operator.mul, list(par.shape + (2,) if par.is_complex() else par.shape), 1
             )
@@ -832,6 +837,8 @@ def plot_data_mishra_input(
     plotting: bool = False,
 ):
     if normalization:
+        if type(data_plot) is not torch.Tensor:
+            data_plot = data_plot[0]
         data_plot = (example.max_data - example.min_data) * data_plot + example.min_data
 
     plot_data_generic_2d(data_plot, title, ep, writer, plotting)

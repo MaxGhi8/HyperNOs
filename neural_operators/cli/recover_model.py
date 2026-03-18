@@ -45,7 +45,7 @@ sys.path.append("..")
 import matplotlib.pyplot as plt
 import seaborn as sns
 import torch
-from architectures import CNO, FNO, ResidualNetwork
+from architectures import BAMPNO, CNO, FNO, ResidualNetwork, DeepONet
 from neuralop.models import TFNO, CODANO, RNO, OTNO, UNO, LocalNO
 import deepxde as dde
 from beartype import beartype
@@ -107,6 +107,7 @@ def parse_arguments():
             "ord",
             "crosstruss",
             "afieti_homogeneous_neumann",
+            "afieti_fno",
             "bampno_8_domain",
             "bampno_S_domain",
             "bampno_continuation",
@@ -116,7 +117,7 @@ def parse_arguments():
     parser.add_argument(
         "architecture",
         type=str,
-        choices=["FNO", "CNO", "ResNet", "FNO_lin", "BAMPNO", "TFNO", "CODANO", "RNO", "OTNO", "UNO", "LocalNO", "DeepONet", "MIONet", "PODDeepONet", "PODMIONet"],
+        choices=["FNO", "CNO", "ResNet", "FNO_lin", "BAMPNO", "DON", "TFNO", "CODANO", "RNO", "OTNO", "UNO", "LocalNO", "DeepONet", "MIONet", "PODDeepONet", "PODMIONet"],
         help="Select the architecture to use.",
     )
     parser.add_argument(
@@ -213,7 +214,7 @@ try:
 
     try:
         example = NO_load_data_model(
-            which_example=which_example,
+            which_example=which_example + "_don" if arc == "DON" else which_example,
             no_architecture={
                 "FourierF": default_hyper_params.get("FourierF", 0),
                 "retrain": default_hyper_params.get("retrain", 4),
@@ -357,6 +358,22 @@ try:
                     ),
                     default_hyper_params["retrain"],
                 )
+            
+            case "DON":
+                model = DeepONet(
+                    branch_hyperparameters=default_hyper_params["branch_hyperparameters"],
+                    trunk_hyperparameters=default_hyper_params["trunk_hyperparameters"],
+                    n_basis=default_hyper_params["n_basis"],
+                    n_output=default_hyper_params["n_output"],
+                    dim=default_hyper_params["problem_dim"],
+                    device=device,
+                )
+                model = wrap_model(
+                    model,
+                    which_example + "_don",
+                    grid_size=default_hyper_params["size_grid"],
+                )
+
 
             case "TFNO":
                 model = TFNO(
@@ -565,7 +582,7 @@ loss = loss_selector(loss_fn_str=loss_fn_str, problem_dim=problem_dim, beta=beta
 # Data loader
 #########################################
 example = NO_load_data_model(
-    which_example=which_example,
+    which_example=which_example + "_don" if arc == "DON" else which_example,
     no_architecture={
         "FourierF": hyperparams["FourierF"],
         "retrain": retrain,
@@ -579,6 +596,17 @@ train_loader = example.train_loader
 val_loader = example.val_loader
 test_loader = example.test_loader
 
+train_input_sample = next(iter(train_loader))[0]
+val_input_sample = next(iter(val_loader))[0]
+test_input_sample = next(iter(test_loader))[0]
+
+def get_shape(x):
+    if hasattr(x, "shape"):
+        return x.shape
+    elif isinstance(x, (list, tuple)):
+        return [get_shape(xi) for xi in x]
+    return "Unknown"
+
 if val_samples is None:
     val_samples = len(val_loader.dataset)
 if test_samples is None:
@@ -588,9 +616,9 @@ if training_samples is None:
 
 print(
     "Dimension of datasets inputs are:",
-    next(iter(train_loader))[0].shape,
-    next(iter(val_loader))[0].shape,
-    next(iter(test_loader))[0].shape,
+    get_shape(train_input_sample),
+    get_shape(val_input_sample),
+    get_shape(test_input_sample),
 )
 print(
     "Dimension of datasets outputs are:",
@@ -650,6 +678,7 @@ print(f"Total Model Size: {total_bytes:,} bytes ({total_mb:.2f} MB)")
 
 #########################################
 # Compute mean error and print it
+# Using the same batch-by-batch approach as in training for consistency
 #########################################
 if arc == "BAMPNO":
     train_relative_l2_tensor = ChebyshevLprelLoss_mp(2, None)(
@@ -663,56 +692,218 @@ if arc == "BAMPNO":
     )
 
 else:
-    # Error tensors
-    # train_relative_l1_tensor = LprelLoss(1, None)(
-    #     train_output_tensor, train_prediction_tensor
-    # )
-    test_relative_l1_tensor = LprelLoss(1, None)(output_tensor, prediction_tensor)
+    # Compute errors batch-by-batch to match training exactly
+    with torch.no_grad():
+        model.eval()
 
-    train_relative_l2_tensor = LprelLoss(2, None)(
-        train_output_tensor, train_prediction_tensor
-    )
-    test_relative_l2_tensor = LprelLoss(2, None)(output_tensor, prediction_tensor)
+        ## TEST SET ##
+        test_relative_l1 = 0.0
+        test_relative_l2 = 0.0
+        test_relative_semih1 = 0.0
+        test_relative_h1 = 0.0
+        test_samples_count = 0
 
-    if problem_dim == 1:
-        # train_relative_semih1_tensor = H1relLoss_1D(1.0, None, 0.0)(
-        #     train_output_tensor, train_prediction_tensor
-        # )
-        # train_relative_h1_tensor = H1relLoss_1D(1.0, None)(
-        #     train_output_tensor, train_prediction_tensor
-        # )
+        # Initialize empty tensors to accumulate per-sample errors
+        test_relative_l1_tensor = torch.tensor([]).to(device)
+        test_relative_l2_tensor = torch.tensor([]).to(device)
+        test_relative_semih1_tensor = torch.tensor([]).to(device)
+        test_relative_h1_tensor = torch.tensor([]).to(device)
 
-        test_relative_semih1_tensor = H1relLoss_1D(1.0, None, 0.0)(
-            output_tensor, prediction_tensor
-        )
-        test_relative_h1_tensor = H1relLoss_1D(1.0, None)(
-            output_tensor, prediction_tensor
-        )
+        # Compute loss on the test set
+        for input_batch, output_batch in test_loader:
+            if isinstance(input_batch, (list, tuple)):
+                input_batch = [i.to(device) for i in input_batch]
+                test_samples_count += input_batch[0].shape[0]
+            else:
+                input_batch = input_batch.to(device)
+                test_samples_count += input_batch.shape[0]
+            output_batch = output_batch.to(device)
 
-    elif problem_dim == 2:
-        # train_relative_semih1_tensor = H1relLoss(1.0, None, 0.0)(
-        #     train_output_tensor, train_prediction_tensor
-        # )
-        # train_relative_h1_tensor = H1relLoss(1.0, None)(
-        #     train_output_tensor, train_prediction_tensor
-        # )
+            # compute the output
+            output_pred_batch = model.forward(input_batch)
 
-        test_relative_semih1_tensor = H1relLoss(1.0, None, 0.0)(
-            output_tensor, prediction_tensor
-        )
-        test_relative_h1_tensor = H1relLoss(1.0, None)(output_tensor, prediction_tensor)
+            # compute the relative L^1 error (for mean)
+            loss_f = LprelLoss(1, False)(output_pred_batch, output_batch)
+            test_relative_l1 += loss_f.item()
+            # compute per-sample L^1 error (for median and tensor)
+            l1_tensor_batch = LprelLoss(1, None)(output_pred_batch, output_batch)
+            test_relative_l1_tensor = torch.cat(
+                (test_relative_l1_tensor, l1_tensor_batch), dim=0
+            )
 
-    # Error mean
-    test_mean_l1 = test_relative_l1_tensor.mean().item()
-    test_mean_l2 = test_relative_l2_tensor.mean().item()
-    test_mean_semih1 = test_relative_semih1_tensor.mean().item()
-    test_mean_h1 = test_relative_h1_tensor.mean().item()
+            # compute the relative L^2 error (for mean)
+            test_relative_l2 += LprelLoss(2, False)(
+                output_pred_batch, output_batch
+            ).item()
+            # compute per-sample L^2 error (for median and tensor)
+            l2_tensor_batch = LprelLoss(2, None)(output_pred_batch, output_batch)
+            test_relative_l2_tensor = torch.cat(
+                (test_relative_l2_tensor, l2_tensor_batch), dim=0
+            )
 
-    # Error median
+            # compute the relative semi-H^1 error and H^1 error
+            if problem_dim == 1:
+                test_relative_semih1 += H1relLoss_1D(1.0, False, 0.0)(
+                    output_pred_batch, output_batch
+                ).item()
+                test_relative_h1 += H1relLoss_1D(1.0, False)(
+                    output_pred_batch, output_batch
+                ).item()
+                # compute per-sample semi-H^1 and H^1 errors
+                semih1_tensor_batch = H1relLoss_1D(1.0, None, 0.0)(
+                    output_pred_batch, output_batch
+                )
+                h1_tensor_batch = H1relLoss_1D(1.0, None)(
+                    output_pred_batch, output_batch
+                )
+                test_relative_semih1_tensor = torch.cat(
+                    (test_relative_semih1_tensor, semih1_tensor_batch), dim=0
+                )
+                test_relative_h1_tensor = torch.cat(
+                    (test_relative_h1_tensor, h1_tensor_batch), dim=0
+                )
+
+            elif problem_dim == 2:
+                test_relative_semih1 += H1relLoss(1.0, False, 0.0)(
+                    output_pred_batch, output_batch
+                ).item()
+                test_relative_h1 += H1relLoss(1.0, False)(
+                    output_pred_batch, output_batch
+                ).item()
+                # compute per-sample semi-H^1 and H^1 errors
+                semih1_tensor_batch = H1relLoss(1.0, None, 0.0)(
+                    output_pred_batch, output_batch
+                )
+                h1_tensor_batch = H1relLoss(1.0, None)(output_pred_batch, output_batch)
+                test_relative_semih1_tensor = torch.cat(
+                    (test_relative_semih1_tensor, semih1_tensor_batch), dim=0
+                )
+                test_relative_h1_tensor = torch.cat(
+                    (test_relative_h1_tensor, h1_tensor_batch), dim=0
+                )
+
+        # Average over all test samples
+        test_mean_l1 = test_relative_l1 / test_samples_count
+        test_mean_l2 = test_relative_l2 / test_samples_count
+        test_mean_semih1 = test_relative_semih1 / test_samples_count
+        test_mean_h1 = test_relative_h1 / test_samples_count
+
+        ## TRAIN SET ##
+        # Compute errors for training set
+        train_relative_l1 = 0.0
+        train_relative_l2 = 0.0
+        train_relative_semih1 = 0.0
+        train_relative_h1 = 0.0
+        train_samples_count = 0
+
+        # Initialize empty tensors to accumulate per-sample training errors
+        train_relative_l1_tensor = torch.tensor([]).to(device)
+        train_relative_l2_tensor = torch.tensor([]).to(device)
+        train_relative_semih1_tensor = torch.tensor([]).to(device)
+        train_relative_h1_tensor = torch.tensor([]).to(device)
+
+        # Compute loss on the training set
+        for input_batch, output_batch in train_loader:
+            if isinstance(input_batch, (list, tuple)):
+                input_batch = [i.to(device) for i in input_batch]
+                train_samples_count += input_batch[0].shape[0]
+            else:
+                input_batch = input_batch.to(device)
+                train_samples_count += input_batch.shape[0]
+            output_batch = output_batch.to(device)
+
+            # compute the output
+            output_pred_batch = model.forward(input_batch)
+
+            # compute the relative L^1 error (for mean)
+            loss_f = LprelLoss(1, False)(output_pred_batch, output_batch)
+            train_relative_l1 += loss_f.item()
+            # compute per-sample L^1 error (for median and tensor)
+            l1_tensor_batch = LprelLoss(1, None)(output_pred_batch, output_batch)
+            train_relative_l1_tensor = torch.cat(
+                (train_relative_l1_tensor, l1_tensor_batch), dim=0
+            )
+
+            # compute the relative L^2 error (for mean)
+            train_relative_l2 += LprelLoss(2, False)(
+                output_pred_batch, output_batch
+            ).item()
+            # compute per-sample L^2 error (for median and tensor)
+            l2_tensor_batch = LprelLoss(2, None)(output_pred_batch, output_batch)
+            train_relative_l2_tensor = torch.cat(
+                (train_relative_l2_tensor, l2_tensor_batch), dim=0
+            )
+
+            # compute the relative semi-H^1 error and H^1 error
+            if problem_dim == 1:
+                train_relative_semih1 += H1relLoss_1D(1.0, False, 0.0)(
+                    output_pred_batch, output_batch
+                ).item()
+                train_relative_h1 += H1relLoss_1D(1.0, False)(
+                    output_pred_batch, output_batch
+                ).item()
+                # compute per-sample semi-H^1 and H^1 errors
+                semih1_tensor_batch = H1relLoss_1D(1.0, None, 0.0)(
+                    output_pred_batch, output_batch
+                )
+                h1_tensor_batch = H1relLoss_1D(1.0, None)(
+                    output_pred_batch, output_batch
+                )
+                train_relative_semih1_tensor = torch.cat(
+                    (train_relative_semih1_tensor, semih1_tensor_batch), dim=0
+                )
+                train_relative_h1_tensor = torch.cat(
+                    (train_relative_h1_tensor, h1_tensor_batch), dim=0
+                )
+
+            elif problem_dim == 2:
+                train_relative_semih1 += H1relLoss(1.0, False, 0.0)(
+                    output_pred_batch, output_batch
+                ).item()
+                train_relative_h1 += H1relLoss(1.0, False)(
+                    output_pred_batch, output_batch
+                ).item()
+                # compute per-sample semi-H^1 and H^1 errors
+                semih1_tensor_batch = H1relLoss(1.0, None, 0.0)(
+                    output_pred_batch, output_batch
+                )
+                h1_tensor_batch = H1relLoss(1.0, None)(output_pred_batch, output_batch)
+                train_relative_semih1_tensor = torch.cat(
+                    (train_relative_semih1_tensor, semih1_tensor_batch), dim=0
+                )
+                train_relative_h1_tensor = torch.cat(
+                    (train_relative_h1_tensor, h1_tensor_batch), dim=0
+                )
+
+        # Average over all training samples
+        train_mean_l1 = train_relative_l1 / train_samples_count
+        train_mean_l2 = train_relative_l2 / train_samples_count
+        train_mean_semih1 = train_relative_semih1 / train_samples_count
+        train_mean_h1 = train_relative_h1 / train_samples_count
+
+    # Error median for test set
     test_median_l1 = torch.median(test_relative_l1_tensor).item()
     test_median_l2 = torch.median(test_relative_l2_tensor).item()
     test_median_semih1 = torch.median(test_relative_semih1_tensor).item()
     test_median_h1 = torch.median(test_relative_h1_tensor).item()
+
+    # Error median for training set
+    train_median_l1 = torch.median(train_relative_l1_tensor).item()
+    train_median_l2 = torch.median(train_relative_l2_tensor).item()
+    train_median_semih1 = torch.median(train_relative_semih1_tensor).item()
+    train_median_h1 = torch.median(train_relative_h1_tensor).item()
+
+    print("Train mean relative l1 norm: ", train_mean_l1)
+    print("Train mean relative l2 norm: ", train_mean_l2)
+    print("Train mean relative semi h1 norm: ", train_mean_semih1)
+    print("Train mean relative h1 norm: ", train_mean_h1)
+    print("")
+
+    print("Train median relative l1 norm: ", train_median_l1)
+    print("Train median relative l2 norm: ", train_median_l2)
+    print("Train median relative semi h1 norm: ", train_median_semih1)
+    print("Train median relative h1 norm: ", train_median_h1)
+    print("")
 
     print("Test mean relative l1 norm: ", test_mean_l1)
     print("Test mean relative l2 norm: ", test_mean_l2)
@@ -814,7 +1005,11 @@ except AttributeError:
 # evaluation of all the test set
 t_1 = time.time()
 with torch.no_grad():
-    _ = model(input_tensor)
+    if arc == "DON":
+        trunk = next(iter(test_loader))[0][1].to(device)
+        _ = model((input_tensor, trunk))
+    else:
+        _ = model(input_tensor)
 t_2 = time.time()
 print(f"Time for evaluation of {input_tensor.shape[0]} solutions is: ", t_2 - t_1)
 
@@ -822,7 +1017,11 @@ print(f"Time for evaluation of {input_tensor.shape[0]} solutions is: ", t_2 - t_
 ex = input_tensor[[0], ...]
 t_1 = time.time()
 with torch.no_grad():
-    _ = model(ex)
+    if arc == "DON":
+        trunk = next(iter(test_loader))[0][1].to(device)
+        _ = model((ex, trunk))
+    else:
+        _ = model(ex)
 t_2 = time.time()
 print(f"Time for evaluation of one solution is: ", t_2 - t_1)
 print("")

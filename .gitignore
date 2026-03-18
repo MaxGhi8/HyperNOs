@@ -7,8 +7,4 @@ train_loss/
 **/figures/
 *.png
 
-**/BAMPNO/
-**/FNO_lin/
-
 uv.lock
-neuraloperator/

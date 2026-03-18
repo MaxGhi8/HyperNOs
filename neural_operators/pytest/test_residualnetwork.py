@@ -3,10 +3,16 @@ import sys
 sys.path.append("..")
 
 import torch
-from architectures import ResidualNetwork, centered_softmax, zero_mean_imposition
+from architectures import (
+    ResidualBlock,
+    ResidualNetwork,
+    centered_softmax,
+    zero_mean_imposition,
+)
 from datasets import NO_load_data_model
 
-torch.set_default_dtype(torch.float64)
+torch.set_default_dtype(torch.float32)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def test_centered_softmax():
@@ -23,6 +29,17 @@ def test_zero_mean_imposition():
     assert torch.allclose(x.sum(dim=1), torch.zeros(32), atol=1e-6)
 
 
+def test_residual_block():
+    hidden_channels = [5, 42, 5]
+    block = ResidualBlock(hidden_channels, "relu", device=device)
+    batch_size = 32
+    input = torch.rand(batch_size, hidden_channels[0]).to(device)
+    output = block.forward(input)
+    # test if the block runs
+    assert output.shape[-1] == hidden_channels[-1]
+    assert output.shape[0] == batch_size
+
+
 def test_residualnetwork():
     in_channels = 7
     out_channels = 3
@@ -30,10 +47,10 @@ def test_residualnetwork():
     n_blocks = 2
     activation_str = "relu"
     model = ResidualNetwork(
-        in_channels, out_channels, hidden_channels, activation_str, n_blocks
+        in_channels, out_channels, hidden_channels, activation_str, n_blocks, device=device
     )
     batch_size = 32
-    input = torch.rand(batch_size, in_channels)
+    input = torch.rand(batch_size, in_channels).to(device)
     output = model.forward(input)
     # test if the model runs
     assert output.shape[-1] == out_channels
@@ -47,6 +64,7 @@ def test_residualnetwork():
         activation_str,
         n_blocks,
         zero_mean=True,
+        device=device,
     )
     output = model.forward(input)
     assert output.shape[-1] == out_channels
@@ -85,6 +103,11 @@ def test_residual_normalization():
     )
 
     input = torch.rand(batch_size, in_channels)
+    output = model.forward(input)
+    assert output.shape[-1] == out_channels
+    assert output.shape[0] == batch_size
+    # Test zero mean
+    assert torch.allclose(output.sum(dim=1), torch.zeros(batch_size), atol=1e-6)
     output = model.forward(input)
     assert output.shape[-1] == out_channels
     assert output.shape[0] == batch_size

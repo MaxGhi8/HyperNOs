@@ -5,13 +5,13 @@ from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from torch import Tensor
 
-torch.set_default_dtype(torch.float32)  # default tensor dtype
+torch.set_default_dtype(torch.float32)
 
 
 #########################################
 # activation function
 #########################################
-def activation_fun(activation_str):
+def activation_fun(activation_str: str) -> nn.Module:
     """
     Activation function to be used within the network.
     The function is the same throughout the network.
@@ -30,6 +30,9 @@ def activation_fun(activation_str):
         raise ValueError("Not implemented activation function")
 
 
+#########################################
+# centered softmax and zero mean imposition
+#########################################
 @jaxtyped(typechecker=beartype)
 def centered_softmax(x: Float[Tensor, "n_samples n"]) -> Float[Tensor, "n_samples n"]:
     """
@@ -53,7 +56,8 @@ def zero_mean_imposition(
 #########################################
 class ResidualBlock(nn.Module):
     """
-    Residual block for the ResNet
+    Residual block for the ResNet: x -> x + F(x)
+    Where F is a feedforward neural network, with optional layer normalization and dropout.
     """
 
     def __init__(
@@ -62,10 +66,20 @@ class ResidualBlock(nn.Module):
         activation_str: str,
         layer_norm: bool = False,
         dropout_rate: float = 0.0,
+        device: torch.device = torch.device("cpu"),
     ) -> None:
         super(ResidualBlock, self).__init__()
+
+        # assert (
+        #     len(hidden_channels) >= 2
+        # ), "Hidden channels must have at least two elements, i.e. input, output"
+        assert (
+            hidden_channels[0] == hidden_channels[-1]
+        ), "Input and output dimensions must be the same for being concatenated in the residual block"
+
         self.hidden_channels = hidden_channels
 
+        ## Construct the residual block
         modules = []
         for i in range(len(self.hidden_channels) - 1):
             # Affine layer
@@ -73,19 +87,21 @@ class ResidualBlock(nn.Module):
                 nn.Linear(self.hidden_channels[i], self.hidden_channels[i + 1])
             )
 
-            # Layer normalization
-            if layer_norm:
-                modules.append(nn.LayerNorm(self.hidden_channels[i + 1]))
-
             # Activation function (except for the last layer)
             if i < len(self.hidden_channels) - 2:
+                # Layer normalization
+                if layer_norm:
+                    modules.append(nn.LayerNorm(self.hidden_channels[i + 1]))
+
                 modules.append(activation_fun(activation_str))
 
-                # Add dropout if specified
+                # Add dropout
                 if dropout_rate > 0:
                     modules.append(nn.Dropout(dropout_rate))
 
         self.res_block = nn.Sequential(*modules)
+
+        self.to(device)
 
         # Kaiming initialization
         try:
@@ -148,6 +164,7 @@ class ResidualNetwork(nn.Module):
         device: torch.device = torch.device("cpu"),
         layer_norm: bool = False,
         dropout_rate: float = 0.0,
+        activation_on_output: bool = False,
         zero_mean: bool = False,
         example_input_normalizer=None,
         example_output_normalizer=None,
@@ -172,6 +189,7 @@ class ResidualNetwork(nn.Module):
             nn.Linear(in_channels, hidden_channels[0]),
             nn.LayerNorm(hidden_channels[0]) if layer_norm else nn.Identity(),
             activation_fun(activation_str),
+            # nn.Dropout(dropout_rate) if dropout_rate > 0 else nn.Identity(), #! Do not use dropout here (IDK why)
         )
 
         self.residual_blocks = nn.Sequential(
@@ -187,6 +205,9 @@ class ResidualNetwork(nn.Module):
         )
 
         self.output_layer = nn.Linear(hidden_channels[-1], out_channels)
+        self.output_layer_activation = (
+            activation_fun(activation_str) if activation_on_output else nn.Identity()
+        )
 
         self.output_denormalizer = (
             nn.Identity()
@@ -197,15 +218,16 @@ class ResidualNetwork(nn.Module):
         self.post_processing = zero_mean_imposition if zero_mean else nn.Identity()
 
         # Kaiming initialization
-        # try:
-        #     self._init_weights(activation_str)
-        # except Exception as e:
-        #     print(
-        #         "Warning: Kaiming initialization failed. Using default initialization."
-        #     )
+        try:
+            self._init_weights(activation_str)
+        except Exception as e:
+            print(
+                "Warning: Kaiming initialization failed. Using default initialization."
+            )
 
         # Move the model to the specified device
         self.to(device)
+        self.device = device
 
         # Enable JIT compilation for better performance if PyTorch version supports it
         if hasattr(torch, "compile") and torch.__version__ >= "2.0.0":
@@ -235,8 +257,13 @@ class ResidualNetwork(nn.Module):
         self, x: Float[Tensor, "n_samples {self.in_channels}"]
     ) -> Float[Tensor, "n_samples {self.out_channels}"]:
 
+        # norm = torch.norm(x, p=2, dim=1, keepdim=True)
+        # x = x / norm
+
         x = self.input_layer(self.input_normalizer(x))
         x = self.residual_blocks(x)
-        x = self.output_layer(x)
+        x = self.output_layer_activation(self.output_layer(x))
+
+        # x = self.output_layer(x) * norm
 
         return self.post_processing(self.output_denormalizer(x))
