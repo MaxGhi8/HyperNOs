@@ -31,6 +31,14 @@ import json
 import os
 import sys
 import time
+from unittest.mock import MagicMock
+
+# Mock torch_harmonics to allow importing LocalNO without it installed
+if 'torch_harmonics' not in sys.modules:
+    mock_harmonics = MagicMock()
+    sys.modules['torch_harmonics'] = mock_harmonics
+    sys.modules['torch_harmonics.quadrature'] = MagicMock()
+    sys.modules['torch_harmonics.filter_basis'] = MagicMock()
 
 sys.path.append("..")
 
@@ -38,6 +46,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import torch
 from architectures import BAMPNO, CNO, FNO, ResidualNetwork, DeepONet
+from neuralop.models import TFNO, CODANO, RNO, OTNO, UNO, LocalNO
+import deepxde as dde
 from beartype import beartype
 from cli.utilities_recover_model import get_tensors, test_fun, test_plot_samples
 from datasets import NO_load_data_model
@@ -45,11 +55,9 @@ from datasets import NO_load_data_model
 # from architectures import FNO_lin
 from jaxtyping import Float, jaxtyped
 from loss_fun import (
-    ChebyshevLprelLoss_mp,
     H1relLoss,
     H1relLoss_1D,
     H1relLoss_1D_multiout,
-    H1relLoss_cheb_mp,
     H1relLoss_multiout,
     LprelLoss,
     LprelLoss_multiout,
@@ -109,7 +117,7 @@ def parse_arguments():
     parser.add_argument(
         "architecture",
         type=str,
-        choices=["FNO", "CNO", "ResNet", "FNO_lin", "BAMPNO", "DON"],
+        choices=["FNO", "CNO", "ResNet", "FNO_lin", "BAMPNO", "DON", "TFNO", "CODANO", "RNO", "OTNO", "UNO", "LocalNO", "DeepONet", "MIONet", "PODDeepONet", "PODMIONet"],
         help="Select the architecture to use.",
     )
     parser.add_argument(
@@ -129,6 +137,7 @@ def parse_arguments():
             "best_50M",  # for the cont_tran FNO tests
             "best_150M",  # for the cont_tran FNO tests
             "best_500k",  # for the cont_tran FNO tests
+            "testing",
         ],
         help="Select the hyper-params to use for define the architecture and the training, we have implemented the 'best' and 'default' options.",
     )
@@ -161,12 +170,22 @@ Norm_dict = {"L1": 0, "L2": 1, "H1": 2, "L1_SMOOTH": 3, "MSE": 4}
 
 # upload the model and the hyperparameters
 folder = f"../tests/{arc}/{which_example}/loss_{loss_fn_str}_mode_{mode_str}/"
+
+# Here I load the possibility to not have the _mode_ in the folder name (to handle both json and dict loading)
+if not os.path.exists(folder):
+    alt_folder = f"../tests/{arc}/{which_example}/loss_{loss_fn_str}_{mode_str}/"
+    if os.path.exists(alt_folder):
+        print(f"Standard folder not found, using alternative path: {alt_folder}")
+        folder = alt_folder
+
 files = os.listdir(folder)
 name_model = folder + [file for file in files if file.startswith("model_")][0]
 print("Model name: ", name_model)
 
 try:
-    try:  # For models saved with torch.save(model.state_dict())
+    
+    #### Try to load `hyperparameters` 
+    try:
         # Load the default hyperparameters for the model
         hyperparams_train, hyperparams_arc = initialize_hyperparameters(
             arc, which_example, mode_str
@@ -176,12 +195,29 @@ try:
             **hyperparams_train,
             **hyperparams_arc,
         }
+        hyperparams = default_hyper_params
+        print("Loaded hyperparameters from default configurations")
 
+    except FileNotFoundError:
+        print("Default configuration not found, trying to load from chosed_hyperparams.json")
+        with open(folder + "/chosed_hyperparams.json", "r") as f:
+            hyperparams = json.load(f)
+        default_hyper_params = hyperparams
+        print("Loaded hyperparameters from chosed_hyperparams.json")
+
+    #### Load the datasets
+    # DeepXDE changes default tensor type to CUDA if available, which breaks datasets.py DataLoader generator
+    if torch.cuda.is_available():
+        torch.set_default_dtype(torch.float32)
+        if hasattr(torch, "set_default_device"):
+            torch.set_default_device("cpu")
+
+    try:
         example = NO_load_data_model(
             which_example=which_example + "_don" if arc == "DON" else which_example,
             no_architecture={
-                "FourierF": default_hyper_params["FourierF"],
-                "retrain": default_hyper_params["retrain"],
+                "FourierF": default_hyper_params.get("FourierF", 0),
+                "retrain": default_hyper_params.get("retrain", 4),
             },
             batch_size=default_hyper_params["batch_size"],
             training_samples=default_hyper_params["training_samples"],
@@ -191,6 +227,12 @@ try:
                 else None
             ),
         )
+    except Exception as e:
+        print(f"Error loading data: {e}")
+        raise e
+
+    #### Load the model
+    try:  # For models saved with torch.save(model.state_dict())
 
         match arc:
             case "FNO":
@@ -333,52 +375,205 @@ try:
                 )
 
 
+            case "TFNO":
+                model = TFNO(
+                    n_modes=(default_hyper_params["modes"], default_hyper_params["modes"]),
+                    hidden_channels=default_hyper_params["width"],
+                    n_layers=default_hyper_params["n_layers"],
+                    in_channels=default_hyper_params["input_dim"],
+                    out_channels=default_hyper_params["out_dim"],
+                    factorization="tucker",
+                    implementation="factorized",
+                    rank=default_hyper_params["rank"],
+                )
+                model = wrap_model(model, which_example + "_neural_operator")
+
+            case "CODANO":
+                model = CODANO(
+                    n_modes=[[default_hyper_params["modes"]] * default_hyper_params["problem_dim"]] * default_hyper_params["n_layers"],
+                    hidden_variable_codimension=default_hyper_params["width"],
+                    lifting_channels=default_hyper_params["width"],
+                    projection_channels=default_hyper_params["width"],
+                    n_layers=default_hyper_params["n_layers"],
+                    output_variable_codimension=default_hyper_params["out_dim"], 
+                    n_heads=[1] * default_hyper_params["n_layers"],
+                    per_layer_scaling_factors=[[1] * default_hyper_params["problem_dim"]] * default_hyper_params["n_layers"],
+                    attention_scaling_factors=[1] * default_hyper_params["n_layers"],
+                )
+                model = wrap_model(model, which_example + "_neural_operator")
+
+            case "RNO":
+                model = RNO(
+                    n_modes=(default_hyper_params["modes"], default_hyper_params["modes"]),
+                    hidden_channels=default_hyper_params["width"],
+                    n_layers=default_hyper_params["n_layers"],
+                    in_channels=default_hyper_params["input_dim"],
+                    out_channels=default_hyper_params["out_dim"],
+                    factorization="tucker",
+                    rank=default_hyper_params["rank"],
+                )
+                model = wrap_model(model, f"RNO_{which_example}")
+
+            case "OTNO":
+                model = OTNO(
+                    n_modes=(default_hyper_params["modes"], default_hyper_params["modes"]),
+                    hidden_channels=default_hyper_params["width"],
+                    n_layers=default_hyper_params["n_layers"],
+                    in_channels=default_hyper_params["input_dim"],
+                    out_channels=default_hyper_params["out_dim"],
+                    factorization="tucker",
+                    rank=default_hyper_params["rank"],
+                )
+                model = wrap_model(model, f"OTNO_{which_example}")
+
+            case "UNO":
+                model = UNO(
+                    in_channels=default_hyper_params["input_dim"],
+                    out_channels=default_hyper_params["out_dim"],
+                    hidden_channels=default_hyper_params["width"],
+                    n_layers=default_hyper_params["n_layers"],
+                    uno_out_channels=[default_hyper_params["width"], default_hyper_params["width"]*2, default_hyper_params["width"]*2, default_hyper_params["width"]*2, default_hyper_params["width"]],
+                    uno_n_modes=[[default_hyper_params.get("modes", 16), default_hyper_params.get("modes", 16)]] * 5,
+                    uno_scalings=[[1.0, 1.0], [0.5, 0.5], [1.0, 1.0], [2.0, 2.0], [1.0, 1.0]],
+                    channel_mlp_skip="linear",
+                )
+                model = wrap_model(model, which_example + "_neural_operator")
+
+            case "LocalNO":
+                model = LocalNO(
+                    n_modes=(default_hyper_params["modes"], default_hyper_params["modes"]),
+                    hidden_channels=default_hyper_params["width"],
+                    n_layers=default_hyper_params["n_layers"],
+                    in_channels=default_hyper_params["input_dim"],
+                    out_channels=default_hyper_params["out_dim"],
+                    default_in_shape=(64, 64),
+                    factorization="tucker",
+                    implementation="factorized",
+                    rank=default_hyper_params["rank"],
+                    disco_layers=False,
+                )
+                model = wrap_model(model, which_example + "_neural_operator")
+
+            case "DeepONet":
+                input_dim = default_hyper_params["width"] * default_hyper_params["width"] * (1 + 2 * default_hyper_params.get("FourierF", 0))
+                p = default_hyper_params["network_width"]
+                layer_sizes_branch = [input_dim] + [default_hyper_params["network_width"]] * default_hyper_params["branch_depth"] + [p]
+                layer_sizes_trunk = [2] + [default_hyper_params["network_width"]] * default_hyper_params["trunk_depth"] + [p]
+
+                model = dde.nn.DeepONetCartesianProd(
+                    layer_sizes_branch,
+                    layer_sizes_trunk,
+                    "relu",
+                    "Glorot normal"
+                )
+                model.out_dim = default_hyper_params["out_dim"]
+                model = wrap_model(model, which_example + "_deepxde")
+
+            case "MIONet":
+                input_dim = default_hyper_params["width"] * default_hyper_params["width"] * (1 + 2 * default_hyper_params.get("FourierF", 0))
+                p = default_hyper_params["network_width"]
+                layer_sizes_branch = [input_dim] + [default_hyper_params["network_width"]] * default_hyper_params["branch_depth"] + [p]
+                layer_sizes_trunk = [2] + [default_hyper_params["network_width"]] * default_hyper_params["trunk_depth"] + [p]
+
+                model = dde.nn.MIONetCartesianProd(
+                    layer_sizes_branch, # Branch 1
+                    layer_sizes_branch, # Branch 2 (Assuming symmetric/same size for now based on training script)
+                    layer_sizes_trunk,
+                    "relu",
+                    "Glorot normal"
+                )
+                model.out_dim = default_hyper_params["out_dim"]
+                model = wrap_model(model, which_example + "_mionet_deepxde")
+
+            case "PODDeepONet":
+                input_dim = default_hyper_params["width"] * default_hyper_params["width"] * (1 + 2 * default_hyper_params.get("FourierF", 0))
+                p = default_hyper_params["network_width"]
+                layer_sizes_branch = [input_dim] + [default_hyper_params["network_width"]] * default_hyper_params["branch_depth"] + [p]
+                
+                # Dummy basis for instantiation. Will be overwritten by loaded state_dict.
+                # Shape: (Features, p) -> (input_dim, p)
+                dummy_basis = torch.zeros(input_dim, p)
+
+                model = dde.nn.PODDeepONet(
+                    pod_basis=dummy_basis,
+                    layer_sizes_branch=layer_sizes_branch,
+                    activation="relu",
+                    kernel_initializer="Glorot normal",
+                    layer_sizes_trunk=None
+                )
+                model.out_dim = default_hyper_params["out_dim"]
+                
+                # Ensure buffer registration matches logic needed for loading
+                if hasattr(model, "pod_basis"):
+                    del model.pod_basis
+                    model.register_buffer("pod_basis", dummy_basis)
+
+                model = wrap_model(model, which_example + "_deepxde")
+
+            case "PODMIONet":
+                input_dim = default_hyper_params["width"] * default_hyper_params["width"] * (1 + 2 * default_hyper_params.get("FourierF", 0))
+                p = default_hyper_params["network_width"]
+                layer_sizes_branch = [input_dim] + [default_hyper_params["network_width"]] * default_hyper_params["branch_depth"] + [p]
+                
+                dummy_basis = torch.zeros(input_dim, p)
+
+                model = dde.nn.PODMIONet(
+                    pod_basis=dummy_basis,
+                    layer_sizes_branch1=layer_sizes_branch,
+                    layer_sizes_branch2=layer_sizes_branch,
+                    activation="relu",
+                    kernel_initializer="Glorot normal",
+                    layer_sizes_trunk=None
+                )
+                model.out_dim = default_hyper_params["out_dim"]
+
+                if hasattr(model, "pod_basis"):
+                    del model.pod_basis
+                    model.register_buffer("pod_basis", dummy_basis)
+
+                model = wrap_model(model, which_example + "_mionet_deepxde")
+
+        model = model.to(device)
         checkpoint = torch.load(name_model, weights_only=True, map_location=device)
+
+        # if "_metadata" in checkpoint["state_dict"]:
+        #     del checkpoint["state_dict"]["_metadata"]
+
         model.load_state_dict(checkpoint["state_dict"])
 
-    except Exception:
-        print("Model not found, trying to load the model with torch.load()")
-        # save with torch.save(model)
-        # model = torch.load(name_model, weights_only=False, map_location=device)
+    except Exception as e:
+        print(f"Model not found or weights_only load failed. Error: {e}")
+        print("Trying to load with weights_only=False...")
+        try:
+            checkpoint = torch.load(name_model, weights_only=False, map_location=device)
+            if "_metadata" in checkpoint["state_dict"]:
+                del checkpoint["state_dict"]["_metadata"]
+            model.load_state_dict(checkpoint["state_dict"])
+            print("Model loaded successfully with weights_only=False.")
+        except Exception as e2:
+            print(f"Fallback load failed: {e2}")
+            raise e2
 
 except Exception:
     raise ValueError(
         "The model is not found, please check the hyperparameters passed trhow the CLI."
     )
 
-#########################################
-# Hyperparameters
-#########################################
-# Load `hyperparameters` from JSON
-with open(folder + "/chosed_hyperparams.json", "r") as f:
-    hyperparams = json.load(f)
-
 # Choose the Loss function
 hyperparams["loss_fn_str"] = loss_fn_str
 
 # Training hyperparameters
 batch_size = hyperparams["batch_size"]
-try:
-    beta = hyperparams["beta"]
-except KeyError:
-    beta = 1.0  # default value
+beta = hyperparams.get("beta", 1.0)
 FourierF = hyperparams["FourierF"]
 problem_dim = hyperparams["problem_dim"]
-try:
-    retrain = hyperparams["retrain"]
-except KeyError:
-    retrain = hyperparams["retrain_seed"]
-val_samples = hyperparams["val_samples"]
-test_samples = hyperparams["test_samples"]
-training_samples = hyperparams["training_samples"]
+retrain = hyperparams.get("retrain") or hyperparams.get("retrain_seed") or 4
 
-try:
-    filename = hyperparams["filename"]
-except KeyError:
-    try:
-        filename = hyperparams["grid_filename"]
-    except KeyError:
-        filename = None
+val_samples = hyperparams.get("val_samples")
+test_samples = hyperparams.get("test_samples")
+training_samples = hyperparams.get("training_samples")
+
+filename = hyperparams.get("filename") or hyperparams.get("grid_filename")
 
 # Loss function
 loss = loss_selector(loss_fn_str=loss_fn_str, problem_dim=problem_dim, beta=beta)
@@ -394,14 +589,13 @@ example = NO_load_data_model(
     },
     batch_size=hyperparams["batch_size"],
     training_samples=hyperparams["training_samples"],
-    filename=(
-        default_hyper_params["filename"] if "filename" in default_hyper_params else None
-    ),
+    filename=filename,
 )
 
 train_loader = example.train_loader
 val_loader = example.val_loader
 test_loader = example.test_loader
+
 train_input_sample = next(iter(train_loader))[0]
 val_input_sample = next(iter(val_loader))[0]
 test_input_sample = next(iter(test_loader))[0]
@@ -412,6 +606,13 @@ def get_shape(x):
     elif isinstance(x, (list, tuple)):
         return [get_shape(xi) for xi in x]
     return "Unknown"
+
+if val_samples is None:
+    val_samples = len(val_loader.dataset)
+if test_samples is None:
+    test_samples = len(test_loader.dataset)
+if training_samples is None:
+    training_samples = len(train_loader.dataset)
 
 print(
     "Dimension of datasets inputs are:",
@@ -791,9 +992,12 @@ def compute_dirichlet_error(test_prediction_tensor, example, device):
     return total_error / test_prediction_tensor.shape[0]
 
 
-# error_on_boundary = compute_dirichlet_error(prediction_tensor, example, device)
-# print("Mean absolute error on the boundary (Dirichlet BC): ", error_on_boundary)
-# print("")
+try:
+    error_on_boundary = compute_dirichlet_error(prediction_tensor, example, device)
+    print("Mean absolute error on the boundary (Dirichlet BC): ", error_on_boundary)
+    print("")
+except AttributeError:
+    print("Skipping Dirichlet error computation (X_phys not found in example).")
 
 #########################################
 # Time for evaluation
@@ -1184,7 +1388,7 @@ if which_example == "bampno_8_domain":
         test_relative_l2_tensor,
         "best",
         which_example,
-        ntest=hyperparams["test_samples"],
+        ntest=test_samples,
         str_norm=loss_fn_str,
         n_idx=5,
         X=example.X_phys,
@@ -1198,7 +1402,7 @@ else:
         test_relative_l2_tensor,
         "random",
         which_example,
-        ntest=hyperparams["test_samples"],
+        ntest=test_samples,
         str_norm=loss_fn_str,
         n_idx=2,
     )

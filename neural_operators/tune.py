@@ -1,7 +1,17 @@
 import os
 import tempfile
+import sys
+from unittest.mock import MagicMock
+
+# Mock torch_harmonics for Ray workers to allow importing LocalNO without it installed
+if 'torch_harmonics' not in sys.modules:
+    mock_harmonics = MagicMock()
+    sys.modules['torch_harmonics'] = mock_harmonics
+    sys.modules['torch_harmonics.quadrature'] = MagicMock()
+    sys.modules['torch_harmonics.filter_basis'] = MagicMock()
 
 import torch
+import ray
 from ray import get, init, put, train, tune
 from ray.train import Checkpoint
 from ray.tune.schedulers import ASHAScheduler
@@ -39,12 +49,53 @@ def tune_hyperparameters(
         )
 
     # Initialize Ray
-    init(
-        address="auto",
-        runtime_env={
-            "env_vars": {"PYTHONPATH": os.path.abspath("..")},
-        },
-    )
+    if ray.is_initialized():
+        ray.shutdown()
+
+    # Debug: Check environment variable
+    ray_addr = os.environ.get("RAY_ADDRESS")
+    print(f"DEBUG: RAY_ADDRESS is {ray_addr}")
+
+    runtime_env = {
+        "env_vars": {"PYTHONPATH": f"{os.path.dirname(os.path.dirname(os.path.abspath(__file__)))}:{os.path.dirname(os.path.abspath(__file__))}"},
+    }
+
+    if ray_addr:
+        try:
+            init(
+                address="auto",
+                ignore_reinit_error=True,
+                runtime_env=runtime_env,
+            )
+            print("Ray initialized (connected to existing cluster).")
+        except Exception as e:
+            print(f"Could not connect to existing cluster: {e}. Falling back to local initialization...")
+            if ray.is_initialized():
+                ray.shutdown()
+            
+            # Use a fresh temp dir to avoid zombie sessions
+            tmp_dir = tempfile.mkdtemp(prefix="ray_hypernos_")
+            print(f"DEBUG: Starting local Ray in {tmp_dir}")
+            
+            init(
+                address=None,
+                ignore_reinit_error=True,
+                runtime_env=runtime_env,
+                _temp_dir=tmp_dir,
+            )
+            print("Ray initialized (local fallback).")
+    else:
+        # Use a fresh temp dir to avoid zombie sessions
+        tmp_dir = tempfile.mkdtemp(prefix="ray_hypernos_")
+        print(f"DEBUG: Starting local Ray in {tmp_dir}")
+        
+        init(
+            address=None,
+            ignore_reinit_error=True,
+            runtime_env=runtime_env,
+            _temp_dir=tmp_dir,
+        )
+        print("Ray initialized (local).")
 
     # puts large builders in Ray's object store
     dataset_builder_ref = put(dataset_builder)
@@ -58,6 +109,14 @@ def tune_hyperparameters(
         actual_dataset_builder = get(dataset_builder_ref)
         actual_loss_fn = get(loss_fn_ref)
         actual_loss_phys = get(loss_phys_ref)
+
+        # # Merge with default hyperparameters if available
+        # # default_hyper_params is a list at this point (due to logic below or input)
+        # # We take the first element as the base configuration
+        # if default_hyper_params and isinstance(default_hyper_params, list) and len(default_hyper_params) > 0:
+        #     full_config = default_hyper_params[0].copy()
+        #     full_config.update(config)
+        #     config = full_config
 
         dataset = actual_dataset_builder(config)
         model = actual_model_builder(config)
@@ -89,7 +148,6 @@ def tune_hyperparameters(
         stop_last_trials=True,
     )
 
-    # Define the search algorithm
     search_alg = HyperOptSearch(
         metric="relative_loss",
         mode="min",
@@ -137,6 +195,7 @@ def train_model(
     checkpoint_freq: int = 500,
     loss_phys=lambda x, y: 0.0,
 ):
+    model = model.to(device)
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=learning_rate,

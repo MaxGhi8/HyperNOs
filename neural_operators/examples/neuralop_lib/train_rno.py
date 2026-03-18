@@ -1,19 +1,19 @@
 """
-In this example I fix all the hyperparameters for the FNO model and train it.
+In this example I fix all the hyperparameters for the RNO model and train it.
 """
 
 import os
 import sys
 
-sys.path.append("..")
+sys.path.append("../../")
 from datasets import NO_load_data_model
 from loss_fun import loss_selector
-from neuralop.models import TFNO
+from neuralop.models import RNO
 from train import train_fixed_model
 from utilities import get_plot_function
+from wrappers import wrap_model_builder
 
-
-def train_tfno(which_example: str, loss_fn_str: str):
+def train_rno(which_example: str, loss_fn_str: str):
 
     default_hyper_params = {
         "training_samples": 1024,
@@ -24,7 +24,7 @@ def train_tfno(which_example: str, loss_fn_str: str):
         "scheduler_step": 10,
         "scheduler_gamma": 0.98,
         "beta": 1,
-        "width": 64,
+        "width": 32,
         "modes": 16,
         "n_layers": 4,
         "input_dim": 1,
@@ -36,16 +36,18 @@ def train_tfno(which_example: str, loss_fn_str: str):
     }
 
     # Define the model builders
-    model_builder = lambda config: TFNO(
+    model_builder = lambda config: RNO(
         n_modes=(config["modes"], config["modes"]),
         hidden_channels=config["width"],
         n_layers=config["n_layers"],
-        in_channels=config["input_dim"] + 2,  # for the grid
+        in_channels=config["input_dim"],
         out_channels=config["out_dim"],
         factorization="tucker",
-        implementation="factorized",
         rank=config["rank"],
     )
+    
+    # Wrap the model builder to use RNOWrapper
+    model_builder = wrap_model_builder(model_builder, f"RNO_{which_example}")
 
     # Define the dataset builder
     dataset_builder = lambda config: NO_load_data_model(
@@ -65,10 +67,10 @@ def train_tfno(which_example: str, loss_fn_str: str):
         beta=default_hyper_params["beta"],
     )
 
-    experiment_name = f"TFNO/{which_example}/loss_{loss_fn_str}_mode_testing"
+    experiment_name = f"RNO/{which_example}/loss_{loss_fn_str}_mode_testing"
 
     # Create the right folder if it doesn't exist
-    folder = f"../tests/{experiment_name}"
+    folder = f"../../tests/{experiment_name}"
     if not os.path.isdir(folder):
         print("Generated new folder")
         os.makedirs(folder, exist_ok=True)
@@ -87,8 +89,9 @@ def train_tfno(which_example: str, loss_fn_str: str):
         experiment_name,
         get_plot_function(which_example, "input"),
         get_plot_function(which_example, "output"),
+        output_folder=folder,
     )
 
 
 if __name__ == "__main__":
-    train_tfno("poisson", "L1")
+    train_rno("poisson", "L1")

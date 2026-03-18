@@ -49,9 +49,8 @@ from .FNO.FNO_utilities import (
     count_params_fno,
 )
 
-# FNO_lin architecture
-from .FNO_lin.FNO_lin import FNO_lin
-from .FNO_lin.FNO_lin_utilities import compute_modes, count_params_fno
+# Group equivariant FNO architecture
+from .G_FNO.GroupEquivariantFNO import G_FNO
 
 # IgaNet transformer architecture
 from .IgaNet_transformer.IgaNet_transformer import (
