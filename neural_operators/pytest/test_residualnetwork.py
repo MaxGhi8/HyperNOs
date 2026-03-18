@@ -11,7 +11,7 @@ from architectures import (
 )
 from datasets import NO_load_data_model
 
-torch.set_default_dtype(torch.float32)
+torch.set_default_dtype(torch.float64)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -69,7 +69,7 @@ def test_residualnetwork():
     output = model.forward(input)
     assert output.shape[-1] == out_channels
     assert output.shape[0] == batch_size
-    assert torch.allclose(output.sum(dim=1), torch.zeros(batch_size), atol=1e-6)
+    assert torch.allclose(output.sum(dim=1), torch.zeros(output.shape[0], device=output.device), atol=1e-6)
 
 
 def test_residual_normalization():
@@ -107,9 +107,9 @@ def test_residual_normalization():
     assert output.shape[-1] == out_channels
     assert output.shape[0] == batch_size
     # Test zero mean
-    assert torch.allclose(output.sum(dim=1), torch.zeros(batch_size), atol=1e-6)
+    assert torch.allclose(output.sum(dim=1), torch.zeros(output.shape[0], device=output.device), atol=1e-6)
     output = model.forward(input)
     assert output.shape[-1] == out_channels
     assert output.shape[0] == batch_size
     # Test zero mean
-    assert torch.allclose(output.sum(dim=1), torch.zeros(batch_size), atol=1e-6)
+    assert torch.allclose(output.sum(dim=1), torch.zeros(output.shape[0], device=output.device), atol=1e-6)
