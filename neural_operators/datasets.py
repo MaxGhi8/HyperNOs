@@ -338,7 +338,7 @@ class ShearLayer:
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -534,7 +534,7 @@ class SinFrequency:
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -743,7 +743,7 @@ class WaveEquation:
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -941,7 +941,7 @@ class AllenCahn:
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -1129,7 +1129,7 @@ class ContTranslation:
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -1319,7 +1319,7 @@ class DiscContTranslation:
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -1511,7 +1511,7 @@ class Airfoil:
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -1855,7 +1855,7 @@ class Darcy:
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -1996,7 +1996,7 @@ class Darcy_Zongyi:
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -2127,7 +2127,7 @@ class Burgers_Zongyi:
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -2257,7 +2257,7 @@ class FitzHughNagumo:
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -2423,7 +2423,7 @@ class HodgkinHuxley:
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -2806,7 +2806,7 @@ class OHaraRudy:
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -3210,7 +3210,7 @@ class AFIETI_FNO:
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -3395,7 +3395,7 @@ class CrossTruss(Dataset):
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -3524,7 +3524,7 @@ class StiffnessMatrix(Dataset):
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -3601,7 +3601,7 @@ class CoeffRHS_1d:
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -3731,7 +3731,7 @@ class CoeffRHS:
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -4178,7 +4178,7 @@ class BAMPNO_old:
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
@@ -4282,7 +4282,7 @@ class Eigenfunction:
 
         # Create generator on the appropriate device
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        g = torch.Generator(device=device)
+        g = torch.Generator(device=torch.device("cpu"))
 
         retrain = network_properties["retrain"]
         if retrain > 0:
