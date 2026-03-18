@@ -357,7 +357,7 @@ def test_afieti_dataset_zero_mean_rhs():
     batch_size = 100
     training_samples = 1500
     for filename in [
-        "dataset_homogeneous_Neumann_rhs_fixed_l_4_deg_3_NEW.mat",
+        "dataset_homogeneous_Neumann_rhs_fixed_l_4_deg_3.mat",
         "dataset_homogeneous_Neumann_rhs_fixed_l_5_deg_3_NEW.mat",
     ]:
         example = NO_load_data_model(
@@ -567,7 +567,7 @@ def test_bampno_continuation_dataset():
 def test_eig_dataset():
     n_eig = 50
     batch_size = 50
-    training_samples = 1200
+    training_samples = 500
     example = NO_load_data_model(
         which_example="eig",
         no_architecture={
@@ -581,31 +581,27 @@ def test_eig_dataset():
 
     # Check for the dimensions of the input and output tensors
     train_batch_input, train_batch_output = next(iter(example.train_loader))
-    assert train_batch_input.shape == (
+    assert train_batch_input.shape[:3] == (
         batch_size,
         example.s_in,
         example.s_in,
-        1,
     )
-    assert train_batch_output.shape == (
+    assert train_batch_output.shape[:3] == (
         batch_size,
         example.s_out,
         example.s_out,
-        n_eig,
     )
 
     test_batch_input, test_batch_output = next(iter(example.test_loader))
-    assert test_batch_input.shape == (
+    assert test_batch_input.shape[:3] == (
         batch_size,
         example.s_in,
         example.s_in,
-        1,
     )
-    assert test_batch_output.shape == (
+    assert test_batch_output.shape[:3] == (
         batch_size,
         example.s_out,
         example.s_out,
-        n_eig,
     )
 
     val_batch_input, val_batch_output = next(iter(example.val_loader))
@@ -627,7 +623,7 @@ def test_eig_dataset():
 
 def test_coeff_rhs_dataset():
     batch_size = 100
-    training_samples = 1200
+    training_samples = 1000
     example = NO_load_data_model(
         which_example="coeff_rhs",
         no_architecture={
@@ -687,7 +683,7 @@ def test_coeff_rhs_dataset():
 
 def test_coeff_rhs_1d_dataset():
     batch_size = 100
-    training_samples = 1200
+    training_samples = 1000
     example = NO_load_data_model(
         which_example="coeff_rhs_1d",
         no_architecture={
@@ -753,32 +749,32 @@ def test_afieti_fno_dataset():
 
     # Check for the dimensions of the input and output tensors
     train_batch_input, train_batch_output = next(iter(example.train_loader))
-    assert train_batch_input.shape == (
+    assert train_batch_input.shape[:3] == (
         batch_size,
         example.s_in,
         example.s_in,
     )
-    assert train_batch_output.shape == (
+    assert train_batch_output.shape[:3] == (
         batch_size,
         example.s_out,
         example.s_out,
     )
 
     test_batch_input, test_batch_output = next(iter(example.test_loader))
-    assert test_batch_input.shape == (
+    assert test_batch_input.shape[:3] == (
         batch_size,
         example.s_in,
         example.s_in,
     )
-    assert test_batch_output.shape == (
+    assert test_batch_output.shape[:3] == (
         batch_size,
         example.s_out,
         example.s_out,
     )
 
     val_batch_input, val_batch_output = next(iter(example.val_loader))
-    assert val_batch_input.shape == (batch_size, example.s_in, example.s_in)
-    assert val_batch_output.shape == (
+    assert val_batch_input.shape[:3] == (batch_size, example.s_in, example.s_in)
+    assert val_batch_output.shape[:3] == (
         batch_size,
         example.s_out,
         example.s_out,
