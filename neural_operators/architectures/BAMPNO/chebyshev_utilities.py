@@ -8,7 +8,7 @@ from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from torch import Tensor
 
-torch.set_default_dtype(torch.float32)  # default tensor dtype
+# torch.set_default_dtype(torch.float32)  # default tensor dtype
 
 #########################################
 # Functions for the change of basis

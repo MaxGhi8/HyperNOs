@@ -40,7 +40,7 @@ def test_cft_1d():
     coeff = torch.randn((n,)) * 4  # random coefficients
     T = np.polynomial.chebyshev.Chebyshev(np.asarray(coeff))  # Chebyshev polynomial
     values = torch.tensor(
-        T(np.asarray(Chebyshev_grid_1d(n + 10))).reshape(-1, 1)
+        T(np.asarray(Chebyshev_grid_1d(n + 10))).reshape(-1, 1), dtype=torch.float64
     )  # values of the polynomial in the Chebyshev grid
 
     num_coeff = values_to_coefficients(values).reshape(
@@ -59,7 +59,7 @@ def test_cft_2d():
     grid = Chebyshev_grid_2d(n, [-1.0, -1.0], [1.0, 1.0])
     X, Y = grid[:, :, 0], grid[:, :, 1]
 
-    values = torch.tensor(np.polynomial.chebyshev.chebval2d(X, Y, np.asarray(c)))
+    values = torch.tensor(np.polynomial.chebyshev.chebval2d(X, Y, np.asarray(c)), dtype=torch.float64)
 
     appro_coeffs = values_to_coefficients(values.unsqueeze(-1)).squeeze(-1)
 
@@ -86,7 +86,7 @@ def test_patched_cft_2d():
                 values[batch_idx, patch_idx, :, :, v] = torch.tensor(
                     np.polynomial.chebyshev.chebval2d(
                         X, Y, np.asarray(c[batch_idx, patch_idx, :, :, v])
-                    )
+                    ), dtype=torch.float64
                 )
 
     appro_coeffs = patched_values_to_coefficients(values)
@@ -107,7 +107,7 @@ def test_icft_2d():
     X, Y = grid[:, :, 0], grid[:, :, 1]
 
     values = torch.tensor(
-        np.polynomial.chebyshev.chebval2d(X, Y, np.asarray(c))
+        np.polynomial.chebyshev.chebval2d(X, Y, np.asarray(c)), dtype=torch.float64
     )  # Evaluated Chebyshev polynomial
 
     appro_values = coefficients_to_values(c.unsqueeze(-1)).squeeze(-1)
@@ -135,7 +135,7 @@ def test_patched_icft_2d():
                 values[batch_idx, patch_idx, :, :, v] = torch.tensor(
                     np.polynomial.chebyshev.chebval2d(
                         X, Y, np.asarray(c[batch_idx, patch_idx, :, :, v])
-                    )
+                    ), dtype=torch.float64
                 )
 
     appro_values = patched_coefficients_to_values(c)
@@ -208,21 +208,21 @@ def test_differentiation():
         T = np.polynomial.chebyshev.Chebyshev(np.asarray(coeff))  # Chebyshev polynomial
         if i == 0:
             values = torch.tensor(
-                T(np.asarray(Chebyshev_grid_1d(n))).reshape(-1, 1)
+                T(np.asarray(Chebyshev_grid_1d(n))).reshape(-1, 1), dtype=torch.float64
             )  # values of the polynomial in the Chebyshev grid
             coeff_diff = torch.tensor(
-                T.deriv().coef.reshape(-1, 1)
+                T.deriv().coef.reshape(-1, 1), dtype=torch.float64
             )  # values of the derivative of the polynomial in the Chebyshev grid
         else:
             values = torch.cat(
                 (
                     values,
-                    torch.tensor(T(np.asarray(Chebyshev_grid_1d(n))).reshape(-1, 1)),
+                    torch.tensor(T(np.asarray(Chebyshev_grid_1d(n))).reshape(-1, 1), dtype=torch.float64),
                 ),
                 dim=1,
             )  # values of the polynomial in the Chebyshev grid
             coeff_diff = torch.cat(
-                (coeff_diff, torch.tensor(T.deriv().coef).reshape(-1, 1)), dim=1
+                (coeff_diff, torch.tensor(T.deriv().coef, dtype=torch.float64).reshape(-1, 1)), dim=1
             )
 
     # Coefficients of the polynomial with our Chebyshev transform
@@ -248,14 +248,14 @@ def test_integration():
     )  # values of the polynomial in the Chebyshev grid
 
     # Coefficients of the polynomial with out Chebyshev transform
-    num_coeff = values_to_coefficients(torch.tensor(values))
+    num_coeff = values_to_coefficients(torch.tensor(values, dtype=torch.float64))
 
     # Test integration
     error = torch.norm(
         integrate(num_coeff, 0).reshape(
             -1,
         )[1 : (n + 1)]
-        - torch.tensor(T.integ().coef)[1:],
+        - torch.tensor(T.integ().coef, dtype=torch.float64)[1:],
         float("inf"),
     )
 
