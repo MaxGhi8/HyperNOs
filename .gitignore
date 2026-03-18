@@ -7,11 +7,4 @@ train_loss/
 **/figures/
 *.png
 
-**/BAMPNO/
-**/FNO_lin/
-
 uv.lock
-
-fft_test_data.mat
-
-luca/
