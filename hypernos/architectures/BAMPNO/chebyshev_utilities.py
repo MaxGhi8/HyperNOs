@@ -211,6 +211,11 @@ def batched_differentiate_2d(coeff: Tensor, axis: int = 0) -> Tensor:
         raise ValueError("axis must be 0 or 1")
 
 
+patched_differentiate = torch.vmap(
+    batched_differentiate, in_dims=(0, None), out_dims=0
+)
+
+
 #########################################
 # Integration in Chebyshev space
 #########################################

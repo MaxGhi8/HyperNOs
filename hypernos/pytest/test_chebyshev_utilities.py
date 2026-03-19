@@ -44,7 +44,7 @@ def test_cft_1d():
         -1,
     )
 
-    assert torch.allclose(coeff, num_coeff[:n], atol=1e-10)
+    assert torch.allclose(coeff, num_coeff[:n], atol=1e-12)
 
 
 def test_cft_2d():
@@ -60,7 +60,7 @@ def test_cft_2d():
 
     appro_coeffs = values_to_coefficients(values.unsqueeze(-1)).squeeze(-1)
 
-    assert torch.allclose(c, appro_coeffs[:n, :n], atol=1e-10)
+    assert torch.allclose(c, appro_coeffs[:n, :n], atol=1e-12)
 
 
 def test_patched_cft_2d():
@@ -88,7 +88,7 @@ def test_patched_cft_2d():
 
     appro_coeffs = patched_values_to_coefficients(values)
 
-    assert torch.allclose(c, appro_coeffs, atol=1e-10)
+    assert torch.allclose(c, appro_coeffs, atol=1e-12)
 
 
 #########################################
@@ -109,7 +109,7 @@ def test_icft_2d():
 
     appro_values = coefficients_to_values(c.unsqueeze(-1)).squeeze(-1)
 
-    assert torch.allclose(values, appro_values, atol=1e-10)
+    assert torch.allclose(values, appro_values, atol=1e-12)
 
 
 def test_patched_icft_2d():
@@ -136,7 +136,7 @@ def test_patched_icft_2d():
                 )
 
     appro_values = patched_coefficients_to_values(c)
-    assert torch.allclose(values, appro_values, atol=1e-10)
+    assert torch.allclose(values, appro_values, atol=1e-12)
 
 
 def test_inverse():
@@ -227,7 +227,7 @@ def test_differentiation():
     coeff_diff_appro = differentiate(num_coeff, 0)
 
     # Test differentiation
-    assert torch.allclose(coeff_diff_appro[:-1], coeff_diff, atol=1e-10)
+    assert torch.allclose(coeff_diff_appro[:-1], coeff_diff, atol=1e-12)
 
 
 #########################################
@@ -256,4 +256,4 @@ def test_integration():
         float("inf"),
     )
 
-    assert error < 1e-10
+    assert error < 1e-12

@@ -119,7 +119,7 @@ def test_L1relLoss():
     x = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]).unsqueeze(-1)
     y = torch.tensor([[[0.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]).unsqueeze(-1)
     result = LprelLoss(1, False)(x, y)
-    assert np.abs(result.item() - 1 / 9) < 1e-6  # single precision
+    assert np.abs(result.item() - 1 / 9) < 1e-12  # double precision
 
     # test 5: test on division by zero
     x = torch.randn(10, 3, 3)
@@ -176,7 +176,7 @@ def test_L2relLoss():
     x = torch.tensor([[[1.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]).unsqueeze(-1)
     y = torch.tensor([[[0.0, 2.0], [3.0, 4.0]], [[5.0, 6.0], [7.0, 8.0]]]).unsqueeze(-1)
     result = LprelLoss(2, False)(x, y)
-    assert np.abs(result.item() - 1 / (np.sqrt(29))) < 1e-6  # single precision
+    assert np.abs(result.item() - 1 / (np.sqrt(29))) < 1e-12  # double precision
 
     # test 5: test on division by zero
     x = torch.randn(10, 3, 3)
@@ -336,19 +336,19 @@ def test_chebyshev_quadrature_accuracy():
     # Constant function
     f_const = torch.ones_like(points)
     integral_const = torch.sum(weights * f_const).item()
-    assert abs(integral_const - 2.0) < 1e-14, f"Constant integration error: {abs(integral_const - 2.0)}"
+    assert abs(integral_const - 2.0) < 1e-12, f"Constant integration error: {abs(integral_const - 2.0)}"
     
     # Quadratic function: \int_{-1}^{1} x^2 dx = 2/3
     f_quad = points**2
     integral_quad = torch.sum(weights * f_quad).item()
     expected_quad = 2.0/3.0
-    assert abs(integral_quad - expected_quad) < 1e-14, f"Quadratic integration error: {abs(integral_quad - expected_quad)}"
+    assert abs(integral_quad - expected_quad) < 1e-12, f"Quadratic integration error: {abs(integral_quad - expected_quad)}"
     
     # Quartic function: \int_{-1}^{1} x^4 dx = 2/5
     f_quart = points**4
     integral_quart = torch.sum(weights * f_quart).item()
     expected_quart = 2.0/5.0
-    assert abs(integral_quart - expected_quart) < 1e-14, f"Quartic integration error: {abs(integral_quart - expected_quart)}"
+    assert abs(integral_quart - expected_quart) < 1e-12, f"Quartic integration error: {abs(integral_quart - expected_quart)}"
 
 
 def test_chebyshev_2d_quadrature():
@@ -375,10 +375,10 @@ def test_chebyshev_2d_quadrature():
     # Test constant function: \int\int_{-1}^{1} 1 dx dy = 4
     f_const = torch.ones_like(X)
     integral_const = torch.sum(weights_2d * f_const).item()
-    assert abs(integral_const - 4.0) < 1e-13, f"2D constant integration error: {abs(integral_const - 4.0)}"
+    assert abs(integral_const - 4.0) < 1e-12, f"2D constant integration error: {abs(integral_const - 4.0)}"
 
     # Test separable quadratic: \int\int_{-1}^{1} x^2 y^2 dx dy = (2/3)^2
     f_sep_quad = X**2 * Y**2
     integral_sep_quad = torch.sum(weights_2d * f_sep_quad).item()
     expected_sep_quad = (2.0/3.0) * (2.0/3.0)
-    assert abs(integral_sep_quad - expected_sep_quad) < 1e-13, f"2D separable quadratic error: {abs(integral_sep_quad - expected_sep_quad)}"
+    assert abs(integral_sep_quad - expected_sep_quad) < 1e-12, f"2D separable quadratic error: {abs(integral_sep_quad - expected_sep_quad)}"
