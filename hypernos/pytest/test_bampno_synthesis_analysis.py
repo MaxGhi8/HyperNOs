@@ -1,10 +1,8 @@
 import torch
-import sys
 import os
 
-sys.path.append("..")
-from datasets import NO_load_data_model
-from architectures.BAMPNO import chebyshev_utilities as cheb
+from hypernos.datasets import NO_load_data_model
+from hypernos.architectures.BAMPNO import chebyshev_utilities as cheb
 
 
 def get_M(n: int):

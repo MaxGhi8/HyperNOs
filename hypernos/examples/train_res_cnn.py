@@ -3,17 +3,13 @@ In this example I fix all the hyperparameters for the CNO model and train it.
 """
 
 import os
-import sys
-
 import torch
 
-sys.path.append("..")
-
-from architectures import CNN2DResidualNetwork as CNN_res
-from datasets import NO_load_data_model
-from loss_fun import loss_selector
-from train import train_fixed_model
-from utilities import get_plot_function, initialize_hyperparameters
+from hypernos.architectures import CNN2DResidualNetwork as CNN_res
+from hypernos.datasets import NO_load_data_model
+from hypernos.loss_fun import loss_selector
+from hypernos.train import train_fixed_model
+from hypernos.utilities import get_plot_function, initialize_hyperparameters
 
 
 def train_cnn(which_example: str, mode_hyperparams: str, loss_fn_str: str):

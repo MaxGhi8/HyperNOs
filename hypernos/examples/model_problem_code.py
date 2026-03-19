@@ -3,17 +3,14 @@
 # IMPORTANT: before running this code please make sure to have installed all the necessary dependencies
 # (see requirements.txt) and to be in this folder: HyperNOs/neural_operators/examples
 # Also make sure to start ray with the command `ray start --head`.
-import sys
-
 import torch
 
-sys.path.append("..")
-from architectures import FNO
-from datasets import NO_load_data_model
-from loss_fun import LprelLoss
+from hypernos.architectures import FNO
+from hypernos.datasets import NO_load_data_model
+from hypernos.loss_fun import LprelLoss
 from ray import tune
-from tune import tune_hyperparameters
-from utilities import initialize_hyperparameters
+from hypernos.tune import tune_hyperparameters
+from hypernos.utilities import initialize_hyperparameters
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

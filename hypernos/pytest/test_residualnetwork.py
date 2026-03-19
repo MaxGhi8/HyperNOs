@@ -1,15 +1,11 @@
-import sys
-
-sys.path.append("..")
-
 import torch
-from architectures import (
+from hypernos.architectures import (
     ResidualBlock,
     ResidualNetwork,
     centered_softmax,
     zero_mean_imposition,
 )
-from datasets import NO_load_data_model
+from hypernos.datasets import NO_load_data_model
 
 torch.set_default_dtype(torch.float32)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -29,19 +29,16 @@ This is the main file for makes test and plot the Neural Operator model.
 import argparse
 import json
 import os
-import sys
 import time
-
-sys.path.append("..")
 
 import matplotlib.pyplot as plt
 import seaborn as sns
 import torch
 from beartype import beartype
-from cli.utilities_recover_model import get_tensors, test_fun, test_plot_samples
-from datasets import NO_load_data_model
+from hypernos.cli.utilities_recover_model import get_tensors, test_fun, test_plot_samples
+from hypernos.datasets import NO_load_data_model
 from jaxtyping import Float, jaxtyped
-from loss_fun import (
+from hypernos.loss_fun import (
     H1relLoss,
     H1relLoss_1D,
     H1relLoss_1D_multiout,
@@ -52,7 +49,7 @@ from loss_fun import (
 )
 from scipy.io import savemat
 from torch import Tensor
-from utilities import count_params
+from hypernos.utilities import count_params
 
 #########################################
 # default values

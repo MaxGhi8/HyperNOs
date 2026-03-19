@@ -3,18 +3,14 @@ In this example I fix all the hyperparameters for the CNO model and train it.
 """
 
 import os
-import sys
-
 import torch
 
-sys.path.append("..")
-
-from architectures import CNO, compute_channel_multiplier, count_params_cno
-from datasets import NO_load_data_model
-from loss_fun import loss_selector
-from train import train_fixed_model
-from utilities import get_plot_function, initialize_hyperparameters
-from wrappers import wrap_model_builder
+from hypernos.architectures import CNO, compute_channel_multiplier, count_params_cno
+from hypernos.datasets import NO_load_data_model
+from hypernos.loss_fun import loss_selector
+from hypernos.train import train_fixed_model
+from hypernos.utilities import get_plot_function, initialize_hyperparameters
+from hypernos.wrappers import wrap_model_builder
 
 
 def train_samedof_cno(which_example: str, loss_fn_str: str):

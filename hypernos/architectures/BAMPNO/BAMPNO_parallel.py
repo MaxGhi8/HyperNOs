@@ -50,7 +50,7 @@ except Exception:  # pragma: no cover
     Float = torch.Tensor  # type: ignore
 
 import mat73
-from utilities import find_file  # path search utility
+from hypernos.utilities import find_file  # path search utility
 
 # Import utilities from existing BAMPNO implementation
 from . import chebyshev_utilities as cheb  # type: ignore

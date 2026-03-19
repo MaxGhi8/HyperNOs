@@ -5,21 +5,17 @@ It is used to save the model in ONNX format for deployment or inference.
 
 import argparse
 import os
-import sys
-
 import torch
 
-sys.path.append("..")
-
-from architectures import (
+from hypernos.architectures import (
     CNO,
     FNO_ONNX,
     GeometryConditionedLinearOperator,
     ResidualNetwork,
 )
-from datasets import NO_load_data_model
-from utilities import initialize_hyperparameters
-from wrappers import wrap_model
+from hypernos.datasets import NO_load_data_model
+from hypernos.utilities import initialize_hyperparameters
+from hypernos.wrappers import wrap_model
 
 #########################################
 # default values

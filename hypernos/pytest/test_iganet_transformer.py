@@ -1,10 +1,7 @@
-import sys
-
 import pytest
 import torch
 
-sys.path.append("..")
-from architectures import GeometryConditionedLinearOperator, zero_mean_imposition
+from hypernos.architectures import GeometryConditionedLinearOperator, zero_mean_imposition
 
 device = torch.device("cpu")
 

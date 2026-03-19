@@ -2,17 +2,13 @@
 In this example I choose some parameters to tune and some to keep fixed for the FNO model.
 """
 
-import sys
-
 import torch
 
-sys.path.append("..")
-
-from architectures import FNO
-from datasets import Darcy
-from loss_fun import LprelLoss
+from hypernos.architectures import FNO
+from hypernos.datasets import Darcy
+from hypernos.loss_fun import LprelLoss
 from ray import tune
-from tune import tune_hyperparameters
+from hypernos.tune import tune_hyperparameters
 
 
 def ray_model_problem():

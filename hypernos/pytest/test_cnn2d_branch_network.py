@@ -2,14 +2,10 @@
 Comprehensive pytest suite for CNN2D_DON network.
 """
 
-import sys
-
 import pytest
 import torch
 
-sys.path.append("../")
-
-from architectures import CNN2D_DON
+from hypernos.architectures import CNN2D_DON
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

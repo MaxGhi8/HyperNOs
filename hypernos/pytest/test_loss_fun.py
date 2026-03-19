@@ -3,14 +3,11 @@ This file contains the tests for the loss functions defined in Loss_fun.py.
 """
 
 import random
-import sys
-
 import numpy as np
 import pytest
 import torch
 
-sys.path.append("..")
-from loss_fun import lpLoss, H1relLoss, LprelLoss, MSELoss_rel, SmoothL1Loss_rel, ChebyshevLprelLoss
+from hypernos.loss_fun import lpLoss, H1relLoss, LprelLoss, MSELoss_rel, SmoothL1Loss_rel, ChebyshevLprelLoss
 
 torch.set_default_dtype(torch.float64)
 torch.manual_seed(0)

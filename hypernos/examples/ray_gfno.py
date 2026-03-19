@@ -2,16 +2,14 @@
 This script runs Ray Tune hyperparameter optimization for the G-FNO model.
 """
 
-import sys
 from ray import tune
 import torch
 
-sys.path.append("..")
-from architectures import G_FNO
-from datasets import NO_load_data_model
-from loss_fun import loss_selector
-from tune import tune_hyperparameters
-from wrappers import wrap_model_builder
+from hypernos.architectures import G_FNO
+from hypernos.datasets import NO_load_data_model
+from hypernos.loss_fun import loss_selector
+from hypernos.tune import tune_hyperparameters
+from hypernos.wrappers import wrap_model_builder
 
 def ray_gfno(which_example: str, loss_fn_str: str):
 

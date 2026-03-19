@@ -11,12 +11,12 @@ import torch
 import torch.nn as nn
 
 sys.path.append("../../")
-from datasets import NO_load_data_model
-from loss_fun import loss_selector
+from hypernos.datasets import NO_load_data_model
+from hypernos.loss_fun import loss_selector
 from neuralop.models import FNOGNO
-from train import train_fixed_model
-from utilities import get_plot_function
-from wrappers import wrap_model_builder
+from hypernos.train import train_fixed_model
+from hypernos.utilities import get_plot_function
+from hypernos.wrappers import wrap_model_builder
 
 from neuralop.layers.gno_block import GNOBlock
 

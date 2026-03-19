@@ -12,12 +12,12 @@ import torch.nn as nn
 import warnings
 
 sys.path.append("../../")
-from datasets import NO_load_data_model
+from hypernos.datasets import NO_load_data_model
 from neuralop.models import TFNO, UQNO
-from train import train_fixed_model
-from utilities import get_plot_function
-from wrappers import wrap_model_builder
-from loss_fun import LprelLoss
+from hypernos.train import train_fixed_model
+from hypernos.utilities import get_plot_function
+from hypernos.wrappers import wrap_model_builder
+from hypernos.loss_fun import LprelLoss
 
 class QuantileLoss:
     """

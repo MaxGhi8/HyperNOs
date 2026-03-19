@@ -3,18 +3,14 @@ In this example I fix all the hyperparameters for the ResNet model and train it.
 """
 
 import os
-import sys
-
 import torch
 
-sys.path.append("..")
-
-from architectures import GeometryConditionedLinearOperator
-from datasets import NO_load_data_model
-from loss_fun import lpLoss
+from hypernos.architectures import GeometryConditionedLinearOperator
+from hypernos.datasets import NO_load_data_model
+from hypernos.loss_fun import lpLoss
 from ray import tune
-from tune import tune_hyperparameters
-from utilities import initialize_hyperparameters
+from hypernos.tune import tune_hyperparameters
+from hypernos.utilities import initialize_hyperparameters
 
 
 def train_iganet_transformer(which_example: str, filename: str, mode_hyperparams: str):

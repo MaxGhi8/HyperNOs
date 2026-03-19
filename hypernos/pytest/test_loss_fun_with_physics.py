@@ -1,9 +1,5 @@
-import sys
-
-sys.path.append("..")
-
 import torch
-from loss_fun_with_physics import (
+from hypernos.loss_fun_with_physics import (
     DarcyResidualAutograd,
     DarcyResidualFiniteDiff,
     HelmholtzResidualAutograd,

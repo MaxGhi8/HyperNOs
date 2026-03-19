@@ -8,10 +8,10 @@ import torch.nn as nn
 from ray import tune
 
 sys.path.append("../../")
-from datasets import NO_load_data_model
+from hypernos.datasets import NO_load_data_model
 from neuralop.models import TFNO, UQNO
-from tune import tune_hyperparameters
-from wrappers import wrap_model_builder
+from hypernos.tune import tune_hyperparameters
+from hypernos.wrappers import wrap_model_builder
 
 class QuantileLoss:
     """

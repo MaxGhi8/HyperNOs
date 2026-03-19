@@ -8,12 +8,12 @@ import torch.nn as nn
 from ray import tune
 
 sys.path.append("../../")
-from datasets import NO_load_data_model
-from loss_fun import loss_selector
+from hypernos.datasets import NO_load_data_model
+from hypernos.loss_fun import loss_selector
 from neuralop.models import FNOGNO
 from neuralop.layers.gno_block import GNOBlock
-from tune import tune_hyperparameters
-from wrappers import wrap_model_builder
+from hypernos.tune import tune_hyperparameters
+from hypernos.wrappers import wrap_model_builder
 
 # Monkey patch GNOBlock to force use_torch_scatter_reduce=False
 # This is to silence the "use_scatter is True but torch_scatter is not properly built" warning

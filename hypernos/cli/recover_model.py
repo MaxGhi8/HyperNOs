@@ -40,21 +40,19 @@ if 'torch_harmonics' not in sys.modules:
     sys.modules['torch_harmonics.quadrature'] = MagicMock()
     sys.modules['torch_harmonics.filter_basis'] = MagicMock()
 
-sys.path.append("..")
-
 import matplotlib.pyplot as plt
 import seaborn as sns
 import torch
-from architectures import BAMPNO, CNO, FNO, ResidualNetwork, DeepONet
+from hypernos.architectures import BAMPNO, CNO, FNO, ResidualNetwork, DeepONet
 from neuralop.models import TFNO, CODANO, RNO, OTNO, UNO, LocalNO
 import deepxde as dde
 from beartype import beartype
-from cli.utilities_recover_model import get_tensors, test_fun, test_plot_samples
-from datasets import NO_load_data_model
+from hypernos.cli.utilities_recover_model import get_tensors, test_fun, test_plot_samples
+from hypernos.datasets import NO_load_data_model
 
 # from architectures import FNO_lin
 from jaxtyping import Float, jaxtyped
-from loss_fun import (
+from hypernos.loss_fun import (
     H1relLoss,
     H1relLoss_1D,
     H1relLoss_1D_multiout,
@@ -65,8 +63,8 @@ from loss_fun import (
 )
 from scipy.io import savemat
 from torch import Tensor
-from utilities import count_params, initialize_hyperparameters
-from wrappers import wrap_model
+from hypernos.utilities import count_params, initialize_hyperparameters
+from hypernos.wrappers import wrap_model
 
 #########################################
 # default values

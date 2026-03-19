@@ -16,12 +16,12 @@ if 'torch_harmonics' not in sys.modules:
     sys.modules['torch_harmonics.filter_basis'] = MagicMock()
 
 sys.path.append("../../")
-from datasets import NO_load_data_model
-from loss_fun import loss_selector
+from hypernos.datasets import NO_load_data_model
+from hypernos.loss_fun import loss_selector
 from neuralop.models import LocalNO
-from train import train_fixed_model
-from utilities import get_plot_function
-from wrappers import wrap_model_builder
+from hypernos.train import train_fixed_model
+from hypernos.utilities import get_plot_function
+from hypernos.wrappers import wrap_model_builder
 
 def train_local_no(which_example: str, loss_fn_str: str):
 

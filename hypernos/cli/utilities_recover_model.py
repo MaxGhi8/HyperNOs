@@ -3,10 +3,6 @@ Utilities function for testing models.
 Plotting of input/output and prediction for the trained model.
 """
 
-import sys
-
-sys.path.append("..")
-
 import warnings
 
 import matplotlib.pyplot as plt
@@ -14,7 +10,7 @@ import numpy as np
 import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
-from loss_fun import (
+from hypernos.loss_fun import (
     H1relLoss,
     H1relLoss_1D,
     H1relLoss_1D_multiout,

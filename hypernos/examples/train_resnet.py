@@ -3,17 +3,13 @@ In this example I fix all the hyperparameters for the ResNet model and train it.
 """
 
 import os
-import sys
-
 import torch
 
-sys.path.append("..")
-
-from architectures import ResidualNetwork
-from datasets import NO_load_data_model
-from loss_fun import lpLoss
-from train import train_fixed_model
-from utilities import initialize_hyperparameters
+from hypernos.architectures import ResidualNetwork
+from hypernos.datasets import NO_load_data_model
+from hypernos.loss_fun import lpLoss
+from hypernos.train import train_fixed_model
+from hypernos.utilities import initialize_hyperparameters
 
 
 def train_resnet(which_example: str, filename: str, mode_hyperparams: str):

@@ -1,10 +1,7 @@
 """Test function for testing the file utitlities.py"""
 
-import sys
-
-sys.path.append("..")
 import torch
-from utilities import UnitGaussianNormalizer, minmaxGlobalNormalizer, minmaxNormalizer
+from hypernos.utilities import UnitGaussianNormalizer, minmaxGlobalNormalizer, minmaxNormalizer
 
 
 #########################################

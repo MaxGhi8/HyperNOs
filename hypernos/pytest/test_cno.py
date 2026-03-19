@@ -1,12 +1,8 @@
-import sys
-
-sys.path.append("..")
-
 import pytest
 import torch
-from architectures import CNO
-from utilities import initialize_hyperparameters
-from wrappers import wrap_model
+from hypernos.architectures import CNO
+from hypernos.utilities import initialize_hyperparameters
+from hypernos.wrappers import wrap_model
 
 
 # Select some random params for testing fro 1D CNO

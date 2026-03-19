@@ -13,11 +13,11 @@ import numpy as np
 os.environ["DDE_BACKEND"] = "pytorch"
 
 sys.path.append("../../")
-from datasets import NO_load_data_model
-from loss_fun import loss_selector
-from train import train_fixed_model
-from utilities import get_plot_function
-from wrappers import wrap_model_builder
+from hypernos.datasets import NO_load_data_model
+from hypernos.loss_fun import loss_selector
+from hypernos.train import train_fixed_model
+from hypernos.utilities import get_plot_function
+from hypernos.wrappers import wrap_model_builder
 
 # DeepXDE changes default tensor type to CUDA if available, which breaks datasets.py DataLoader generator
 if torch.cuda.is_available():

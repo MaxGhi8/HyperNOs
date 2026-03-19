@@ -1,9 +1,5 @@
-import sys
-
-sys.path.append("..")
-
 import torch
-from architectures import CNN2DResidualNetwork, Conv2DResidualBlock
+from hypernos.architectures import CNN2DResidualNetwork, Conv2DResidualBlock
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

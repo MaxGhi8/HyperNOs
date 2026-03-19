@@ -33,8 +33,6 @@ This is the main file for training the Neural Operator with the FNO architecture
 """
 
 import argparse
-import sys
-
 import torch
 from hypernos.examples.train_cno import train_cno
 from hypernos.examples.train_fno import train_fno

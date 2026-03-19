@@ -3,18 +3,14 @@ In this example I fix all the hyperparameters for the FNO model and train it.
 """
 
 import os
-import sys
-
 import torch
 
-sys.path.append("..")
-
-from architectures import FNO
-from datasets import SinFrequency
-from loss_fun import loss_selector
-from loss_fun_with_physics import PoissonResidualFiniteDiff
-from train import train_fixed_model
-from utilities import get_plot_function, initialize_hyperparameters
+from hypernos.architectures import FNO
+from hypernos.datasets import SinFrequency
+from hypernos.loss_fun import loss_selector
+from hypernos.loss_fun_with_physics import PoissonResidualFiniteDiff
+from hypernos.train import train_fixed_model
+from hypernos.utilities import get_plot_function, initialize_hyperparameters
 
 
 def train_fno_with_phys(mode_hyperparams: str, loss_fn_str: str, alpha_phys: float):

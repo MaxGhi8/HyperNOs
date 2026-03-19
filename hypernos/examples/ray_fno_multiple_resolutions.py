@@ -2,19 +2,15 @@
 In this example I choose some parameters to tune and some to keep fixed for the FNO model.
 """
 
-import sys
-
 import torch
 
-sys.path.append("..")
-
-from architectures import FNO
-from datasets import NO_load_data_model, concat_datasets
-from loss_fun import loss_selector
+from hypernos.architectures import FNO
+from hypernos.datasets import NO_load_data_model, concat_datasets
+from hypernos.loss_fun import loss_selector
 from ray import tune
-from tune import tune_hyperparameters
-from utilities import initialize_hyperparameters
-from wrappers import wrap_model_builder
+from hypernos.tune import tune_hyperparameters
+from hypernos.utilities import initialize_hyperparameters
+from hypernos.wrappers import wrap_model_builder
 
 
 def ray_fno_multiple_resolutions(

@@ -33,12 +33,8 @@ This is the main file for hyperparameter search of the Neural Operator with the 
 """
 
 import argparse
-import sys
-
-sys.path.append("..")
-
-from examples.ray_cno import ray_cno
-from examples.ray_fno import ray_fno
+from hypernos.examples.ray_cno import ray_cno
+from hypernos.examples.ray_fno import ray_fno
 
 
 # Choose the example to run from CLI

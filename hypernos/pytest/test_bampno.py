@@ -1,10 +1,6 @@
-import sys
-
-sys.path.append("..")
-
 import torch
-from architectures import BAMPNO
-from utilities import initialize_hyperparameters
+from hypernos.architectures import BAMPNO
+from hypernos.utilities import initialize_hyperparameters
 
 torch.set_default_dtype(torch.float32)
 

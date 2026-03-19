@@ -2,13 +2,10 @@
 This file contains the tests for the functions defined in chebyshev_utilities.py.
 """
 
-import sys
-
 import numpy as np
 import torch
 
-sys.path.append("..")
-from architectures import (
+from hypernos.architectures import (
     Chebyshev_grid_1d,
     Chebyshev_grid_2d,
     batched_coefficients_to_values,

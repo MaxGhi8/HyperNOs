@@ -1,9 +1,6 @@
 import torch
 import pytest
-import sys
-sys.path.append("..")
-
-from architectures import CNN2D
+from hypernos.architectures import CNN2D
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

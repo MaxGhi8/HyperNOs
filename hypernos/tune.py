@@ -16,8 +16,8 @@ from ray import get, init, put, train, tune
 from ray.train import Checkpoint
 from ray.tune.schedulers import ASHAScheduler
 from ray.tune.search.hyperopt import HyperOptSearch
-from train import train_epoch
-from utilities import count_params
+from hypernos.train import train_epoch
+from hypernos.utilities import count_params
 
 
 def tune_hyperparameters(

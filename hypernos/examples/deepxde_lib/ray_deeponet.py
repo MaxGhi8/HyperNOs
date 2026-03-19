@@ -18,10 +18,10 @@ if torch.cuda.is_available():
         torch.set_default_device("cpu")
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-from datasets import NO_load_data_model
-from loss_fun import loss_selector
-from tune import tune_hyperparameters
-from wrappers import wrap_model_builder
+from hypernos.datasets import NO_load_data_model
+from hypernos.loss_fun import loss_selector
+from hypernos.tune import tune_hyperparameters
+from hypernos.wrappers import wrap_model_builder
 
 def ray_deeponet(which_example: str, loss_fn_str: str):
 

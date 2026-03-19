@@ -1,11 +1,8 @@
 import random
-import sys
-
 import pytest
 import torch
 
-sys.path.append("..")
-from datasets import (
+from hypernos.datasets import (
     AFIETI,
     AFIETI_transformer,
     Airfoil,

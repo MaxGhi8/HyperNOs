@@ -1,13 +1,9 @@
-import sys
-
-sys.path.append("..")
-
 import pytest
 import torch
-from architectures import FNO
-from datasets import NO_load_data_model
-from utilities import initialize_hyperparameters
-from wrappers import wrap_model
+from hypernos.architectures import FNO
+from hypernos.datasets import NO_load_data_model
+from hypernos.utilities import initialize_hyperparameters
+from hypernos.wrappers import wrap_model
 
 torch.set_default_dtype(torch.float32)
 

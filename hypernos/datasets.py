@@ -15,7 +15,7 @@ from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, TensorDataset
-from utilities import (
+from hypernos.utilities import (
     FourierFeatures,
     FourierFeatures1D,
     MaskedUnitGaussianNormalizer,

@@ -2,7 +2,7 @@ import json
 import os
 
 import torch
-from loss_fun import (
+from hypernos.loss_fun import (
     H1relLoss,
     H1relLoss_1D,
     H1relLoss_1D_multiout,
@@ -12,7 +12,7 @@ from loss_fun import (
 )
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
-from utilities import count_params
+from hypernos.utilities import count_params
 
 
 def train_fixed_model(

@@ -1,10 +1,7 @@
 import torch
 import pytest
 
-import sys
-sys.path.append('..')
-
-from architectures import (
+from hypernos.architectures import (
     FeedForwardNetwork,
     activation_fun,
     centered_softmax,

@@ -8,20 +8,16 @@ This script loads a trained FNO model and exports all its parameters
 import argparse
 import json
 import os
-import sys
-
-sys.path.append("..")
-
 import numpy as np
 import torch
-from architectures import BAMPNO, CNO, FNO, FNO_lin, ResidualNetwork
-from datasets import NO_load_data_model
+from hypernos.architectures import BAMPNO, CNO, FNO, FNO_lin, ResidualNetwork
+from hypernos.datasets import NO_load_data_model
 
 # from architectures import FNO_lin
-from loss_fun import loss_selector
+from hypernos.loss_fun import loss_selector
 from scipy.io import savemat
-from utilities import count_params, initialize_hyperparameters
-from wrappers import wrap_model
+from hypernos.utilities import count_params, initialize_hyperparameters
+from hypernos.wrappers import wrap_model
 
 # torch.set_default_dtype(torch.float64)  # default tensor dtype
 

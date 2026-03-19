@@ -6,11 +6,11 @@ import sys
 from ray import tune
 
 sys.path.append("../../")
-from datasets import NO_load_data_model
-from loss_fun import loss_selector
+from hypernos.datasets import NO_load_data_model
+from hypernos.loss_fun import loss_selector
 from neuralop.models import OTNO
-from tune import tune_hyperparameters
-from wrappers import wrap_model_builder
+from hypernos.tune import tune_hyperparameters
+from hypernos.wrappers import wrap_model_builder
 
 def ray_otno(which_example: str, loss_fn_str: str):
 

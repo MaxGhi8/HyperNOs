@@ -1,11 +1,7 @@
-import sys
-
 import pytest
 import torch
 
-sys.path.append("..")
-
-from architectures import DeepONet
+from hypernos.architectures import DeepONet
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

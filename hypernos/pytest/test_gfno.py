@@ -1,12 +1,9 @@
 import os
-import sys
-
 import pytest
 import torch
 
 # Add parent directory to path to allow imports if needed, though mostly we rely on relative or package imports if installed.
-sys.path.append("..")
-from architectures import G_FNO
+from hypernos.architectures import G_FNO
 
 
 def test_gfno_2d():

@@ -3,18 +3,14 @@ In this example I run Ray for the optimization of hyperparameters for the ResNet
 """
 
 import os
-import sys
-
 import torch
 
-sys.path.append("..")
-
-from architectures import ResidualNetwork
-from datasets import NO_load_data_model
-from loss_fun import lpLoss
+from hypernos.architectures import ResidualNetwork
+from hypernos.datasets import NO_load_data_model
+from hypernos.loss_fun import lpLoss
 from ray import tune
-from tune import tune_hyperparameters
-from utilities import initialize_hyperparameters
+from hypernos.tune import tune_hyperparameters
+from hypernos.utilities import initialize_hyperparameters
 
 
 def ray_resnet(which_example: str, filename: str, mode_hyperparams: str):

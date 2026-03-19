@@ -4,11 +4,9 @@ Boundary Adapted Multi Patch Neural Operator (BAMPNO) for solving PDEs in 2D.
 """
 
 import os
-import sys
 from functools import cache
 
-sys.path.append("..")
-import architectures.BAMPNO.chebyshev_utilities as cheb
+import hypernos.architectures.BAMPNO.chebyshev_utilities as cheb
 import mat73
 import torch
 import torch.nn as nn
@@ -16,7 +14,7 @@ import torch.nn.functional as F
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from torch import Tensor
-from utilities import find_file
+from hypernos.utilities import find_file
 
 #########################################
 # default values
