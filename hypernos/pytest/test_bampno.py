@@ -45,13 +45,14 @@ def test_BAMPNO_from_json():
 
     # Load the default hyperparameters for the FNO model
     hyperparams_train, hyperparams_arc = initialize_hyperparameters(
-        "BAMPNO", "Lshape_domain", "default"
+        "BAMPNO", "bampno_Lshape_domain", "default"
     )
 
     config = {
         **hyperparams_train,
         **hyperparams_arc,
     }
+    config["n_pts"]=60
 
     model = BAMPNO(
         problem_dim=config["problem_dim"],
