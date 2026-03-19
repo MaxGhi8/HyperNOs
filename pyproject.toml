@@ -1,5 +1,52 @@
+[build-system]
+# Specifies the tools required to build the project.
+# Using setuptools and its build_meta backend is a standard, modern practice.
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+# The name of the package as it will appear on PyPI.
+name = "hypernos"
+# The version of your package. 
+version = "0.1.0"
+# A brief summary of the project.
+description = "Automated and Parallel Library for Neural Operators Research"
+# Points to your README file for the long description shown on PyPI.
+readme = "README.md"
+# The minimum Python version required to run this project.
+requires-python = ">=3.12"
+# All the libraries your project depends on, extracted from requirements.txt.
+dependencies = [
+    "beartype>=0.19.0,<0.20.0",
+    "h5py>=3.12.0,<3.13.0",
+    "hyperopt>=0.2.7,<0.3.0",
+    "jaxtyping>=0.2.34,<0.3.0",
+    "mat73>=0.65.0",
+    "matplotlib>=3.9.0,<3.10.0",
+    "neuraloperator==1.0.2",
+    "numpy>=2.1.0,<2.2.0",
+    "onnx>=1.17",
+    "onnxscript>=0.2.3",
+    "pandas>=2.2.0,<2.3.0",
+    "pyarrow>=18.0.0,<19.0.0",
+    "pytest>=8.3.0",
+    "ray>=2.38.0,<2.39.0",
+    "scipy>=1.14.0,<1.15.0",
+    "seaborn>=0.13.0,<0.14.0",
+    "tensorboard>=2.18.0",
+    "tensorboardX>=2.6.0,<2.7.0",
+    "torch>=2.4.0",
+    "tqdm>=4.66.0,<4.67.0",
+]
+
+[tool.setuptools]
+# Explicitly tells setuptools which directories contain the package source code.
+packages = ["hypernos"]
+
 [tool.black]
+# Configuration for the Black code formatter (ensures consistent code style).
 line-length = 88
 
 [tool.isort]
+# Configuration for isort (organizes imports according to Black's style).
 profile = "black"
