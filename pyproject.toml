@@ -7,14 +7,19 @@ build-backend = "setuptools.build_meta"
 [project]
 # The name of the package as it will appear on PyPI.
 name = "hypernos"
+
 # The version of your package. 
 version = "0.1.0"
+
 # A brief summary of the project.
 description = "Automated and Parallel Library for Neural Operators Research"
+
 # Points to your README file for the long description shown on PyPI.
 readme = "README.md"
+
 # The minimum Python version required to run this project.
 requires-python = ">=3.12"
+
 # All the libraries your project depends on, extracted from requirements.txt.
 dependencies = [
     "beartype>=0.19.0,<0.20.0",
@@ -42,6 +47,11 @@ dependencies = [
 [tool.setuptools]
 # Explicitly tells setuptools which directories contain the package source code.
 packages = ["hypernos"]
+
+[project.scripts]
+# This creates a global command 'hypernos-run' that you can use anywhere!
+# It points to the 'main()' function inside hypernos/cli/main_singlerun.py
+hypernos-run = "hypernos.cli.main_singlerun:main"
 
 [tool.black]
 # Configuration for the Black code formatter (ensures consistent code style).

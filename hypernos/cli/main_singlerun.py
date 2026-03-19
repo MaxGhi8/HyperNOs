@@ -35,18 +35,9 @@ This is the main file for training the Neural Operator with the FNO architecture
 import argparse
 import sys
 
-sys.path.append("..")
-
 import torch
-from examples.train_cno import train_cno
-from examples.train_fno import train_fno
-
-#########################################
-# default values
-#########################################
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print("Device: ", device)
-# torch.set_default_dtype(torch.float32) # default tensor dtype
+from hypernos.examples.train_cno import train_cno
+from hypernos.examples.train_fno import train_fno
 
 
 #########################################
@@ -106,17 +97,29 @@ def parse_arguments():
     }
 
 
-config = parse_arguments()
-which_example = config["example"]
-arc = config["architecture"]
-loss_fn_str = config["loss_fn_str"]
-mode_str = config["mode"]
+def main():
+    #########################################
+    # default values
+    #########################################
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print("Device: ", device)
+    # torch.set_default_dtype(torch.float32) # default tensor dtype
 
-# Run the chosed example
-match arc:
-    case "FNO":
-        train_fno(which_example, mode_str, loss_fn_str)
-    case "CNO":
-        train_cno(which_example, mode_str, loss_fn_str)
-    case _:
-        raise ValueError("This architecture is not allowed")
+    config = parse_arguments()
+    which_example = config["example"]
+    arc = config["architecture"]
+    loss_fn_str = config["loss_fn_str"]
+    mode_str = config["mode"]
+
+    # Run the chosen example
+    match arc:
+        case "FNO":
+            train_fno(which_example, mode_str, loss_fn_str)
+        case "CNO":
+            train_cno(which_example, mode_str, loss_fn_str)
+        case _:
+            raise ValueError("This architecture is not allowed")
+
+
+if __name__ == "__main__":
+    main()
