@@ -15,7 +15,7 @@ I already implemented some examples of usage with the following popular librarie
 - **[NeuralOperator](https://github.com/neuraloperator/neuraloperator)**: Implement neural operator architectures like FNO, SFNO, TFNO, UNO, UQNO, GINO, FNOGNO, LocalNO, RNO, CODANO, OTNO.
 - **[DeepXDE](https://github.com/lululxvi/deepxde)**: Implement operator learning models like DeepONet, MIONet, POD-DeepONet, POD-MIONet.
 
-You can find examples of how to use these models in the `neural_operators/examples` directory with two dedicated subdirectories: `deepxde_lib` and `neuralop_lib`. There are implemented examples both for training a given architecture and for hyperparameter optimization routines.
+You can find examples of how to use these models in the `hypernos/examples` directory with two dedicated subdirectories: `deepxde_lib` and `neuralop_lib`. There are implemented examples both for training a given architecture and for hyperparameter optimization routines.
 
 ## Visualization website
 
@@ -38,16 +38,18 @@ To set up the HyperNOs project, follow these steps:
    pyenv activate hypernos
    ```
 
-   Then, install the dependencies using `pip`:
+   # Install in editable mode
 
-   ```bash
-   pip install -r requirements.txt
+   pip install -e .
+
    ```
 
-   If you want to use the `neuraloperator` library, since we use the cutting-edge features of NeuralOperator, please install the library directly from GitHub and not with pip, you can found the instructions [here](https://github.com/neuraloperator/neuraloperator).
+   Installing the package makes it available as `hypernos` across your system and sets up the `hypernos-run` command.
 
    > [!WARNING]
-   > For PyTorch, more attention may be needed during installation. We describe the default installation; however, we highly recommend following the [official documentation](https://pytorch.org/get-started/locally/) to install the correct version for your system. You can check your CUDA driver version by running `nvidia-smi` in your terminal to ensure compatibility.
+   > For PyTorch, more attention may be needed during installation. We highly recommend following the [official documentation](https://pytorch.org/get-started/locally/) to install the correct version for your system (e.g., matching your CUDA version).
+
+   ```
 
 3. Download the dataset using the `download_data.sh` script:
 
@@ -69,7 +71,7 @@ To set up the HyperNOs project, follow these steps:
    > ./download_data.sh
    > ```
 
-4. If you want to download our trained model this have to be done in two steps. First of all clone the following github repository:
+4. Download pre-trained models (optional):
    ```bash
     git clone --depth=1 https://github.com/MaxGhi8/tests
    ```
@@ -100,6 +102,18 @@ cd neural_operators/examples/
 python train_fno.py
 ```
 
+### Python API
+
+You can now import HyperNOs directly in your own scripts:
+
+```python
+import torch
+from hypernos.examples.train_fno import train_fno
+
+# Run a training session
+train_fno("poisson", "best", "L2")
+```
+
 ### Hyperparameter Optimization with Ray Tune
 
 You can use Ray Tune to optimize hyperparameters.
@@ -121,7 +135,7 @@ python ray_fno.py
 
 #### Cluster (Slurm)
 
-For running on a cluster using Slurm, we provide a template script. Please refer to [SLURM_USAGE.md](SLURM_USAGE.md) for detailed instructions on how to configure and submit jobs using `template.slurm`.
+For running on a cluster using Slurm, refer to [SLURM_USAGE.md](SLURM_USAGE.md) for instructions on using `template.slurm`.
 
 ## Citation
 
