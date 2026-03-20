@@ -33,11 +33,6 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Mathematics",
 ]
 
-[project.urls]
-Homepage = "https://hypernos.streamlit.app/"
-Repository = "https://github.com/MaxGhi8/HyperNOs"
-Issues = "https://github.com/MaxGhi8/HyperNOs/issues"
-
 # All the libraries your project depends on, extracted from requirements.txt.
 dependencies = [
     "beartype>=0.19.0,<0.20.0",
@@ -63,6 +58,11 @@ dependencies = [
     "torch>=2.4.0",
     "tqdm>=4.66.0,<4.67.0",
 ]
+
+[project.urls]
+Homepage = "https://hypernos.streamlit.app/"
+Repository = "https://github.com/MaxGhi8/HyperNOs"
+Issues = "https://github.com/MaxGhi8/HyperNOs/issues"
 
 [tool.setuptools]
 # Explicitly tells setuptools which directories contain the package source code.
