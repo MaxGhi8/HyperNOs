@@ -1,26 +1,24 @@
 [build-system]
-# Specifies the tools required to build the project.
-# Using setuptools and its build_meta backend is a standard, modern practice.
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-# The name of the package as it will appear on PyPI.
 name = "hypernos"
-
-# The version of your package. 
 version = "0.1.0"
-
-# A brief summary of the project.
 description = "Automated and Parallel Library for Neural Operators Research"
-
-# Points to your README file for the long description shown on PyPI.
 readme = "README.md"
-
-# The minimum Python version required to run this project.
 requires-python = ">=3.12"
-
-# All the libraries your project depends on, extracted from requirements.txt.
+license = { text = "MIT" }
+authors = [
+    { name = "Massimiliano Ghiotto", email = "massimiliano.ghiotto00@gmail.com" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
 dependencies = [
     "beartype>=0.19.0,<0.20.0",
     "deepxde>=1.15.0,<=1.17.0",
@@ -46,36 +44,19 @@ dependencies = [
     "tqdm>=4.66.0,<4.67.0",
 ]
 
-# Metadata for PyPI
-authors = [
-    { name = "Massimiliano Ghiotto", email = "massimiliano.ghiotto00@gmail.com" }
-]
-license = "MIT"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Operating System :: OS Independent",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Topic :: Scientific/Engineering :: Mathematics",
-]
-
 [project.urls]
 Homepage = "https://hypernos.streamlit.app/"
 Repository = "https://github.com/MaxGhi8/HyperNOs"
 Issues = "https://github.com/MaxGhi8/HyperNOs/issues"
 
-[tool.setuptools]
-# Explicitly tells setuptools which directories contain the package source code.
-packages = ["hypernos"]
-
 [project.scripts]
-# This creates a global command 'hypernos-run' that you can use anywhere!
-# It points to the 'main()' function inside hypernos/cli/main_singlerun.py
 hypernos-run = "hypernos.cli.main_singlerun:main"
 
+[tool.setuptools]
+packages = ["hypernos"]
+
 [tool.black]
-# Configuration for the Black code formatter (ensures consistent code style).
 line-length = 88
 
 [tool.isort]
-# Configuration for isort (organizes imports according to Black's style).
 profile = "black"
