@@ -1,21 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0", "setuptools-scm"]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "hypernos"
 version = "0.1.0"
-description = "Automated and Parallel Library for Neural Operators Research"
-readme = "README.md"
-requires-python = ">=3.12"
-license = { text = "MIT" }
-authors = [{ name = "Massimiliano Ghiotto", email = "massimiliano.ghiotto00@gmail.com" }]
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Operating System :: OS Independent",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Topic :: Scientific/Engineering :: Mathematics",
-]
 dependencies = [
     "beartype>=0.19.0,<0.20.0",
     "deepxde>=1.15.0,<=1.17.0",
@@ -40,20 +29,11 @@ dependencies = [
     "torch>=2.4.0",
     "tqdm>=4.66.0,<4.67.0",
 ]
-
-[project.urls]
-homepage = "https://hypernos.streamlit.app/"
-repository = "https://github.com/MaxGhi8/HyperNOs"
-documentation = "https://github.com/MaxGhi8/HyperNOs"
-
-[project.scripts]
-hypernos-run = "hypernos.cli.main_singlerun:main"
+description = "Automated and Parallel Library for Neural Operators Research"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "Massimiliano Ghiotto", email = "massimiliano.ghiotto00@gmail.com" }]
 
 [tool.setuptools]
 packages = ["hypernos"]
-
-[tool.black]
-line-length = 88
-
-[tool.isort]
-profile = "black"
