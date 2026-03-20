@@ -20,19 +20,6 @@ readme = "README.md"
 # The minimum Python version required to run this project.
 requires-python = ">=3.12"
 
-# Metadata for PyPI
-authors = [
-    { name = "Massimiliano Ghiotto", email = "massimiliano.ghiotto00@gmail.com" }
-]
-license = { text = "MIT" }
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Topic :: Scientific/Engineering :: Mathematics",
-]
-
 # All the libraries your project depends on, extracted from requirements.txt.
 dependencies = [
     "beartype>=0.19.0,<0.20.0",
@@ -57,6 +44,18 @@ dependencies = [
     "tensorboardX>=2.6.0,<2.7.0",
     "torch>=2.4.0",
     "tqdm>=4.66.0,<4.67.0",
+]
+
+# Metadata for PyPI
+authors = [
+    { name = "Massimiliano Ghiotto", email = "massimiliano.ghiotto00@gmail.com" }
+]
+license = "MIT"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Mathematics",
 ]
 
 [project.urls]
