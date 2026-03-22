@@ -254,8 +254,8 @@ def validate_epoch(
         examples_count = 0
 
         for input_batch, output_batch in val_loader:
-            if type(input_batch) is list:
-                input_batch = [inp.to(device) for inp in input_batch]
+            if isinstance(input_batch, (list, tuple)):
+                input_batch = tuple(inp.to(device) for inp in input_batch)
                 examples_count += input_batch[0].size(0)
             else:
                 input_batch = input_batch.to(device)
