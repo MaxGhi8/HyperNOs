@@ -209,7 +209,7 @@ def train_model(
     print(f"Total Parameters: {total_params:,}")
 
     start_epoch = 0
-    checkpoint = train.get_checkpoint()
+    checkpoint = None
     if checkpoint:
         with checkpoint.as_directory() as checkpoint_dir:
             checkpoint_dict = torch.load(os.path.join(checkpoint_dir, "checkpoint.pt"))
@@ -237,9 +237,9 @@ def train_model(
                 path = os.path.join(temp_checkpoint_dir, "checkpoint.pt")
                 torch.save((model.state_dict(), optimizer.state_dict()), path)
                 checkpoint = Checkpoint.from_directory(temp_checkpoint_dir)
-                train.report({"relative_loss": acc}, checkpoint=checkpoint)
+                tune.report({"relative_loss": acc}, checkpoint=checkpoint)
         else:
-            train.report({"relative_loss": acc})
+            tune.report({"relative_loss": acc})
 
 
 def validate_epoch(
