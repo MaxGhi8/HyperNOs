@@ -33,7 +33,7 @@ def plot_models_losses(
     y_label: str = "Loss value",
     y_scale: str = "log",
     annotate: bool = False,
-    save_name: str = "comparison_losses.png",
+    save_name: str = "comparison_losses.pdf",
 ):
     """Plot multiple losses for multiple models.
 
@@ -158,7 +158,7 @@ def plot_models_losses(
     out_dir = os.path.join(os.path.dirname(__file__), "figures")
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, save_name)
-    plt.savefig(out_path)
+    plt.savefig(out_path, format="pdf", bbox_inches="tight", dpi=600)
     plt.close()
     # Reset style
     plt.style.use("default")

@@ -33,7 +33,7 @@ def plot_models_losses(
     y_label: str = "Loss value",
     y_scale: str = "log",
     annotate: bool = False,
-    save_name: str = "comparison_losses.png",
+    save_name: str = "comparison_losses.pdf",
     time_annotations: Optional[Dict[str, Sequence[float]]] = None,
     time_fmt: str = "{:.1f}h",
     loss_legend_loc: str = "lower left",
@@ -264,7 +264,7 @@ def plot_models_losses(
     out_dir = os.path.join(os.path.dirname(__file__), "figures")
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, save_name)
-    plt.savefig(out_path, bbox_inches="tight")
+    plt.savefig(out_path, format="pdf", bbox_inches="tight", dpi=600)
 
     plt.close()
     # Reset style
@@ -275,9 +275,9 @@ if __name__ == "__main__":
 
     # #### Model analysis example
     # Example synthetic data for two models, three losses each
-    x_vals = [2e6, 20e6, 250e6]
+    # x_vals = [2e6, 20e6, 250e6]
 
-    models_losses_example = {
+    # models_losses_example = {
         ## Fixed epochs (1000)
         # "BAMPNO": {
         #     "Train (rel. L2)": {"mean": [0.0056, 0.0049, 0.00053], "std": [0.0001, 0.0001, 4.71e-5]},
@@ -285,62 +285,62 @@ if __name__ == "__main__":
         #     "Test (rel. H1)": {"mean": [0.081, 0.037, 0.027], "std": [0.001, 0.0001, 0.0001]},
         # },
         ## Fixed time (the same of FNO for 1000 epochs)
-        "BAMPNO": {
-            "Train (rel. L2)": {"mean": [0.01, 0.0062, 0.0010], "std": [0.0001, 0.0001, 4.71e-5]},
-            "Test (rel. L2)": {"mean": [0.02, 0.0096, 0.0081], "std": [0.0003, 0.0002, 0.00005]},
-            "Test (rel. H1)": {"mean": [0.085, 0.047, 0.03], "std": [0.001, 0.0001, 0.0001]},
-        },
-        "FNO": {
-            "Train (rel. L2)": {"mean": [0.0078, 0.0025, 0.0013], "std": [2e-4, 6e-5, 8e-5]},
-            "Test (rel. L2)": {"mean": [0.026, 0.025, 0.023], "std": [2e-4, 0.0007, 0.00016]},
-            "Test (rel. H1)": {"mean": [0.098, 0.088, 0.083], "std": [0.0015, 0.0019, 0.0012]},
-        },
-    }
+    #     "BAMPNO": {
+    #         "Train (rel. L2)": {"mean": [0.01, 0.0062, 0.0010], "std": [0.0001, 0.0001, 4.71e-5]},
+    #         "Test (rel. L2)": {"mean": [0.02, 0.0096, 0.0081], "std": [0.0003, 0.0002, 0.00005]},
+    #         "Test (rel. H1)": {"mean": [0.085, 0.047, 0.03], "std": [0.001, 0.0001, 0.0001]},
+    #     },
+    #     "FNO": {
+    #         "Train (rel. L2)": {"mean": [0.0078, 0.0025, 0.0013], "std": [2e-4, 6e-5, 8e-5]},
+    #         "Test (rel. L2)": {"mean": [0.026, 0.025, 0.023], "std": [2e-4, 0.0007, 0.00016]},
+    #         "Test (rel. H1)": {"mean": [0.098, 0.088, 0.083], "std": [0.0015, 0.0019, 0.0012]},
+    #     },
+    # }
 
     # Example training times (hours) per model matching x_vals
     # train_times = {
     #     "BAMPNO": [1.3, 3.6, 7],
     #     "FNO": [0.7, 2.1, 5.2],
     # }
-    train_times = None
+    # train_times = None
 
-    x_label = "Number of trainable parameters"
-    bottom_ylim = None
-    show_convergence_reference = False
+    # x_label = "Number of trainable parameters"
+    # bottom_ylim = None
+    # show_convergence_reference = False
 
     #### Data analysis example
     # Example synthetic data for two models, three losses each
-    # x_vals = [300, 600, 1200, 2400]
+    x_vals = [300, 600, 1200, 2400]
 
-    # models_losses_example = {
-    #     ## Fixed epochs (1000)
-    #     # "BAMPNO": {
-    #     #     "Train (rel. L2)": {"mean": [0.0074, 0.0051, 0.0046, 0.0045], "std": [0.0001, 0.0001, 4.71e-5, 3e-5]},
-    #     #     "Test (rel. L2)": {"mean": [0.024, 0.017, 0.012, 0.007], "std": [0.0003, 0.0002, 0.00005, 0.0001]},
-    #     #     "Test (rel. H1)": {"mean": [0.066, 0.054, 0.042, 0.017], "std": [0.001, 0.0001, 0.0001, 0.0002]},
-    #     # },
-    #     ## Fixed time (the same of FNO for 1000 epochs)
-    #     "BAMPNO": {
-    #         "Train (rel. L2)": {"mean": [0.0080, 0.0058, 0.0053, 0.0048], "std": [0.0001, 0.0001, 4.71e-5, 3e-5]},
-    #         "Test (rel. L2)": {"mean": [0.028, 0.020, 0.013, 0.009], "std": [0.0003, 0.0002, 0.00005, 0.0001]},
-    #         "Test (rel. H1)": {"mean": [0.063, 0.06, 0.046, 0.036], "std": [0.001, 0.0001, 0.0001, 0.0002]},
-    #     },
-    #     "FNO": {
-    #         "Train (rel. L2)": {"mean": [0.0045, 0.0034, 0.0031, 0.0026], "std": [2e-4, 6e-5, 8e-5]},
-    #         "Test (rel. L2)": {"mean": [0.049, 0.032, 0.021, 0.016], "std": [2e-4, 0.0007, 0.00016]},
-    #         "Test (rel. H1)": {"mean": [0.144, 0.1033, 0.081, 0.065], "std": [0.0015, 0.0019, 0.0012]},
-    #     },
-    # }
+    models_losses_example = {
+        ## Fixed epochs (1000)
+        # "BAMPNO": {
+        #     "Train (rel. L2)": {"mean": [0.0074, 0.0051, 0.0046, 0.0045], "std": [0.0001, 0.0001, 4.71e-5, 3e-5]},
+        #     "Test (rel. L2)": {"mean": [0.024, 0.017, 0.012, 0.007], "std": [0.0003, 0.0002, 0.00005, 0.0001]},
+        #     "Test (rel. H1)": {"mean": [0.066, 0.054, 0.042, 0.017], "std": [0.001, 0.0001, 0.0001, 0.0002]},
+        # },
+        ## Fixed time (the same of FNO for 1000 epochs)
+        "BAMPNO": {
+            "Train (rel. L2)": {"mean": [0.0080, 0.0058, 0.0053, 0.0048], "std": [0.0001, 0.0001, 4.71e-5, 3e-5]},
+            "Test (rel. L2)": {"mean": [0.028, 0.020, 0.013, 0.009], "std": [0.0003, 0.0002, 0.00005, 0.0001]},
+            "Test (rel. H1)": {"mean": [0.063, 0.06, 0.046, 0.036], "std": [0.001, 0.0001, 0.0001, 0.0002]},
+        },
+        "FNO": {
+            "Train (rel. L2)": {"mean": [0.0045, 0.0034, 0.0031, 0.0026], "std": [2e-4, 6e-5, 8e-5]},
+            "Test (rel. L2)": {"mean": [0.049, 0.032, 0.021, 0.016], "std": [2e-4, 0.0007, 0.00016]},
+            "Test (rel. H1)": {"mean": [0.144, 0.1033, 0.081, 0.065], "std": [0.0015, 0.0019, 0.0012]},
+        },
+    }
 
     # # Example training times (hours) per model matching x_vals
     # # train_times = {
     # #     "BAMPNO": [1.0, 1.8, 3.6, 7.2],
     # #     "FNO": [0.6, 1.2, 2.1, 4.2],
     # # }
-    # train_times = None
-    # bottom_ylim = 1e-3
-    # x_label = "Number of training samples"
-    # show_convergence_reference = True
+    train_times = None
+    bottom_ylim = 1e-3
+    x_label = "Number of training samples"
+    show_convergence_reference = True
 
     #### Data regularity example
     # x_vals = [1, 2, 8]
@@ -365,7 +365,7 @@ if __name__ == "__main__":
     out_path = plot_models_losses(
         x_values=x_vals,
         models_losses=models_losses_example,
-        title="Model loss comparison",
+        title="",
         y_label="Relative error",
         x_label=x_label,
         annotate=False,

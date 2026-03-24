@@ -138,7 +138,7 @@ def plot_loss_curves(
     plt.yticks(fontsize=fontsize)
 
     if path:
-        plt.savefig(path, dpi=300, bbox_inches="tight")
+        plt.savefig(path, format="pdf", dpi=600, bbox_inches="tight")
     else:
         plt.show()
 
@@ -212,8 +212,8 @@ if __name__ == "__main__":
         test_files,
         # test_L1,
         test_H1,
-        # f"train_loss/loss_function_{example.upper()}_{mode}.png",
-        f"train_loss/loss_function_{example.upper()}.png",
+        # f"train_loss/loss_function_{example.upper()}_{mode}.pdf",
+        f"train_loss/loss_function_{example.upper()}.pdf",
         example2min[example],
         example2max[example],
         title,
