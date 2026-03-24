@@ -6,14 +6,18 @@ import os
 import sys
 from unittest.mock import MagicMock
 
-# Mock torch_harmonics to allow importing LocalNO without it installed
+# Mock torch_harmonics to allow importing LocalNO if not installed
 # This is necessary because neuralop/layers/discrete_continuous_convolution.py 
 # fails at module level if torch_harmonics is missing.
-if 'torch_harmonics' not in sys.modules:
+try:
+    import torch_harmonics
+except ImportError:
+    from unittest.mock import MagicMock
     mock_harmonics = MagicMock()
     sys.modules['torch_harmonics'] = mock_harmonics
     sys.modules['torch_harmonics.quadrature'] = MagicMock()
     sys.modules['torch_harmonics.filter_basis'] = MagicMock()
+    sys.modules['torch_harmonics.convolution'] = MagicMock()
 
 sys.path.append("../../")
 from hypernos.datasets import NO_load_data_model

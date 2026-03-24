@@ -3,12 +3,16 @@ import tempfile
 import sys
 from unittest.mock import MagicMock
 
-# Mock torch_harmonics for Ray workers to allow importing LocalNO without it installed
-if 'torch_harmonics' not in sys.modules:
+# Mock torch_harmonics for Ray workers to allow importing LocalNO if not installed
+try:
+    import torch_harmonics
+except ImportError:
+    from unittest.mock import MagicMock
     mock_harmonics = MagicMock()
     sys.modules['torch_harmonics'] = mock_harmonics
     sys.modules['torch_harmonics.quadrature'] = MagicMock()
     sys.modules['torch_harmonics.filter_basis'] = MagicMock()
+    sys.modules['torch_harmonics.convolution'] = MagicMock()
 
 import torch
 import ray

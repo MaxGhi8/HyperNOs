@@ -33,18 +33,26 @@ import sys
 import time
 from unittest.mock import MagicMock
 
-# Mock torch_harmonics to allow importing LocalNO without it installed
-if 'torch_harmonics' not in sys.modules:
+# Mock torch_harmonics if not installed to allow importing LocalNO
+try:
+    import torch_harmonics
+except ImportError:
+    from unittest.mock import MagicMock
     mock_harmonics = MagicMock()
     sys.modules['torch_harmonics'] = mock_harmonics
     sys.modules['torch_harmonics.quadrature'] = MagicMock()
     sys.modules['torch_harmonics.filter_basis'] = MagicMock()
+    sys.modules['torch_harmonics.convolution'] = MagicMock()
 
 import matplotlib.pyplot as plt
 import seaborn as sns
 import torch
 from hypernos.architectures import BAMPNO, CNO, FNO, ResidualNetwork, DeepONet
-from neuralop.models import TFNO, CODANO, RNO, OTNO, UNO, LocalNO
+try:
+    from neuralop.models import TFNO, CODANO, RNO, OTNO, UNO, LocalNO
+except ImportError as e:
+    print(f"Warning: Some neuralop models could not be imported: {e}")
+    from neuralop.models import TFNO, UNO
 import deepxde as dde
 from beartype import beartype
 from hypernos.cli.utilities_recover_model import get_tensors, test_fun, test_plot_samples
