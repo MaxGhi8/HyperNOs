@@ -974,36 +974,90 @@ elif which_example in ["crosstruss"]:
 #########################################
 # Compute boundary Dirichlet error (interesting for BAMPNO architecture comparison)
 ##########################################
-def compute_dirichlet_error(test_prediction_tensor, example, device):
-    # get the points of the domain
-    x_phys = example.X_phys.to(device)
-    y_phys = example.Y_phys.to(device)
-
+def compute_dirichlet_error(test_prediction_tensor, example_data, device):
     # extract test_prediction_tensor at the boundary points
     # this code holds only for the S domain
     total_error = 0
     for n_ex in range(test_prediction_tensor.shape[0]):
         err = 0
-        example = test_prediction_tensor[n_ex, :, :, 0]
-        err += torch.sum(torch.abs(example[0, :]))  # bottom boundary
-        err += torch.sum(torch.abs(example[-1, :]))  # top boundary
-        err += torch.sum(torch.abs(example[:, 0]))  # left boundary
-        err += torch.sum(torch.abs(example[:, -1]))  # right boundary
-        err += torch.sum(torch.abs(example[59, :30]))
-        err += torch.sum(torch.abs(example[29, 59:]))
-        err += torch.sum(torch.abs(example[:60, 29]))
-        err += torch.sum(torch.abs(example[:60, 59]))
+        u_theta = test_prediction_tensor[n_ex, :, :, 0]
+        err += torch.sum(torch.abs(u_theta[0, :]))  # bottom boundary
+        err += torch.sum(torch.abs(u_theta[-1, :]))  # top boundary
+        err += torch.sum(torch.abs(u_theta[:, 0]))  # left boundary
+        err += torch.sum(torch.abs(u_theta[:, -1]))  # right boundary
+
+        # S-domain specific
+        err += torch.sum(torch.abs(u_theta[59, :30]))
+        err += torch.sum(torch.abs(u_theta[29, 59:]))
+        err += torch.sum(torch.abs(u_theta[:60, 29]))
+        err += torch.sum(torch.abs(u_theta[:60, 59]))
+
         total_error += err
 
     return total_error / test_prediction_tensor.shape[0]
 
 
+def compute_boundary_l2_error(test_prediction_tensor, example_data, device):
+    """
+    Quantify boundary approximation error using the L2(boundary) norm:
+    E = sqrt( 1/N * sum( |u_theta(x_j)|^2 ) )
+    """
+    total_l2_error = 0
+    N_examples = test_prediction_tensor.shape[0]
+
+    for n_ex in range(N_examples):
+        u_theta = test_prediction_tensor[n_ex, :, :, 0]
+        
+
+        # L-domain specific internal boundaries
+        # pts = [
+        #     u_theta[0, :],
+        #     u_theta[-1, :30],
+        #     u_theta[:, 0],
+        #     u_theta[:30, -1],
+        #     u_theta[29, 30:],
+        #     u_theta[30:, 29],
+        # ]
+        
+        # S-domain specific internal boundaries
+        # pts = [
+        #     u_theta[0, 60:],
+        #     u_theta[-1, :30],
+        #     u_theta[30:, 0],
+        #     u_theta[:60, -1],
+        #     u_theta[59, :30],
+        #     u_theta[29, 59:],
+        #     u_theta[60:, 29],
+        #     u_theta[:30, 59]
+        # ]
+
+        # T-domain specific internal boundaries
+        pts = [
+            u_theta[0, :24],
+            u_theta[-1, :24],
+            u_theta[:, 0],
+            u_theta[52:66, -1],
+            u_theta[52, 24:],
+            u_theta[65, 24:],
+            u_theta[:53, 24],
+            u_theta[65:, 24]
+        ]
+            
+        boundary_values = torch.cat(pts)
+        l2_err = torch.sqrt(torch.mean(boundary_values**2))
+        total_l2_error += l2_err
+
+    return (total_l2_error / N_examples).item()
+
+
 try:
-    error_on_boundary = compute_dirichlet_error(prediction_tensor, example, device)
-    print("Mean absolute error on the boundary (Dirichlet BC): ", error_on_boundary)
+    abs_error_on_boundary = compute_dirichlet_error(prediction_tensor, example, device)
+    l2_error_on_boundary = compute_boundary_l2_error(prediction_tensor, example, device)
+    print("Mean absolute error on the boundary (Dirichlet BC): ", abs_error_on_boundary)
+    print("Systematic L2 boundary approximation error (E_boundary): ", l2_error_on_boundary)
     print("")
-except AttributeError:
-    print("Skipping Dirichlet error computation (X_phys not found in example).")
+except Exception as e:
+    print(f"Skipping boundary error computation. Error: {e}")
 
 #########################################
 # Time for evaluation
