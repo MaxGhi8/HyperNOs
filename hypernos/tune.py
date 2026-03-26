@@ -241,9 +241,9 @@ def train_model(
                 path = os.path.join(temp_checkpoint_dir, "checkpoint.pt")
                 torch.save((model.state_dict(), optimizer.state_dict()), path)
                 checkpoint = Checkpoint.from_directory(temp_checkpoint_dir)
-                tune.report({"relative_loss": acc}, checkpoint=checkpoint)
+                train.report({"relative_loss": acc}, checkpoint=checkpoint)
         else:
-            tune.report({"relative_loss": acc})
+            train.report({"relative_loss": acc})
 
 
 def validate_epoch(
