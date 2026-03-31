@@ -184,9 +184,11 @@ def plot_models_losses(
             [0], [0], color="red", linestyle=":", linewidth=2, alpha=0.7
         )
 
-    ax.set_title(title, fontsize=16)
-    ax.set_xlabel(x_label, fontsize=14)
-    ax.set_ylabel(y_label, fontsize=14)
+    ax.set_title(title, fontsize=24)
+    ax.set_xlabel(x_label, fontsize=22)
+    ax.set_ylabel(y_label, fontsize=22)
+    ax.tick_params(axis="both", which="major", labelsize=18)
+    ax.tick_params(axis="both", which="minor", labelsize=14, labelbottom=False, labelleft=False)
     if y_scale == "log":
         ax.set_yscale("log")
         ax.set_xscale("log")
@@ -236,6 +238,8 @@ def plot_models_losses(
         title="Loss type",
         loc=loss_legend_loc,
         bbox_to_anchor=loss_legend_bbox,
+        fontsize=12,
+        title_fontsize=14,
     )
     ax.add_artist(loss_legend)
     
@@ -245,6 +249,8 @@ def plot_models_losses(
         title="Model",
         loc="lower left",
         bbox_to_anchor=(0.20, 0.02),
+        fontsize=12,
+        title_fontsize=14,
     )
     
     # Add convergence reference in a separate legend box to the right
@@ -256,6 +262,8 @@ def plot_models_losses(
             title="Reference",
             loc="lower left",
             bbox_to_anchor=(0.36, 0.02),
+            fontsize=12,
+            title_fontsize=14,
         )
 
     ax.grid(True, which="both", linestyle="--", alpha=0.5)
