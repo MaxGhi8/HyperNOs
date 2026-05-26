@@ -4,7 +4,11 @@ It is used to save the model in ONNX format for deployment or inference.
 """
 
 import argparse
+import json
 import os
+from pathlib import Path
+
+import numpy as np
 import torch
 
 from hypernos.architectures import (
@@ -254,6 +258,55 @@ model.to("cpu")
 
 print("Total number of parameters: ", sum(p.numel() for p in model.parameters()))
 
+
+def _tensor_to_numpy(tensor: torch.Tensor) -> np.ndarray:
+    return tensor.detach().cpu().contiguous().numpy()
+
+
+def _save_sample_io(base_path: str, sample_input, sample_output) -> None:
+    sample_arrays = {}
+    metadata = {"inputs": [], "outputs": []}
+
+    if isinstance(sample_input, (list, tuple)):
+        for index, tensor in enumerate(sample_input):
+            key = f"input_{index}"
+            array = _tensor_to_numpy(tensor)
+            sample_arrays[key] = array
+            metadata["inputs"].append(
+                {"name": key, "shape": list(array.shape), "dtype": str(array.dtype)}
+            )
+    else:
+        array = _tensor_to_numpy(sample_input)
+        sample_arrays["input"] = array
+        metadata["inputs"].append(
+            {"name": "input", "shape": list(array.shape), "dtype": str(array.dtype)}
+        )
+
+    if isinstance(sample_output, (list, tuple)):
+        for index, tensor in enumerate(sample_output):
+            key = f"output_{index}"
+            array = _tensor_to_numpy(tensor)
+            sample_arrays[key] = array
+            metadata["outputs"].append(
+                {"name": key, "shape": list(array.shape), "dtype": str(array.dtype)}
+            )
+    else:
+        array = _tensor_to_numpy(sample_output)
+        sample_arrays["output"] = array
+        metadata["outputs"].append(
+            {"name": "output", "shape": list(array.shape), "dtype": str(array.dtype)}
+        )
+
+    npz_path = Path(f"{base_path}_sample_io.npz")
+    json_path = Path(f"{base_path}_sample_io.json")
+
+    np.savez_compressed(npz_path, **sample_arrays)
+    with json_path.open("w", encoding="utf-8") as file:
+        json.dump(metadata, file, indent=2)
+
+    print(f"Saved sample input/output to {npz_path} and {json_path}")
+
+
 # Create dummy input
 batch_input = next(iter(example.train_loader))[0]
 
@@ -264,6 +317,11 @@ if isinstance(batch_input, list) or isinstance(batch_input, tuple):
     dummy_input = (first, second)
 else:
     dummy_input = batch_input.to("cpu")
+
+with torch.no_grad():
+    dummy_output = model(dummy_input)
+
+_save_sample_io(name_model[:-4], dummy_input, dummy_output)
 
 # Export the model to ONNX
 torch.onnx.export(

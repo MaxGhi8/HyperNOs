@@ -287,7 +287,10 @@ class GeometryConditionedLinearOperator(nn.Module):
         K = torch.zeros_like(Z, device=Z.device)  # (n_samples, d, hidden_dim)
         for idx in range(self.n_heads_A):
             Q += self.W_Q[idx](Z)
+            
+            #! Standard attention
             # K += self.W_K[idx](Z)
+            
             #! For the definitive positive alternative
             K += self.W_Q[idx](Z)
 
@@ -296,9 +299,13 @@ class GeometryConditionedLinearOperator(nn.Module):
 
         # 3. Compute Attention Matrix (Plain Form)
         # (n_samples, d, k) @ (n_samples, k, d) -> (n_samples, d, d)
+        
+        #! standard attention
         # attn_scores = torch.matmul(Q, K.transpose(-2, -1)) * self.scale
+        
         #! For the identity alternative
         # attn_scores = torch.matmul(Z, Z.transpose(-2, -1)) * self.scale
+        
         #! For the definitive positive alternative
         attn_scores = (
             torch.matmul(Q, K.transpose(-2, -1)) * self.scale
@@ -323,6 +330,8 @@ class GeometryConditionedLinearOperator(nn.Module):
 
         # 1-2. Process geometry and construct A(g)
         A = self.construct_matrix(g)
+        
+        f_proj = self.post_processing(f) #! Experiment
 
         # # To verify rank of the matrix
         # print(torch.linalg.matrix_rank(A))
@@ -337,10 +346,10 @@ class GeometryConditionedLinearOperator(nn.Module):
 
         # 2. Apply Linear Operator
         # A: (n_samples, d, d), f: (n_samples, d)
-        u = torch.bmm(A, f.unsqueeze(-1)).squeeze(-1)
+        u = torch.bmm(A, f_proj.unsqueeze(-1)).squeeze(-1)
 
         # 3. Denormalize and enforce constraints
-        u = self.output_denormalizer(u)  #!
+        # u = self.output_denormalizer(u)  #! Comment this for SPD
         u = self.post_processing(u)
 
         return u  # shape: (n_samples, d)
