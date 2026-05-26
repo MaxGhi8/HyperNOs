@@ -318,6 +318,37 @@ def _save_sample_io(base_path: str, sample_input, sample_output) -> None:
     print(f"Saved sample input/output CSV files and manifest to {manifest_path}")
 
 
+def _get_model_epsilon(model):
+    current_model = model
+
+    for _ in range(5):
+        if hasattr(current_model, "epsilon"):
+            epsilon_value = current_model.epsilon
+            if callable(epsilon_value):
+                epsilon_value = epsilon_value()
+            return float(epsilon_value.detach().cpu().item())
+
+        if hasattr(current_model, "model"):
+            current_model = current_model.model
+            continue
+
+        if hasattr(current_model, "module"):
+            current_model = current_model.module
+            continue
+
+        break
+
+    return None
+
+
+def _save_epsilon(base_path: str, epsilon_value: float) -> None:
+    epsilon_path = Path(f"{base_path}_epsilon.txt")
+    with epsilon_path.open("w", encoding="utf-8") as file:
+        file.write(f"{epsilon_value:.18e}\n")
+
+    print(f"Saved epsilon to {epsilon_path}")
+
+
 # Create dummy input
 batch_input = next(iter(example.train_loader))[0]
 
@@ -333,6 +364,13 @@ with torch.no_grad():
     dummy_output = model(dummy_input)
 
 _save_sample_io(name_model[:-4], dummy_input, dummy_output)
+
+epsilon_value = _get_model_epsilon(model)
+if epsilon_value is not None:
+    print(f"Epsilon: {epsilon_value:.18e}")
+    _save_epsilon(name_model[:-4], epsilon_value)
+else:
+    print("Epsilon: not available on this model")
 
 # Export the model to ONNX
 torch.onnx.export(
