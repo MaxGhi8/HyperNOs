@@ -4,11 +4,10 @@ It is used to save the model in ONNX format for deployment or inference.
 """
 
 import argparse
-import json
+import csv
 import os
 from pathlib import Path
 
-import numpy as np
 import torch
 
 from hypernos.architectures import (
@@ -259,52 +258,64 @@ model.to("cpu")
 print("Total number of parameters: ", sum(p.numel() for p in model.parameters()))
 
 
-def _tensor_to_numpy(tensor: torch.Tensor) -> np.ndarray:
-    return tensor.detach().cpu().contiguous().numpy()
+def _tensor_to_flat_list(tensor: torch.Tensor) -> list[float]:
+    return tensor.detach().cpu().contiguous().view(-1).tolist()
+
+
+def _save_tensor_csv(base_path: str, tensor_name: str, tensor: torch.Tensor) -> tuple[str, str]:
+    csv_path = Path(f"{base_path}_{tensor_name}.csv")
+    shape = list(tensor.shape)
+    flat_values = _tensor_to_flat_list(tensor)
+
+    with csv_path.open("w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        writer.writerow(flat_values)
+
+    shape_text = "x".join(str(dimension) for dimension in shape)
+    return str(csv_path), shape_text
 
 
 def _save_sample_io(base_path: str, sample_input, sample_output) -> None:
-    sample_arrays = {}
-    metadata = {"inputs": [], "outputs": []}
+    manifest_rows = []
 
     if isinstance(sample_input, (list, tuple)):
         for index, tensor in enumerate(sample_input):
-            key = f"input_{index}"
-            array = _tensor_to_numpy(tensor)
-            sample_arrays[key] = array
-            metadata["inputs"].append(
-                {"name": key, "shape": list(array.shape), "dtype": str(array.dtype)}
+            csv_path, shape_text = _save_tensor_csv(base_path, f"input_{index}", tensor)
+            manifest_rows.append(
+                ["input", f"input_{index}", csv_path, shape_text, str(tensor.dtype), tensor.numel()]
             )
     else:
-        array = _tensor_to_numpy(sample_input)
-        sample_arrays["input"] = array
-        metadata["inputs"].append(
-            {"name": "input", "shape": list(array.shape), "dtype": str(array.dtype)}
+        csv_path, shape_text = _save_tensor_csv(base_path, "input", sample_input)
+        manifest_rows.append(
+            ["input", "input", csv_path, shape_text, str(sample_input.dtype), sample_input.numel()]
         )
 
     if isinstance(sample_output, (list, tuple)):
         for index, tensor in enumerate(sample_output):
-            key = f"output_{index}"
-            array = _tensor_to_numpy(tensor)
-            sample_arrays[key] = array
-            metadata["outputs"].append(
-                {"name": key, "shape": list(array.shape), "dtype": str(array.dtype)}
+            csv_path, shape_text = _save_tensor_csv(base_path, f"output_{index}", tensor)
+            manifest_rows.append(
+                [
+                    "output",
+                    f"output_{index}",
+                    csv_path,
+                    shape_text,
+                    str(tensor.dtype),
+                    tensor.numel(),
+                ]
             )
     else:
-        array = _tensor_to_numpy(sample_output)
-        sample_arrays["output"] = array
-        metadata["outputs"].append(
-            {"name": "output", "shape": list(array.shape), "dtype": str(array.dtype)}
+        csv_path, shape_text = _save_tensor_csv(base_path, "output", sample_output)
+        manifest_rows.append(
+            ["output", "output", csv_path, shape_text, str(sample_output.dtype), sample_output.numel()]
         )
 
-    npz_path = Path(f"{base_path}_sample_io.npz")
-    json_path = Path(f"{base_path}_sample_io.json")
+    manifest_path = Path(f"{base_path}_sample_io_manifest.csv")
+    with manifest_path.open("w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        writer.writerow(["kind", "name", "filename", "shape", "dtype", "numel"])
+        writer.writerows(manifest_rows)
 
-    np.savez_compressed(npz_path, **sample_arrays)
-    with json_path.open("w", encoding="utf-8") as file:
-        json.dump(metadata, file, indent=2)
-
-    print(f"Saved sample input/output to {npz_path} and {json_path}")
+    print(f"Saved sample input/output CSV files and manifest to {manifest_path}")
 
 
 # Create dummy input
