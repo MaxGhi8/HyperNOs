@@ -1,4 +1,8 @@
+import os
 import random
+
+import numpy as np
+import pandas as pd
 import pytest
 import torch
 
@@ -20,9 +24,108 @@ from hypernos.datasets import (
     ShearLayer,
     SinFrequency,
     WaveEquation,
+    YetiSchurTransformer,
 )
 
 random.seed(42)  # Set a seed for reproducibility
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+YETI_CSV_PATH = os.path.join(REPO_ROOT, "data", "mp_afieti", "yeti_dataset.csv")
+
+
+def check_schur_complement_consistency(
+    dataset_csv: str,
+    patch_id: int,
+    dirichlet: np.ndarray,
+    output: np.ndarray,
+    n_reference_samples: int = 200,
+    seed: int = 0,
+    tol: float = 1e-4,
+) -> dict:
+    """Checks whether a (dirichlet, output) pair for `patch_id` is consistent
+    with output = S_k @ dirichlet for *some* symmetric positive
+    (semi-)definite operator S_k -- the two properties any true Schur
+    complement must have -- using only the OTHER samples already stored for
+    the same patch as reference material. No access to the actual stiffness
+    matrix / S_k is used.
+
+    Two checks:
+      1. Energy positivity: dirichlet . output should be >= -tol (a Schur
+         complement of an SPD stiffness block is PSD, so v^T S_k v >= 0).
+      2. Symmetry: for reference samples (v_j, y_j) of the SAME patch,
+         v_j . output should equal dirichlet . y_j (both equal
+         dirichlet^T S_k v_j when S_k is symmetric).
+
+    This is a necessary-condition check, not a proof the pair is exactly
+    correct: it would catch e.g. a sign error, a mismatched patch, or
+    garbled/shuffled data, but not every possible corruption (an operator
+    that happens to still be symmetric PSD but numerically wrong would
+    pass). An exact per-row check would require reconstructing S_k itself,
+    e.g. by exporting it from the C++ generator.
+    """
+    df = pd.read_csv(dataset_csv)
+    sub = df[df["patch_id"] == patch_id]
+    assert len(sub) > 0, f"no samples found for patch_id={patch_id}"
+
+    n_skeleton = int(sub["n_skeleton"].iloc[0])
+    dirichlet = np.asarray(dirichlet, dtype=np.float64)
+    output = np.asarray(output, dtype=np.float64)
+    assert dirichlet.shape == (n_skeleton,), (
+        f"dirichlet must have shape ({n_skeleton},) for patch {patch_id}, got {dirichlet.shape}"
+    )
+    assert output.shape == (n_skeleton,), (
+        f"output must have shape ({n_skeleton},) for patch {patch_id}, got {output.shape}"
+    )
+
+    dirichlet_cols = [f"dirichlet_{i}" for i in range(n_skeleton)]
+    output_cols = [f"output_{i}" for i in range(n_skeleton)]
+
+    rng = np.random.default_rng(seed)
+    n_ref = min(n_reference_samples, len(sub))
+    ref_idx = rng.choice(len(sub), size=n_ref, replace=False)
+    v_ref = sub.iloc[ref_idx][dirichlet_cols].to_numpy()
+    y_ref = sub.iloc[ref_idx][output_cols].to_numpy()
+
+    energy = float(dirichlet @ output)
+
+    lhs = v_ref @ output    # v_j . output, for each reference v_j
+    rhs = y_ref @ dirichlet  # y_j . dirichlet, for each reference y_j
+    abs_err = np.abs(lhs - rhs)
+    denom = np.maximum(np.abs(lhs), np.abs(rhs))
+    denom[denom == 0] = 1.0
+    rel_err = abs_err / denom
+
+    passed_psd = energy >= -tol
+    passed_symmetry = bool(rel_err.max() < tol)
+
+    return {
+        "patch_id": patch_id,
+        "n_reference_samples": n_ref,
+        "energy": energy,
+        "passed_psd": passed_psd,
+        "max_relative_symmetry_error": float(rel_err.max()),
+        "mean_relative_symmetry_error": float(rel_err.mean()),
+        "passed_symmetry": passed_symmetry,
+        "passed": passed_psd and passed_symmetry,
+    }
+
+
+@pytest.mark.parametrize("patch_id", [0, 5, 10, 20])
+def test_yeti_schur_transformer_schur_complement_consistency(patch_id):
+    df = pd.read_csv(YETI_CSV_PATH)
+    sub = df[df["patch_id"] == patch_id]
+    n_skeleton = int(sub["n_skeleton"].iloc[0])
+    dirichlet_cols = [f"dirichlet_{i}" for i in range(n_skeleton)]
+    output_cols = [f"output_{i}" for i in range(n_skeleton)]
+
+    row = sub.iloc[0]
+    dirichlet = row[dirichlet_cols].to_numpy(dtype=np.float64)
+    output = row[output_cols].to_numpy(dtype=np.float64)
+
+    result = check_schur_complement_consistency(YETI_CSV_PATH, patch_id, dirichlet, output)
+
+    assert result["passed_psd"], result
+    assert result["passed_symmetry"], result
 
 #### Test cases for valid examples 2D
 num_test_cases = 10  # Number of test cases
@@ -851,3 +954,103 @@ def test_afieti_transformer():
     assert rhs.shape == (batch_size, example.s_rhs)
     assert geom.shape == (batch_size, example.s_geo, 4)
     assert output.shape == (batch_size, example.s_rhs)
+
+
+def test_yeti_schur_transformer_dataset():
+    batch_size = 100
+    training_samples = 16000  # dataset has 20000 rows: 16000/2000/2000 split
+    example = NO_load_data_model(
+        which_example="mp_afieti",
+        no_architecture={
+            "FourierF": 0,
+            "retrain": -1,
+        },
+        batch_size=batch_size,
+        training_samples=training_samples,
+        filename="yeti_dataset.csv",
+    )
+
+    assert isinstance(example, YetiSchurTransformer)
+    assert example.s_geo == 144  # 576 geom_* columns / 4 (x, y, z, w)
+    assert example.s_rhs == 24  # 24 dirichlet_* columns
+    assert example.s_out == 24  # 24 output_* columns
+
+    # Check for the dimensions of the input and output tensors
+    (rhs, geom), output = next(iter(example.train_loader))
+    assert rhs.shape == (batch_size, example.s_rhs)
+    assert geom.shape == (batch_size, example.s_geo, 4)
+    assert output.shape == (batch_size, example.s_out)
+
+    (rhs, geom), output = next(iter(example.val_loader))
+    assert rhs.shape == (batch_size, example.s_rhs)
+    assert geom.shape == (batch_size, example.s_geo, 4)
+    assert output.shape == (batch_size, example.s_out)
+
+    (rhs, geom), output = next(iter(example.test_loader))
+    assert rhs.shape == (batch_size, example.s_rhs)
+    assert geom.shape == (batch_size, example.s_geo, 4)
+    assert output.shape == (batch_size, example.s_out)
+
+    # Check for the dimensions of the normalizers
+    assert example.input_normalizer.mean.shape == (example.s_geo, 4)
+    assert example.input_normalizer.std.shape == (example.s_geo, 4)
+    assert example.output_normalizer.mean.shape == (example.s_out,)
+    assert example.output_normalizer.std.shape == (example.s_out,)
+
+
+def test_yeti_schur_transformer_invalid_out_dist():
+    with pytest.raises(
+        AssertionError, match="Out-of-distribution testing samples are not available"
+    ):
+        NO_load_data_model(
+            which_example="mp_afieti",
+            no_architecture={
+                "FourierF": 0,
+                "retrain": -1,
+            },
+            batch_size=32,
+            training_samples=10,
+            in_dist=False,
+            filename="yeti_dataset.csv",
+        )
+
+
+def test_yeti_schur_transformer_invalid_sampling_rate():
+    with pytest.raises(AssertionError, match="Sampling rate must be 1"):
+        NO_load_data_model(
+            which_example="mp_afieti",
+            no_architecture={
+                "FourierF": 0,
+                "retrain": -1,
+            },
+            batch_size=32,
+            training_samples=10,
+            s=2,
+            filename="yeti_dataset.csv",
+        )
+
+
+def test_yeti_schur_transformer_shuffle_seed():
+    def first_test_batch(shuffle_seed):
+        example = YetiSchurTransformer(
+            filename="yeti_dataset.csv",
+            network_properties={"FourierF": 0, "retrain": -1},
+            batch_size=200,
+            training_samples=16000,
+            search_path=REPO_ROOT,
+            shuffle_seed=shuffle_seed,
+        )
+        (rhs, geom), output = next(iter(example.test_loader))
+        return rhs, geom, output
+
+    rhs_a, geom_a, output_a = first_test_batch(shuffle_seed=0)
+    rhs_b, geom_b, output_b = first_test_batch(shuffle_seed=0)
+    rhs_c, geom_c, output_c = first_test_batch(shuffle_seed=123)
+
+    # The same shuffle_seed must yield an identical, reproducible split
+    assert torch.equal(rhs_a, rhs_b)
+    assert torch.equal(geom_a, geom_b)
+    assert torch.equal(output_a, output_b)
+
+    # A different shuffle_seed must yield a different split
+    assert not torch.equal(rhs_a, rhs_c)

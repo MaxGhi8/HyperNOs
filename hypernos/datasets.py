@@ -9,12 +9,14 @@ import random
 import h5py
 import mat73
 import numpy as np
+import pandas as pd
 import scipy
 import torch
 from beartype import beartype
 from jaxtyping import Float, jaxtyped
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset, TensorDataset
+
 from hypernos.utilities import (
     FourierFeatures,
     FourierFeatures1D,
@@ -68,6 +70,8 @@ def NO_load_data_model(
         "afieti_homogeneous_neumann": AFIETI,
         "afieti_homogeneous_neumann_transformer": AFIETI_transformer,
         "afieti_fno": AFIETI_FNO,
+        ###
+        "mp_afieti": YetiSchurTransformer,
         ###
         "bampno": BAMPNO,
         "bampno_8_domain": BAMPNO,
@@ -3286,6 +3290,147 @@ class AFIETI_FNO:
         y_grid = y_grid.unsqueeze(-1)
         grid = torch.cat((x_grid, y_grid), -1)
         return grid
+
+
+# ------------------------------------------------------------------------------
+# IETI transformer data
+# Training samples (16000)
+# Testing samples (2000)
+# Validation samples (2000)
+        
+class _YetiSchurTorchDataset(Dataset):
+    def __init__(self, x: torch.Tensor, f: torch.Tensor, y: torch.Tensor):
+        self.x = x
+        self.f = f
+        self.y = y
+
+    def __len__(self) -> int:
+        return self.y.shape[0]
+
+    def __getitem__(self, idx):
+        return (self.f[idx], self.x[idx]), self.y[idx]
+
+
+class YetiSchurTransformer:
+    def __init__(
+        self,
+        filename: str,
+        network_properties: dict,
+        batch_size: int,
+        training_samples: int,
+        s=1,
+        in_dist=True,
+        search_path="/",
+        shuffle_seed: int = 0,
+    ):
+        assert in_dist, "Out-of-distribution testing samples are not available"
+        assert s == 1, "Sampling rate must be 1, no subsampling allowed in this example"
+
+        g = torch.Generator(device="cpu")
+
+        retrain = network_properties["retrain"]
+        if retrain > 0:
+            os.environ["PYTHONHASHSEED"] = str(retrain)
+            random.seed(retrain)
+            np.random.seed(retrain)
+            torch.manual_seed(retrain)
+            torch.cuda.manual_seed(retrain)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            g.manual_seed(retrain)
+
+        self.TrainDataPath = find_file(filename, search_path)
+        df = pd.read_csv(self.TrainDataPath)
+
+        # Column order in the file is already correct (geom_0_x, geom_0_y,
+        # geom_0_z, geom_0_w, geom_1_x, ...), so a plain prefix filter over
+        # df.columns (order-preserving) is enough -- no re-sorting needed.
+        geom_cols = [c for c in df.columns if c.startswith("geom_")]
+        dirichlet_cols = [c for c in df.columns if c.startswith("dirichlet_")]
+        output_cols = [c for c in df.columns if c.startswith("output_")]
+
+        n_samples = len(df)
+        s_geo = len(geom_cols) // 4
+        s_rhs = len(dirichlet_cols)
+        s_out = len(output_cols)
+        assert s_rhs == s_out, "dirichlet/output column counts must match"
+
+        f_all = torch.from_numpy(df[dirichlet_cols].to_numpy()).float()
+        output_all = torch.from_numpy(df[output_cols].to_numpy()).float()
+        x_all = (
+            torch.from_numpy(df[geom_cols].to_numpy())
+            .float()
+            .view(n_samples, s_geo, 4)
+        )
+
+        # Rows are grouped by patch (all of patch 0's samples, then patch
+        # 1's, ...), so a plain sequential train/val/test split would put
+        # entire patches only in val/test. 
+        perm = torch.randperm(
+            n_samples, generator=torch.Generator().manual_seed(shuffle_seed)
+        )
+        f_all, x_all, output_all = f_all[perm], x_all[perm], output_all[perm]
+
+        # Training data
+        f_train, x_train, output_train = (
+            f_all[:training_samples, ::s],
+            x_all[:training_samples, ::s, :],
+            output_all[:training_samples, ::s],
+        )
+
+        # Compute mean and std (for gaussian point-wise normalization)
+        self.input_normalizer = UnitGaussianNormalizer(x_train)
+        self.output_normalizer = UnitGaussianNormalizer(output_train)
+
+        # Validation data
+        f_val, x_val, output_val = (
+            f_all[training_samples : training_samples + 2000, ::s],
+            x_all[training_samples : training_samples + 2000, ::s, :],
+            output_all[training_samples : training_samples + 2000, ::s],
+        )
+
+        # Test data
+        f_test, x_test, output_test = (
+            f_all[training_samples + 2000 :, ::s],
+            x_all[training_samples + 2000 :, ::s, :],
+            output_all[training_samples + 2000 :, ::s],
+        )
+
+        train_set = _YetiSchurTorchDataset(x_train, f_train, output_train)
+        val_set = _YetiSchurTorchDataset(x_val, f_val, output_val)
+        test_set = _YetiSchurTorchDataset(x_test, f_test, output_test)
+
+        num_workers = 0
+
+        self.train_loader = DataLoader(
+            train_set,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.val_loader = DataLoader(
+            val_set,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+        self.test_loader = DataLoader(
+            test_set,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+            generator=g,
+        )
+
+        self.s_rhs = f_all.shape[1]
+        self.s_geo = x_train.shape[1]
+        self.s_out = output_test.shape[1]
+
 
 
 # ------------------------------------------------------------------------------
