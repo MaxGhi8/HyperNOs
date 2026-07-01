@@ -56,6 +56,7 @@ def parse_arguments():
             "crosstruss",
             "afieti_homogeneous_neumann",
             "afieti_fno",
+            "mp_afieti",
         ],
         help="Select the example to run.",
     )
@@ -128,8 +129,17 @@ try:
             **hyperparams_arc,
         }
 
+        if which_example == "mp_afieti":
+            dataset_which_example = which_example
+            dataset_filename = "yeti_dataset.csv"
+        else:
+            dataset_which_example = which_example + "_transformer" * (
+                "transformer" in arc
+            )
+            dataset_filename = "dataset_homogeneous_Neumann_l_0_deg_2_crazygeom.mat"
+
         example = NO_load_data_model(
-            which_example=which_example + "_transformer" * ("transformer" in arc),
+            which_example=dataset_which_example,
             no_architecture={
                 "FourierF": (
                     default_hyper_params["FourierF"]
@@ -140,7 +150,7 @@ try:
             },
             batch_size=default_hyper_params["batch_size"],
             training_samples=default_hyper_params["training_samples"],
-            filename="dataset_homogeneous_Neumann_l_0_deg_2_crazygeom.mat",
+            filename=dataset_filename,
         )
 
         match arc:
