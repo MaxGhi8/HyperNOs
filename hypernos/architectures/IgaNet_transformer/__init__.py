@@ -1,1 +1,2 @@
 from .IgaNet_transformer import GeometryConditionedLinearOperator, zero_mean_imposition
+from .IgaNet_transformer_mp_afieti import GeometryConditionedLinearOperator as GeometryConditionedLinearOperator_mp_afieti

@@ -8,7 +8,7 @@ import os
 
 import torch
 
-from hypernos.architectures import GeometryConditionedLinearOperator
+from hypernos.architectures.IgaNet_transformer.IgaNet_transformer_mp_afieti import GeometryConditionedLinearOperator
 from hypernos.datasets import NO_load_data_model
 from hypernos.loss_fun import lpLoss
 from hypernos.train import train_fixed_model

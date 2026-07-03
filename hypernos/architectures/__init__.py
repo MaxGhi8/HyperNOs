@@ -57,6 +57,9 @@ from .IgaNet_transformer.IgaNet_transformer import (
     GeometryConditionedLinearOperator,
     zero_mean_imposition,
 )
+from .IgaNet_transformer.IgaNet_transformer_mp_afieti import (
+    GeometryConditionedLinearOperator as GeometryConditionedLinearOperator_mp_afieti,
+)
 
 # RationalNN architecture
 from .RationalNN.RationalNN import (
