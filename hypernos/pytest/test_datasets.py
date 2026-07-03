@@ -127,6 +127,24 @@ def test_yeti_schur_transformer_schur_complement_consistency(patch_id):
     assert result["passed_psd"], result
     assert result["passed_symmetry"], result
 
+
+def test_yeti_schur_transformer_energy_positivity_all_samples():
+    """Verify dirichlet · output > 0 for every row in the dataset."""
+    df = pd.read_csv(YETI_CSV_PATH)
+    for pid in df["patch_id"].unique():
+        sub = df[df["patch_id"] == pid]
+        n = int(sub["n_skeleton"].iloc[0])
+        dcols = [f"dirichlet_{i}" for i in range(n)]
+        ocols = [f"output_{i}" for i in range(n)]
+        D = sub[dcols].to_numpy(dtype=np.float64)
+        O = sub[ocols].to_numpy(dtype=np.float64)
+        energy = (D * O).sum(axis=1)
+        assert (energy > 0).all(), (
+            f"patch_id={pid}: {int((energy <= 0).sum())}/{len(energy)} samples "
+            f"have non-positive energy (min={energy.min():.6e})"
+        )
+
+
 #### Test cases for valid examples 2D
 num_test_cases = 10  # Number of test cases
 random_batch_sizes = [random.randint(1, 50) for _ in range(num_test_cases)]
