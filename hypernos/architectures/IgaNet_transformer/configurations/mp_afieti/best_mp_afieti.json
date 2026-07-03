@@ -13,8 +13,8 @@
 	},
 	"iganet_transformer_architecture": {
 		"problem_dim": 1,
-		"n_dofs": 24,
-		"n_control_points": 144,
+		"n_dofs": 48,
+		"n_control_points": 304,
 		"hidden_dim": 20,
 		"n_heads_A": 1,
 		"n_heads": 1,

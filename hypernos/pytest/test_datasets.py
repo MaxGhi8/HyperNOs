@@ -971,9 +971,9 @@ def test_yeti_schur_transformer_dataset():
     )
 
     assert isinstance(example, YetiSchurTransformer)
-    assert example.s_geo == 144  # 576 geom_* columns / 4 (x, y, z, w)
-    assert example.s_rhs == 24  # 24 dirichlet_* columns
-    assert example.s_out == 24  # 24 output_* columns
+    assert example.s_geo == 304  # 1216 geom_* columns / 4 (x, y, z, w)
+    assert example.s_rhs == 48  # 48 dirichlet_* columns
+    assert example.s_out == 48  # 48 output_* columns
 
     # Check for the dimensions of the input and output tensors
     (rhs, geom), output = next(iter(example.train_loader))
