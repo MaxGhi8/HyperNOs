@@ -14,6 +14,8 @@ from hypernos.architectures import (
     CNO,
     FNO_ONNX,
     GeometryConditionedLinearOperator,
+    GeometryConditionedLinearOperator_mp_afieti,
+    GeometryConditionedLinearOperatorExport_mp_afieti,
     ResidualNetwork,
 )
 from hypernos.datasets import NO_load_data_model
@@ -222,7 +224,12 @@ try:
                 )
 
             case "IgaNet_transformer":
-                model = GeometryConditionedLinearOperator(
+                iganet_transformer_cls = (
+                    GeometryConditionedLinearOperator_mp_afieti
+                    if which_example == "mp_afieti"
+                    else GeometryConditionedLinearOperator
+                )
+                model = iganet_transformer_cls(
                     n_dofs=default_hyper_params["n_dofs"],
                     n_control_points=default_hyper_params["n_control_points"],
                     hidden_dim=default_hyper_params["hidden_dim"],
@@ -257,6 +264,12 @@ except Exception:
         "The model is not found, please check the hyperparameters passed trhow the CLI."
     )
 
+if isinstance(model, GeometryConditionedLinearOperator_mp_afieti):
+    # Export Q, K_scaled and epsilon alongside u so external inference code
+    # (e.g. a C++ application) can apply the operator without materializing
+    # the dense (n_dofs, n_dofs) matrix.
+    model = GeometryConditionedLinearOperatorExport_mp_afieti(model)
+
 model.eval()
 model.to("cpu")
 
@@ -285,7 +298,7 @@ def _save_tensor_csv(base_path: str, tensor_name: str, tensor: torch.Tensor) -> 
     return str(csv_path), shape_text
 
 
-def _save_sample_io(base_path: str, sample_input, sample_output) -> None:
+def _save_sample_io(base_path: str, sample_input, sample_output, output_names=None) -> None:
     manifest_rows = []
 
     if isinstance(sample_input, (list, tuple)):
@@ -301,12 +314,14 @@ def _save_sample_io(base_path: str, sample_input, sample_output) -> None:
         )
 
     if isinstance(sample_output, (list, tuple)):
-        for index, tensor in enumerate(sample_output):
-            csv_path, shape_text = _save_tensor_csv(base_path, f"output_{index}", tensor)
+        if output_names is None or len(output_names) != len(sample_output):
+            output_names = [f"output_{index}" for index in range(len(sample_output))]
+        for name, tensor in zip(output_names, sample_output):
+            csv_path, shape_text = _save_tensor_csv(base_path, name, tensor)
             manifest_rows.append(
                 [
                     "output",
-                    f"output_{index}",
+                    name,
                     csv_path,
                     shape_text,
                     str(tensor.dtype),
@@ -373,7 +388,13 @@ else:
 with torch.no_grad():
     dummy_output = model(dummy_input)
 
-_save_sample_io(name_model[:-4], dummy_input, dummy_output)
+output_names = (
+    ["u", "Q", "K_scaled", "epsilon"]
+    if isinstance(model, GeometryConditionedLinearOperatorExport_mp_afieti)
+    else ["output"]
+)
+
+_save_sample_io(name_model[:-4], dummy_input, dummy_output, output_names=output_names)
 
 epsilon_value = _get_model_epsilon(model)
 if epsilon_value is not None:
@@ -388,7 +409,7 @@ torch.onnx.export(
     (dummy_input,),  # pass a single positional argument
     f"{name_model[:-4]}.onnx",
     input_names=["input"],
-    output_names=["output"],
+    output_names=output_names,
     export_params=True,
     # dynamo=True,
 )
