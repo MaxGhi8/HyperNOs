@@ -273,11 +273,19 @@ class GeometryConditionedLinearOperator(nn.Module):
         return F.softplus(self.raw_epsilon)
 
     @jaxtyped(typechecker=beartype)
-    def construct_matrix(
+    def compute_operator_components(
         self, g: Float[Tensor, "n_samples p 4"]
-    ) -> Float[Tensor, "n_samples d d"]:
+    ) -> tuple[
+        Float[Tensor, "n_samples d hidden_dim"],
+        Float[Tensor, "n_samples d hidden_dim"],
+        Float[Tensor, ""],
+    ]:
         """
-        Helper method to visualize or extract the learned operator matrix A(g).
+        Compute the low-rank + diagonal factorization of the operator matrix:
+            A(g) = Q @ K_scaled^T + epsilon * I
+        Returns Q, K_scaled (= K * self.scale) and epsilon so that A(g) can be
+        applied to a vector via `apply_operator` without ever materializing the
+        dense (n_dofs, n_dofs) matrix.
         """
         # Process Geometry: g -> Z
         Z = self.geo_branch(g)  # Z shape: (n_samples, d, hidden_dim)
@@ -287,35 +295,34 @@ class GeometryConditionedLinearOperator(nn.Module):
         K = torch.zeros_like(Z, device=Z.device)  # (n_samples, d, hidden_dim)
         for idx in range(self.n_heads_A):
             Q += self.W_Q[idx](Z)
-            
+
             #! Standard attention
             # K += self.W_K[idx](Z)
-            
+
             #! For the definitive positive alternative
             K += self.W_Q[idx](Z)
 
         Q = Q / self.n_heads_A
         K = K / self.n_heads_A
 
-        # 3. Compute Attention Matrix (Plain Form)
-        # (n_samples, d, k) @ (n_samples, k, d) -> (n_samples, d, d)
-        
-        #! standard attention
-        # attn_scores = torch.matmul(Q, K.transpose(-2, -1)) * self.scale
-        
-        #! For the identity alternative
-        # attn_scores = torch.matmul(Z, Z.transpose(-2, -1)) * self.scale
-        
-        #! For the definitive positive alternative
-        attn_scores = (
-            torch.matmul(Q, K.transpose(-2, -1)) * self.scale
-            + torch.eye(self.n_dofs, device=Z.device).unsqueeze(0) * self.epsilon
-        )
+        return Q, K * self.scale, self.epsilon
 
-        # Apply Softmax over the last dimension
-        # A = F.softmax(attn_scores, dim=-1)
+    @jaxtyped(typechecker=beartype)
+    def apply_operator(
+        self,
+        f: Float[Tensor, "n_samples d"],
+        Q: Float[Tensor, "n_samples d hidden_dim"],
+        K_scaled: Float[Tensor, "n_samples d hidden_dim"],
+        epsilon: Float[Tensor, ""],
+    ) -> Float[Tensor, "n_samples d"]:
+        """
+        Apply A(g) = Q @ K_scaled^T + epsilon * I to f without materializing
+        the dense (n_dofs, n_dofs) matrix A(g).
+        """
+        Kt_f = torch.bmm(K_scaled.transpose(-2, -1), f.unsqueeze(-1))  # (n_samples, hidden_dim, 1)
+        Qf = torch.bmm(Q, Kt_f).squeeze(-1)  # (n_samples, d)
 
-        return attn_scores
+        return Qf + epsilon * f
 
     @jaxtyped(typechecker=beartype)
     def forward(
@@ -327,18 +334,17 @@ class GeometryConditionedLinearOperator(nn.Module):
         f, g = x
         g = self.input_normalizer(g)
 
-        # 1. Process geometry and construct A(g)
-        A = self.construct_matrix(g)
+        # 1. Process geometry into the low-rank + diagonal factorization of A(g)
+        Q, K_scaled, epsilon = self.compute_operator_components(g)
 
-        # 2. Apply Linear Operator
-        # A: (n_samples, d, d), f: (n_samples, d)
+        # 2. Apply Linear Operator without materializing A(g) = Q @ K_scaled^T + epsilon * I
 
         #! Option 1: with normalizations
         # f_proj = self.post_processing(f)
-        # u = torch.bmm(A, f_proj.unsqueeze(-1)).squeeze(-1)
+        # u = self.apply_operator(f_proj, Q, K_scaled, epsilon)
         # u = self.post_processing(u)
         #! Option 2: without normalizations
-        u = torch.bmm(A, f.unsqueeze(-1)).squeeze(-1)
+        u = self.apply_operator(f, Q, K_scaled, epsilon)
 
         # 3. Denormalize
         # u = self.output_denormalizer(u)  #! Comment this for SPD
@@ -405,9 +411,19 @@ if __name__ == "__main__":
         sums, torch.zeros_like(sums), atol=1e-5
     ), "Zero mean constraint NOT satisfied!"
 
-    # Check 3: Check Matrix A internals
-    A_matrix = model.construct_matrix(g_input)
-    print(f"\nInternal Matrix A(g) shape: {A_matrix.shape}")
-    assert A_matrix.shape == (BATCH_SIZE, N_DOFS, N_DOFS), "Matrix A shape mismatch!"
+    # Check 3: Check operator components internals and efficient apply
+    Q, K_scaled, epsilon = model.compute_operator_components(g_input)
+    print(f"\nOperator components shapes: Q {Q.shape}, K_scaled {K_scaled.shape}, epsilon {epsilon.shape}")
+    assert Q.shape == (BATCH_SIZE, N_DOFS, LATENT_DIM), "Q shape mismatch!"
+    assert K_scaled.shape == (BATCH_SIZE, N_DOFS, LATENT_DIM), "K_scaled shape mismatch!"
+
+    # The efficient apply (no dense matrix materialized) must match the dense apply
+    A_matrix = torch.bmm(Q, K_scaled.transpose(-2, -1)) + torch.eye(
+        N_DOFS, device=device
+    ).unsqueeze(0) * epsilon
+    u_dense = torch.bmm(A_matrix, f_input.unsqueeze(-1)).squeeze(-1)
+    u_efficient = model.apply_operator(f_input, Q, K_scaled, epsilon)
+    assert torch.allclose(u_efficient, u_dense, atol=1e-5), "Efficient apply does NOT match dense apply!"
+    assert torch.allclose(u_efficient, u_pred, atol=1e-5), "Efficient apply does NOT match forward output!"
 
     print("\n--- Test finished! ---")
