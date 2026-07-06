@@ -352,6 +352,41 @@ class GeometryConditionedLinearOperator(nn.Module):
         return u  # shape: (n_samples, d)
 
 
+class GeometryConditionedLinearOperatorExport(nn.Module):
+    """
+    Wraps a trained GeometryConditionedLinearOperator so that a single forward
+    pass also exposes Q, K_scaled and epsilon (in addition to u).
+
+    This is meant for ONNX export: external inference code (e.g. a C++
+    application) can then cache Q, K_scaled and epsilon and reuse them to
+    apply the operator to many right-hand sides f via
+        u = Q @ (K_scaled^T @ f) + epsilon * f
+    without ever forming the dense (n_dofs, n_dofs) matrix.
+
+    The wrapped model's own forward (used for training) is unaffected.
+    """
+
+    def __init__(self, model: GeometryConditionedLinearOperator) -> None:
+        super().__init__()
+        self.model = model
+
+    def forward(
+        self, x  #: Float[Tensor, "n_samples d"], g: Float[Tensor, "n_samples p 4"]
+    ) -> tuple[
+        Float[Tensor, "n_samples d"],
+        Float[Tensor, "n_samples d hidden_dim"],
+        Float[Tensor, "n_samples d hidden_dim"],
+        Float[Tensor, ""],
+    ]:
+        f, g = x
+        g = self.model.input_normalizer(g)
+
+        Q, K_scaled, epsilon = self.model.compute_operator_components(g)
+        u = self.model.apply_operator(f, Q, K_scaled, epsilon)
+
+        return u, Q, K_scaled, epsilon
+
+
 #########################################
 # Main Execution Block
 #########################################

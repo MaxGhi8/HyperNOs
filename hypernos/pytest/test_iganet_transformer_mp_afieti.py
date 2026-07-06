@@ -1,6 +1,9 @@
 import torch
 
 from hypernos.architectures import GeometryConditionedLinearOperator_mp_afieti
+from hypernos.architectures.IgaNet_transformer.IgaNet_transformer_mp_afieti import (
+    GeometryConditionedLinearOperatorExport,
+)
 
 device = torch.device("cpu")
 
@@ -74,6 +77,33 @@ def test_apply_operator_matches_dense_apply_and_forward():
 
     assert torch.allclose(u_efficient, u_dense, atol=1e-5)
     assert torch.allclose(u_model, u_dense, atol=1e-5)
+
+
+def test_export_wrapper_returns_u_and_components():
+    torch.manual_seed(4)
+    model = make_model()
+    batch = 3
+    d = 16
+    hidden_dim = 8
+
+    f = torch.randn(batch, d, device=device)
+    g = torch.randn(batch, 10, 4, device=device)
+
+    export_model = GeometryConditionedLinearOperatorExport(model)
+    u, Q, K_scaled, epsilon = export_model((f, g))
+
+    assert u.shape == (batch, d)
+    assert Q.shape == (batch, d, hidden_dim)
+    assert K_scaled.shape == (batch, d, hidden_dim)
+    assert epsilon.dim() == 0
+
+    u_model = model((f, g))
+    Q_direct, K_scaled_direct, epsilon_direct = model.compute_operator_components(g)
+
+    assert torch.allclose(u, u_model, atol=1e-6)
+    assert torch.allclose(Q, Q_direct, atol=1e-6)
+    assert torch.allclose(K_scaled, K_scaled_direct, atol=1e-6)
+    assert torch.allclose(epsilon, epsilon_direct, atol=1e-6)
 
 
 def test_apply_operator_matches_dense_apply_multiple_heads_A():
